@@ -1,0 +1,42 @@
+# ============================================================
+# Quản Lý Gia Phả Việt Nam — Docker Compose cho Synology NAS
+# ============================================================
+# Hướng dẫn:
+#   1. Chép file .env.example thành .env và điền đầy đủ giá trị
+#   2. Upload thư mục project lên NAS (ví dụ: /volume1/docker/giaphaonline)
+#   3. Trong Container Manager > Project > Create, trỏ đến thư mục này
+#   4. Hoặc chạy qua SSH: docker compose up -d --build
+# ============================================================
+
+services:
+  app:
+    container_name: giaphaonline
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Đảm bảo tương thích cả CPU Intel (x86) lẫn ARM (một số NAS đời mới)
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      args:
+        SITE_NAME: ${SITE_NAME}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY}
+    image: giaphaonline:latest
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - SITE_NAME=${SITE_NAME}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY}
+    volumes:
+      # Mount thư mục logs ra ngoài để dễ theo dõi
+      - /volume1/docker/giaphaonline/logs:/app/logs
+    networks:
+      - giaphaonline_net
+
+networks:
+  giaphaonline_net:
+    driver: bridge
