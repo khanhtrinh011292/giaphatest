@@ -30,7 +30,7 @@ export default function AboutPage() {
 
             <div className="max-w-none">
               <p className="text-stone-600 leading-relaxed text-[15px] mb-8">
-                <strong className="text-stone-800">Gia Phả OS</strong> là một
+                <strong className="text-stone-800">Gia Phả Online</strong> là một
                 giải pháp mã nguồn mở được thiết kế giúp các dòng họ, gia đình
                 tự xây dựng và quản lý cây phả hệ của riêng mình. Dự án giúp bảo
                 tồn và truyền đạt lại thông tin cội nguồn một cách trực quan,
@@ -80,15 +80,6 @@ export default function AboutPage() {
                     trong cơ sở dữ liệu Supabase mà bạn tạo và quản lý. Bạn có
                     thể xóa, xuất hoặc di chuyển dữ liệu bất cứ lúc nào.
                   </li>
-                  <li>
-                    <strong className="text-stone-800">Demo công khai:</strong>{" "}
-                    Trang demo tại{" "}
-                    <code className="bg-white border border-stone-200 px-1 py-0.5 rounded text-[13px] text-amber-700">
-                      giapha-os.homielab.com
-                    </code>{" "}
-                    sử dụng dữ liệu mẫu hư cấu, không chứa thông tin của người
-                    thật. Không nên nhập thông tin cá nhân thật vào trang demo.
-                  </li>
                 </ul>
               </div>
 
@@ -106,10 +97,10 @@ export default function AboutPage() {
                 dụng phần mềm, hoặc muốn thảo luận thì xin vui lòng gửi email về
                 địa chỉ:{` `}
                 <a
-                  href="mailto:giaphaos@homielab.com"
+                  href="mailto:khanhtrinh011292@gmail.com"
                   className="font-semibold text-amber-700 hover:text-amber-600 transition-colors inline-flex items-center gap-1.5 mt-2"
                 >
-                  giaphaos@homielab.com
+                  khanhtrinh011292@gmail.com
                 </a>
               </p>
             </div>
