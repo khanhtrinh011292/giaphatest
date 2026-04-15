@@ -65,7 +65,7 @@ interface BackupPayload {
   custom_events?: CustomEventExport[];
 }
 
-// ─── Sanitized insert types (có thêm family_id, bỏ generated fields) ─────────
+// ─── Sanitized insert types ───────────────────────────────────────────────────
 
 type PersonInsert = Omit<PersonExport, "created_at" | "updated_at"> & {
   family_id: string;
@@ -80,11 +80,23 @@ type CustomEventInsert = Omit<CustomEventExport, "created_by"> & {
   family_id: string;
 };
 
+// ─── FamilyAccess return type (discriminated union) ──────────────────────────
+
+type FamilyAccessError = { error: string };
+type FamilyAccessOk = {
+  supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>;
+  user: NonNullable<Awaited<ReturnType<typeof import("@/utils/supabase/queries").getUser>>>;
+  family: { id: string; owner_id: string };
+  canRead: true;
+  canImport: boolean;
+};
+type FamilyAccessResult = FamilyAccessError | FamilyAccessOk;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-async function getFamilyAccess(familyId: string) {
+async function getFamilyAccess(familyId: string): Promise<FamilyAccessResult> {
   const user = await getUser();
-  if (!user) return { error: "Vui lòng đăng nhập." as const };
+  if (!user) return { error: "Vui lòng đăng nhập." };
 
   const supabase = await getSupabase();
 
@@ -95,7 +107,7 @@ async function getFamilyAccess(familyId: string) {
     .single();
 
   if (familyError || !family)
-    return { error: "Không tìm thấy gia phả." as const };
+    return { error: "Không tìm thấy gia phả." };
 
   if (family.owner_id === user.id)
     return { supabase, user, family, canRead: true, canImport: true };
@@ -108,7 +120,7 @@ async function getFamilyAccess(familyId: string) {
     .single();
 
   if (!share)
-    return { error: "Bạn không có quyền truy cập gia phả này." as const };
+    return { error: "Bạn không có quyền truy cập gia phả này." };
 
   return {
     supabase,
@@ -204,7 +216,6 @@ export async function exportData(
       error: "Lỗi tải dữ liệu relationships: " + relationshipsError.message,
     };
 
-  // FIX: filter theo family_id thay vì lấy tất cả private details
   const personIds = (allPersons ?? []).map((p) => p.id);
   let allPrivateDetails: PersonDetailsPrivateExport[] = [];
   if (personIds.length > 0) {
@@ -318,7 +329,6 @@ export async function importData(
   if (importPayload.persons.length === 0)
     return { error: "File backup trống — không có thành viên nào để phục hồi." };
 
-  // 1. Lấy danh sách person IDs hiện tại để xoá private details
   const { data: currentPersons, error: currentPersonsError } = await supabase
     .from("persons")
     .select("id")
@@ -333,7 +343,6 @@ export async function importData(
   const existingPersonIds = (currentPersons ?? []).map((p) => p.id);
   const CHUNK = 200;
 
-  // 2. Xoá custom_events
   const { error: delEventsError } = await supabase
     .from("custom_events")
     .delete()
@@ -341,7 +350,6 @@ export async function importData(
   if (delEventsError)
     return { error: "Lỗi khi xoá custom_events cũ: " + delEventsError.message };
 
-  // 3. Xoá relationships
   const { error: delRelError } = await supabase
     .from("relationships")
     .delete()
@@ -349,7 +357,6 @@ export async function importData(
   if (delRelError)
     return { error: "Lỗi khi xoá relationships cũ: " + delRelError.message };
 
-  // 4. Xoá person_details_private
   if (existingPersonIds.length > 0) {
     const { error: delPrivateError } = await supabase
       .from("person_details_private")
@@ -362,7 +369,6 @@ export async function importData(
       };
   }
 
-  // 5. Xoá persons
   const { error: delPersonsError } = await supabase
     .from("persons")
     .delete()
@@ -370,7 +376,6 @@ export async function importData(
   if (delPersonsError)
     return { error: "Lỗi khi xoá persons cũ: " + delPersonsError.message };
 
-  // 6. Insert persons
   const persons = importPayload.persons.map((p) => sanitizePerson(familyId, p));
   for (let i = 0; i < persons.length; i += CHUNK) {
     const { error } = await supabase
@@ -382,7 +387,6 @@ export async function importData(
       };
   }
 
-  // 7. Insert relationships
   const relationships = importPayload.relationships
     .filter((r) => r.person_a !== r.person_b)
     .map((r) => sanitizeRelationship(familyId, r));
@@ -396,7 +400,6 @@ export async function importData(
       };
   }
 
-  // 8. Insert person_details_private
   let privateDetailsCount = 0;
   const privateDetails = importPayload.person_details_private ?? [];
   if (privateDetails.length > 0) {
@@ -412,7 +415,6 @@ export async function importData(
     privateDetailsCount = privateDetails.length;
   }
 
-  // 9. Insert custom_events
   let customEventsCount = 0;
   const customEvents = (importPayload.custom_events ?? []).map((e) =>
     sanitizeCustomEvent(familyId, e),
