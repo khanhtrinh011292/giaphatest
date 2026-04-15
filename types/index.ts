@@ -5,17 +5,15 @@ export type RelationshipType =
   | "adopted_child";
 export type UserRole = "admin" | "editor" | "member";
 export type ShareRole = "viewer" | "editor" | "admin";
-
-// ─── Auth / User ─────────────────────────────────────────────────────────────
+export type FamilyRole = ShareRole | "owner";
 
 export interface Profile {
   id: string;
+  role: UserRole;
   display_name: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  // legacy - kept for backward compat with existing dashboard/users page
-  role?: UserRole;
 }
 
 export interface AdminUserData {
@@ -25,8 +23,6 @@ export interface AdminUserData {
   is_active: boolean;
   created_at: string;
 }
-
-// ─── Multi-Family ─────────────────────────────────────────────────────────────
 
 export interface Family {
   id: string;
@@ -44,21 +40,18 @@ export interface FamilyShare {
   shared_with: string;
   role: ShareRole;
   created_at: string;
-  // Joined
+  // Joined fields
   family?: Family;
   shared_with_email?: string;
 }
 
-/** Object truyền qua React Context cho mỗi trang trong /dashboard/[familyId]/ */
 export interface FamilyContext {
   family: Family;
-  myRole: ShareRole | "owner";
-  canWrite: boolean;  // owner | editor | admin
-  canAdmin: boolean;  // owner | admin
+  myRole: FamilyRole;
+  canWrite: boolean; // editor | admin | owner
+  canAdmin: boolean; // admin | owner
   isOwner: boolean;
 }
-
-// ─── Family data types ────────────────────────────────────────────────────────
 
 export interface Person {
   id: string;
@@ -86,7 +79,6 @@ export interface Person {
   death_lunar_month: number | null;
   death_lunar_day: number | null;
 
-  // Extra fields
   is_deceased: boolean;
   is_in_law: boolean;
   birth_order: number | null;
@@ -105,7 +97,6 @@ export interface Relationship {
   updated_at: string;
 }
 
-// Helper types for UI
 export interface PersonWithDetails extends Person {
   spouses?: Person[];
   children?: Person[];
