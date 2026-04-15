@@ -4,7 +4,7 @@ import { revokeShare, shareFamily, updateShareRole } from "@/app/actions/family"
 import { ShareRole } from "@/types";
 import { ArrowLeftIcon, MailIcon, ShieldIcon, Trash2Icon, UserPlusIcon } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 type ShareRow = {
@@ -16,9 +16,9 @@ type ShareRow = {
 };
 
 const ROLE_OPTIONS: { value: ShareRole; label: string; desc: string }[] = [
-  { value: "viewer",  label: "👁️ Chỉ xem",    desc: "Xem sơ đồ và danh sách, không chỉnh sửa" },
-  { value: "editor",  label: "✏️ Chỉnh sửa",  desc: "Thêm, sửa, xóa thành viên và quan hệ" },
-  { value: "admin",   label: "⚙️ Quản trị",   desc: "Toàn quyền, bao gồm quản lý chia sẻ" },
+  { value: "viewer",  label: "\ud83d\udc41\ufe0f Ch\u1ec9 xem",    desc: "Xem s\u01a1 \u0111\u1ed3 v\u00e0 danh s\u00e1ch, kh\u00f4ng ch\u1ec9nh s\u1eeda" },
+  { value: "editor",  label: "\u270f\ufe0f Ch\u1ec9nh s\u1eeda",  desc: "Th\u00eam, s\u1eeda, x\u00f3a th\u00e0nh vi\u00ean v\u00e0 quan h\u1ec7" },
+  { value: "admin",   label: "\u2699\ufe0f Qu\u1ea3n tr\u1ecb",   desc: "To\u00e0n quy\u1ec1n, bao g\u1ed3m qu\u1ea3n l\u00fd chia s\u1ebb" },
 ];
 
 function roleLabel(role: ShareRole) {
@@ -45,13 +45,13 @@ export default function ShareManager({
   }
 
   function handleShare() {
-    if (!email.trim()) { showStatus("err", "Vui lòng nhập email."); return; }
+    if (!email.trim()) { showStatus("err", "Vui l\u00f2ng nh\u1eadp email."); return; }
     startTransition(async () => {
       const res = await shareFamily(familyId, email, role);
       if ("error" in res) {
-        showStatus("err", res.error);
+        showStatus("err", res.error ?? "\u0110\u00e3 x\u1ea3y ra l\u1ed7i.");
       } else {
-        showStatus("ok", `Đã chia sẻ tới ${email} với quyền ${roleLabel(role)}.`);
+        showStatus("ok", `\u0110\u00e3 chia s\u1ebb t\u1edbi ${email} v\u1edbi quy\u1ec1n ${roleLabel(role)}.`);
         setEmail("");
         router.refresh();
       }
@@ -61,21 +61,23 @@ export default function ShareManager({
   function handleRoleChange(shareId: string, newRole: ShareRole) {
     startTransition(async () => {
       const res = await updateShareRole(shareId, newRole);
-      if ("error" in res) showStatus("err", res.error);
-      else {
+      if ("error" in res) {
+        showStatus("err", res.error ?? "\u0110\u00e3 x\u1ea3y ra l\u1ed7i.");
+      } else {
         setShares((prev) => prev.map((s) => s.id === shareId ? { ...s, role: newRole } : s));
-        showStatus("ok", "Đã cập nhật quyền.");
+        showStatus("ok", "\u0110\u00e3 c\u1eadp nh\u1eadt quy\u1ec1n.");
       }
     });
   }
 
-  function handleRevoke(shareId: string, email: string) {
+  function handleRevoke(shareId: string, revokedEmail: string) {
     startTransition(async () => {
       const res = await revokeShare(shareId, familyId);
-      if ("error" in res) showStatus("err", res.error);
-      else {
+      if ("error" in res) {
+        showStatus("err", res.error ?? "\u0110\u00e3 x\u1ea3y ra l\u1ed7i.");
+      } else {
         setShares((prev) => prev.filter((s) => s.id !== shareId));
-        showStatus("ok", `Đã thu hồi quyền của ${email}.`);
+        showStatus("ok", `\u0110\u00e3 thu h\u1ed3i quy\u1ec1n c\u1ee7a ${revokedEmail}.`);
       }
     });
   }
@@ -91,9 +93,9 @@ export default function ShareManager({
           <ArrowLeftIcon className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-serif font-bold text-stone-800">Chia sẻ Gia phả</h1>
+          <h1 className="text-2xl font-serif font-bold text-stone-800">Chia s\u1ebb Gia ph\u1ea3</h1>
           <p className="text-sm text-stone-500 mt-0.5">
-            Mời người khác cùng xem hoặc chỉnh sửa gia phả của bạn.
+            M\u1eddi ng\u01b0\u1eddi kh\u00e1c c\u00f9ng xem ho\u1eb7c ch\u1ec9nh s\u1eeda gia ph\u1ea3 c\u1ee7a b\u1ea1n.
           </p>
         </div>
       </div>
@@ -111,10 +113,10 @@ export default function ShareManager({
         </div>
       )}
 
-      {/* Form mời */}
+      {/* Form m\u1eddi */}
       <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm space-y-4">
         <h2 className="font-semibold text-stone-700 flex items-center gap-2">
-          <UserPlusIcon className="w-4 h-4" /> Mời người dùng
+          <UserPlusIcon className="w-4 h-4" /> M\u1eddi ng\u01b0\u1eddi d\u00f9ng
         </h2>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -134,7 +136,7 @@ export default function ShareManager({
             </div>
           </div>
           <div className="sm:w-44">
-            <label className="block text-xs font-medium text-stone-500 mb-1">Quyền</label>
+            <label className="block text-xs font-medium text-stone-500 mb-1">Quy\u1ec1n</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as ShareRole)}
@@ -148,7 +150,7 @@ export default function ShareManager({
           </div>
         </div>
 
-        {/* Mô tả quyền được chọn */}
+        {/* M\u00f4 t\u1ea3 quy\u1ec1n \u0111\u01b0\u1ee3c ch\u1ecdn */}
         <p className="text-xs text-stone-400">
           {ROLE_OPTIONS.find((o) => o.value === role)?.desc}
         </p>
@@ -159,22 +161,22 @@ export default function ShareManager({
           className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
         >
           <UserPlusIcon className="w-4 h-4" />
-          {isPending ? "Đang xử lý..." : "Gửi lời mời"}
+          {isPending ? "\u0110ang x\u1eed l\u00fd..." : "G\u1eedi l\u1eddi m\u1eddi"}
         </button>
       </div>
 
-      {/* Danh sách đã chia sẻ */}
+      {/* Danh s\u00e1ch \u0111\u00e3 chia s\u1ebb */}
       <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-stone-100">
           <h2 className="font-semibold text-stone-700 flex items-center gap-2">
             <ShieldIcon className="w-4 h-4" />
-            Đang chia sẻ ({shares.length} người)
+            \u0110ang chia s\u1ebb ({shares.length} ng\u01b0\u1eddi)
           </h2>
         </div>
 
         {shares.length === 0 ? (
           <div className="px-5 py-8 text-center text-stone-400 text-sm">
-            Chưa chia sẻ với ai. Dùng form trên để mời người dùng.
+            Ch\u01b0a chia s\u1ebb v\u1edbi ai. D\u00f9ng form tr\u00ean \u0111\u1ec3 m\u1eddi ng\u01b0\u1eddi d\u00f9ng.
           </div>
         ) : (
           <ul className="divide-y divide-stone-100">
@@ -183,7 +185,7 @@ export default function ShareManager({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-stone-800 truncate">{s.shared_with_email}</p>
                   <p className="text-xs text-stone-400">
-                    Từ {new Date(s.created_at).toLocaleDateString("vi-VN")}
+                    T\u1eeb {new Date(s.created_at).toLocaleDateString("vi-VN")}
                   </p>
                 </div>
                 <select
@@ -199,7 +201,7 @@ export default function ShareManager({
                 <button
                   onClick={() => handleRevoke(s.id, s.shared_with_email)}
                   disabled={isPending}
-                  title="Thu hồi quyền"
+                  title="Thu h\u1ed3i quy\u1ec1n"
                   className="p-1.5 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
                 >
                   <Trash2Icon className="w-4 h-4" />
