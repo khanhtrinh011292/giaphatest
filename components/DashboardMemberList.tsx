@@ -224,7 +224,7 @@ export default function DashboardMemberList({
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-stone-400 group-focus-within:text-amber-500 transition-colors" />
               <input
                 type="text"
-                placeholder="T\u00ecm ki\u1ebfm th\u00e0nh vi\u00ean..."
+                placeholder="Tìm kiếm thành viên..."
                 className="bg-white/90 text-stone-900 w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200/80 shadow-sm placeholder-stone-400 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -238,13 +238,13 @@ export default function DashboardMemberList({
                   value={filterOption}
                   onChange={(e) => setFilterOption(e.target.value)}
                 >
-                  <option value="all">T\u1ea5t c\u1ea3</option>
+                  <option value="all">Tất cả</option>
                   <option value="male">Nam</option>
-                  <option value="female">N\u1eef</option>
-                  <option value="in_law_female">D\u00e2u</option>
-                  <option value="in_law_male">R\u1ec3</option>
-                  <option value="deceased">\u0110\u00e3 m\u1ea5t</option>
-                  <option value="first_child">Con tr\u01b0\u1edfng</option>
+                  <option value="female">Nữ</option>
+                  <option value="in_law_female">Dâu</option>
+                  <option value="in_law_male">Rể</option>
+                  <option value="deceased">Đã mất</option>
+                  <option value="first_child">Con trưởng</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                   <svg className="size-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,14 +260,14 @@ export default function DashboardMemberList({
                   value={sortOption}
                   onChange={(e) => setSortOption(e.target.value)}
                 >
-                  <option value="birth_asc">N\u0103m sinh (T\u0103ng d\u1ea7n)</option>
-                  <option value="birth_desc">N\u0103m sinh (Gi\u1ea3m d\u1ea7n)</option>
-                  <option value="name_asc">T\u00ean (A-Z)</option>
-                  <option value="name_desc">T\u00ean (Z-A)</option>
-                  <option value="updated_desc">C\u1eadp nh\u1eadt (M\u1edbi nh\u1ea5t)</option>
-                  <option value="updated_asc">C\u1eadp nh\u1eadt (C\u0169 nh\u1ea5t)</option>
-                  <option value="generation_asc">Theo th\u1ebf h\u1ec7 (T\u0103ng d\u1ea7n)</option>
-                  <option value="generation_desc">Theo th\u1ebf h\u1ec7 (Gi\u1ea3m d\u1ea7n)</option>
+                  <option value="birth_asc">Năm sinh (Tăng dần)</option>
+                  <option value="birth_desc">Năm sinh (Giảm dần)</option>
+                  <option value="name_asc">Tên (A-Z)</option>
+                  <option value="name_desc">Tên (Z-A)</option>
+                  <option value="updated_desc">Cập nhật (Mới nhất)</option>
+                  <option value="updated_asc">Cập nhật (Cũ nhất)</option>
+                  <option value="generation_asc">Theo thế hệ (Tăng dần)</option>
+                  <option value="generation_desc">Theo thế hệ (Giảm dần)</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                   <svg className="size-4 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,7 +280,7 @@ export default function DashboardMemberList({
           {canEdit && (
             <button onClick={() => setShowCreateMember(true)} className="btn-primary">
               <Plus className="size-4" strokeWidth={2.5} />
-              Th\u00eam th\u00e0nh vi\u00ean
+              Thêm thành viên
             </button>
           )}
         </div>
@@ -318,7 +318,7 @@ export default function DashboardMemberList({
                     <div className="flex items-center gap-3">
                       <div className="h-px flex-1 bg-stone-200" />
                       <h3 className="text-lg font-serif font-bold text-amber-800 bg-amber-50 px-4 py-1.5 rounded-full border border-amber-200/50 shadow-sm">
-                        {gen === "0" ? "Ch\u01b0a x\u00e1c \u0111\u1ecbnh \u0111\u1eddi" : `\u0110\u1eddi th\u1ee9 ${gen}`}
+                        {gen === "0" ? "Chưa xác định đời" : `Đời thứ ${gen}`}
                       </h3>
                       <div className="h-px flex-1 bg-stone-200" />
                     </div>
@@ -335,9 +335,9 @@ export default function DashboardMemberList({
                               .map((p) => p.full_name.trim().split(" ").splice(-2).join(" "))
                               .join(" & ");
                             const label = parentNames
-                              ? `Con c\u1ee7a: ${parentNames}`
+                              ? `Con của: ${parentNames}`
                               : familiesMap.size > 1
-                                ? `Gia \u0111\u00ecnh ${idx + 1}`
+                                ? `Gia đình ${idx + 1}`
                                 : null;
                             if (!label) return null;
                             return (
@@ -439,8 +439,8 @@ export default function DashboardMemberList({
       ) : (
         <div className="text-center py-12 text-stone-400 italic">
           {initialPersons.length > 0
-            ? "Kh\u00f4ng t\u00ecm th\u1ea5y th\u00e0nh vi\u00ean ph\u00f9 h\u1ee3p."
-            : "Ch\u01b0a c\u00f3 th\u00e0nh vi\u00ean n\u00e0o. H\u00e3y th\u00eam th\u00e0nh vi\u00ean \u0111\u1ea7u ti\u00ean."}
+            ? "Không tìm thấy thành viên phù hợp."
+            : "Chưa có thành viên nào. Hãy thêm thành viên đầu tiên."}
         </div>
       )}
     </>
