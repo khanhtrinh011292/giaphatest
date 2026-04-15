@@ -39,14 +39,11 @@ export default function CustomEventModal({
   const [location, setLocation] = useState(eventToEdit?.location || "");
   const [content, setContent] = useState(eventToEdit?.content || "");
 
-  // Lunar date mode
   const [dateMode, setDateMode] = useState<"solar" | "lunar">("solar");
-  const [lunarDay, setLunarDay] = useState<number | "">("");
-  const [lunarMonth, setLunarMonth] = useState<number | "">("");
-  const [lunarYear, setLunarYear] = useState<number | "">("");
-  const [lunarConvertError, setLunarConvertError] = useState<string | null>(
-    null,
-  );
+  const [lunarDay, setLunarDay] = useState<number | \"\">("");
+  const [lunarMonth, setLunarMonth] = useState<number | \"\">("");
+  const [lunarYear, setLunarYear] = useState<number | \"\">("");
+  const [lunarConvertError, setLunarConvertError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -57,7 +54,6 @@ export default function CustomEventModal({
         setContent(eventToEdit.content || "");
       } else {
         setName("");
-        // Default to today
         const now = new Date();
         const y = now.getFullYear();
         const m = String(now.getMonth() + 1).padStart(2, "0");
@@ -75,7 +71,6 @@ export default function CustomEventModal({
     }
   }, [isOpen, eventToEdit]);
 
-  // Auto-convert lunar → solar when all 3 fields are filled
   useEffect(() => {
     if (
       dateMode === "lunar" &&
@@ -102,23 +97,15 @@ export default function CustomEventModal({
     }
   }, [dateMode, lunarDay, lunarMonth, lunarYear]);
 
-  // Prevent background scrolling when modal is open
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
+    document.body.style.overflow = isOpen ? "hidden" : "unset";
+    return () => { document.body.style.overflow = "unset"; };
   }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
       const supabase = createClient();
       const payload: Record<string, unknown> = {
@@ -127,11 +114,9 @@ export default function CustomEventModal({
         location: location || null,
         content: content || null,
       };
-
       if (!eventToEdit && familyId) {
         payload.family_id = familyId;
       }
-
       let resultError;
       if (eventToEdit) {
         const { error: err } = await supabase
@@ -145,18 +130,12 @@ export default function CustomEventModal({
           .insert([payload]);
         resultError = err;
       }
-
       if (resultError) throw resultError;
-
       onSuccess();
       onClose();
     } catch (err) {
       console.error(err);
-      if (err instanceof Error) {
-        setError(err.message || "Đã xảy ra lỗi khi lưu sự kiện.");
-      } else {
-        setError("Đã xảy ra lỗi khi lưu sự kiện.");
-      }
+      setError(err instanceof Error ? (err.message || "Đã xảy ra lỗi khi lưu sự kiện.") : "Đã xảy ra lỗi khi lưu sự kiện.");
     } finally {
       setLoading(false);
     }
@@ -165,7 +144,6 @@ export default function CustomEventModal({
   const handleDelete = async () => {
     if (!eventToEdit) return;
     if (!window.confirm("Bạn có chắc chắn muốn xoá sự kiện này?")) return;
-
     setLoading(true);
     setError(null);
     try {
@@ -174,18 +152,12 @@ export default function CustomEventModal({
         .from("custom_events")
         .delete()
         .eq("id", eventToEdit.id);
-
       if (err) throw err;
-
       onSuccess();
       onClose();
     } catch (err) {
       console.error(err);
-      if (err instanceof Error) {
-        setError(err.message || "Đã xảy ra lỗi khi xoá sự kiện.");
-      } else {
-        setError("Đã xảy ra lỗi khi xoá sự kiện.");
-      }
+      setError(err instanceof Error ? (err.message || "Đã xảy ra lỗi khi xoá sự kiện.") : "Đã xảy ra lỗi khi xoá sự kiện.");
     } finally {
       setLoading(false);
     }
@@ -213,10 +185,7 @@ export default function CustomEventModal({
           transition={{ duration: 0.2 }}
           className="fixed inset-0 z-100 flex items-center justify-center p-4 sm:p-6 bg-stone-900/40 backdrop-blur-sm"
         >
-          {/* Click-away backdrop */}
           <div className="absolute inset-0 cursor-pointer" onClick={onClose} />
-
-          {/* Modal Content */}
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -224,7 +193,6 @@ export default function CustomEventModal({
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
             className="relative bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-stone-200"
           >
-            {/* Sticky Header Actions */}
             <div className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 flex items-center gap-2">
               <button
                 type="button"
@@ -284,9 +252,7 @@ export default function CustomEventModal({
                       <button
                         type="button"
                         onClick={() => {
-                          setDateMode((m) =>
-                            m === "solar" ? "lunar" : "solar",
-                          );
+                          setDateMode((m) => m === "solar" ? "lunar" : "solar");
                           setLunarConvertError(null);
                         }}
                         className="flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-amber-700 transition-colors px-2.5 py-1 rounded-lg bg-stone-50 hover:bg-amber-50 border border-stone-200/60"
@@ -325,11 +291,7 @@ export default function CustomEventModal({
                             min="1"
                             max="30"
                             value={lunarDay}
-                            onChange={(e) =>
-                              setLunarDay(
-                                e.target.value ? Number(e.target.value) : "",
-                              )
-                            }
+                            onChange={(e) => setLunarDay(e.target.value ? Number(e.target.value) : "")}
                             className={inputClasses}
                           />
                           <input
@@ -338,22 +300,14 @@ export default function CustomEventModal({
                             min="1"
                             max="12"
                             value={lunarMonth}
-                            onChange={(e) =>
-                              setLunarMonth(
-                                e.target.value ? Number(e.target.value) : "",
-                              )
-                            }
+                            onChange={(e) => setLunarMonth(e.target.value ? Number(e.target.value) : "")}
                             className={inputClasses}
                           />
                           <input
                             type="number"
                             placeholder="Năm"
                             value={lunarYear}
-                            onChange={(e) =>
-                              setLunarYear(
-                                e.target.value ? Number(e.target.value) : "",
-                              )
-                            }
+                            onChange={(e) => setLunarYear(e.target.value ? Number(e.target.value) : "")}
                             className={inputClasses}
                           />
                         </div>
@@ -403,7 +357,7 @@ export default function CustomEventModal({
                         className={`${inputClasses} pl-11 resize-none custom-scrollbar`}
                         placeholder="Ghi chú thêm về sự kiện..."
                         value={content}
-                        onChange={(e) = setContent(e.target.value)}
+                        onChange={(e) => setContent(e.target.value)}
                       />
                     </div>
                   </div>
@@ -426,23 +380,13 @@ export default function CustomEventModal({
                       Xoá sự kiện
                     </button>
                   ) : (
-                    <div /> /* Empty div to push right buttons to end */
+                    <div />
                   )}
-
                   <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      disabled={loading}
-                      className="btn"
-                    >
+                    <button type="button" onClick={onClose} disabled={loading} className="btn">
                       Huỷ bỏ
                     </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="btn-primary"
-                    >
+                    <button type="submit" disabled={loading} className="btn-primary">
                       {loading && <Loader2 className="size-4 animate-spin" />}
                       {loading ? "Đang lưu..." : "Lưu sự kiện"}
                     </button>
