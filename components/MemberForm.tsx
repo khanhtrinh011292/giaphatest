@@ -8,7 +8,6 @@ import {
   Briefcase,
   Image as ImageIcon,
   Loader2,
-  Lock,
   MapPin,
   Phone,
   Settings2,
@@ -104,7 +103,7 @@ export default function MemberForm({
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[đĐ]/g, "d")
+      .replace(/[\u0111\u0110]/g, "d")
       .replace(/([^0-9a-z-\s])/g, "")
       .replace(/(\s+)/g, "-")
       .replace(/-+/g, "-")
@@ -258,7 +257,8 @@ export default function MemberForm({
         await supabase.from("persons").update({ avatar_url: currentAvatarUrl }).eq("id", currentPersonId);
       }
 
-      if (isAdmin && currentPersonId) {
+      // Save private details for all users who can edit
+      if (currentPersonId) {
         const normalizedData = {
           person_id: currentPersonId,
           phone_number: phoneNumber?.trim() || null,
@@ -274,7 +274,7 @@ export default function MemberForm({
         }
       }
 
-      if (!currentPersonId) throw new Error("Không lấy được ID thành viên sau khi lưu.");
+      if (!currentPersonId) throw new Error("Đồng bộ thất bại.");
 
       if (onSuccess) {
         onSuccess(currentPersonId);
@@ -446,31 +446,27 @@ export default function MemberForm({
         </div>
       </motion.div>
 
-      {isAdmin && (
-        <motion.div variants={formSectionVariants} initial="hidden" animate="show" transition={{ delay: 0.1 }}
-          className="bg-linear-to-br from-amber-50/80 to-stone-50/80 p-5 sm:p-8 rounded-2xl border border-amber-200/50 shadow-sm relative overflow-hidden">
-          <Lock className="absolute -right-6 -bottom-6 w-32 h-32 text-amber-500/5 rotate-12" />
-          <h3 className="text-lg sm:text-xl font-serif font-bold text-amber-900 mb-6 border-b border-amber-200/50 pb-4 flex items-center gap-2 relative z-10">
-            <span className="p-1.5 bg-amber-100/80 text-amber-700 rounded-lg shadow-xs"><Lock className="size-4" /></span>
-            <span>Thông tin riêng tư</span>
-            <span className="text-[10px] ml-auto font-bold bg-amber-200/80 text-amber-800 uppercase tracking-wider px-2.5 py-1 rounded-md">Chỉ Admin</span>
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-            <div>
-              <label className="flex items-center gap-1.5 text-sm font-semibold text-amber-900/80 mb-1.5"><Phone className="size-4" /> Số điện thoại</label>
-              <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} disabled={isDeceased} placeholder="Ví dụ: 0912345678" className={`${inputClasses} disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed`} />
-            </div>
-            <div>
-              <label className="flex items-center gap-1.5 text-sm font-semibold text-amber-900/80 mb-1.5"><Briefcase className="size-4" /> Nghề nghiệp</label>
-              <input type="text" value={occupation} onChange={(e) => setOccupation(e.target.value)} placeholder="Ví dụ: Kỹ sư, Bác sĩ..." className={inputClasses} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="flex items-center gap-1.5 text-sm font-semibold text-amber-900/80 mb-1.5"><MapPin className="size-4" /> Nơi ở hiện tại</label>
-              <input type="text" value={currentResidence} onChange={(e) => setCurrentResidence(e.target.value)} placeholder="Địa chỉ cư trú..." className={inputClasses} />
-            </div>
+      {/* Thông tin bổ sung — mở cho tất cả người dùng có quyền chỉnh sửa */}
+      <motion.div variants={formSectionVariants} initial="hidden" animate="show" transition={{ delay: 0.1 }}
+        className="bg-white/80 p-5 sm:p-8 rounded-2xl shadow-sm border border-stone-200/80">
+        <h3 className="text-lg sm:text-xl font-serif font-bold text-stone-800 mb-6 border-b border-stone-100 pb-4 flex items-center gap-2">
+          <Phone className="size-5 text-amber-600" /> Thông tin liên hệ
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="flex items-center gap-1.5 text-sm font-semibold text-stone-700 mb-1.5"><Phone className="size-4" /> Số điện thoại</label>
+            <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} disabled={isDeceased} placeholder="Ví dụ: 0912345678" className={`${inputClasses} disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed`} />
           </div>
-        </motion.div>
-      )}
+          <div>
+            <label className="flex items-center gap-1.5 text-sm font-semibold text-stone-700 mb-1.5"><Briefcase className="size-4" /> Nghề nghiệp</label>
+            <input type="text" value={occupation} onChange={(e) => setOccupation(e.target.value)} placeholder="Ví dụ: Kỹ sư, Bác sĩ..." className={inputClasses} />
+          </div>
+          <div className="md:col-span-2">
+            <label className="flex items-center gap-1.5 text-sm font-semibold text-stone-700 mb-1.5"><MapPin className="size-4" /> Nơi ở hiện tại</label>
+            <input type="text" value={currentResidence} onChange={(e) => setCurrentResidence(e.target.value)} placeholder="Địa chỉ cư trú..." className={inputClasses} />
+          </div>
+        </div>
+      </motion.div>
 
       <AnimatePresence>
         {error && (

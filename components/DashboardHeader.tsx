@@ -2,7 +2,6 @@ import config from "@/app/config";
 import HeaderMenu from "@/components/HeaderMenu";
 import Image from "next/image";
 import Link from "next/link";
-import { ShareIcon } from "lucide-react";
 
 export default function DashboardHeader({ familyId }: { familyId?: string }) {
   return (
@@ -42,17 +41,8 @@ export default function DashboardHeader({ familyId }: { familyId?: string }) {
           )}
         </div>
 
-        {/* Right: Share button + Menu */}
+        {/* Right: Menu only */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {familyId && (
-            <Link
-              href={`/dashboard/${familyId}/share`}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-amber-700 bg-stone-100 hover:bg-amber-50 border border-stone-200 hover:border-amber-300 px-3 py-1.5 rounded-full transition-colors"
-            >
-              <ShareIcon className="w-3.5 h-3.5" />
-              Chia sẻ
-            </Link>
-          )}
           <HeaderMenu familyId={familyId} />
         </div>
       </div>
