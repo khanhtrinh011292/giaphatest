@@ -11,12 +11,12 @@ export interface BubbleMapTreeProps {
   relationships: Relationship[];
   roots: Person[];
   canEdit?: boolean;
+  familyId?: string;
 }
 
-// Define D3 Node and Link types
 interface GraphNode extends d3.SimulationNodeDatum {
   id: string;
-  people: Person[]; // [main, ...spouses]
+  people: Person[];
   radius: number;
   width: number;
   isRoot: boolean;
@@ -32,18 +32,19 @@ export default function BubbleMapTree({
   personsMap,
   relationships,
   roots,
+  familyId,
 }: BubbleMapTreeProps) {
+  void familyId;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [error, setError] = useState<Error | null>(null);
-  // const { showAvatar } = useDashboard();
 
   const adj = useMemo(
     () => buildAdjacencyLists(relationships, personsMap),
     [relationships, personsMap],
   );
 
-  // Build graph data (Group spouses into a single 'Family Unit' node)
   const { nodes, links } = useMemo(() => {
     const nodeMap = new Map<string, GraphNode>();
     const linkArray: GraphLink[] = [];
@@ -56,7 +57,6 @@ export default function BubbleMapTree({
       if (!nodeMap.has(mainPerson.id)) {
         const people = [mainPerson, ...spouses];
         const radius = isRoot ? 40 : 30;
-        // Width expands for each additional spouse
         const width = radius * 2 + (people.length - 1) * (radius * 1.5);
 
         nodeMap.set(mainPerson.id, {
@@ -92,7 +92,6 @@ export default function BubbleMapTree({
       );
 
       data.children.forEach((child) => {
-        // Link the Parent FamilyUnit -> Child FamilyUnit
         linkArray.push({
           source: personId,
           target: child.id,
@@ -114,7 +113,6 @@ export default function BubbleMapTree({
       const width = containerRef.current.clientWidth;
       const height = containerRef.current.clientHeight;
 
-    // Pin root nodes to the center
     const rootNodes = nodes.filter((n) => n.isRoot);
     if (rootNodes.length === 1) {
       rootNodes[0].fx = width / 2;
@@ -130,11 +128,10 @@ export default function BubbleMapTree({
       .select(svgRef.current)
       .attr("viewBox", [0, 0, width, height])
       .style("cursor", "grab");
-    svg.selectAll("*").remove(); // Clear previous render
+    svg.selectAll("*").remove();
 
     const g = svg.append("g");
 
-    // Defs for avatar clipping
     const defs = svg.append("defs");
     defs
       .append("clipPath")
@@ -151,7 +148,6 @@ export default function BubbleMapTree({
       .attr("cx", 0)
       .attr("cy", 0);
 
-    // Zoom setup
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
@@ -164,7 +160,6 @@ export default function BubbleMapTree({
       ) => void,
     );
 
-    // Initial center transform
     svg.call(
       zoom.translateTo as unknown as (
         selection: d3.Selection<SVGSVGElement, unknown, null, undefined>,
@@ -175,7 +170,6 @@ export default function BubbleMapTree({
       height / 2,
     );
 
-    // Force simulation
     const simulation = d3
       .forceSimulation<GraphNode>(nodes)
       .force(
@@ -186,7 +180,6 @@ export default function BubbleMapTree({
           .distance(150),
       )
       .force("charge", d3.forceManyBody().strength(-1200))
-      // Use width / 2 as the collision radius to prevent overlapping of the wider family units
       .force(
         "collide",
         d3
@@ -195,7 +188,6 @@ export default function BubbleMapTree({
           .iterations(2),
       );
 
-    // Draw links
     const link = g
       .append("g")
       .attr("stroke-opacity", 0.6)
@@ -205,7 +197,6 @@ export default function BubbleMapTree({
       .attr("stroke", "#d6d3d1")
       .attr("stroke-width", 2);
 
-    // Draw nodes (Family Units)
     const node = g
       .append("g")
       .selectAll("g")
@@ -234,7 +225,6 @@ export default function BubbleMapTree({
           }) as never,
       );
 
-    // Pill shape for the Family Unit
     node
       .append("rect")
       .attr("x", (d) => -d.width / 2)
@@ -250,15 +240,11 @@ export default function BubbleMapTree({
       .attr("stroke-width", (d) => (d.isRoot ? 4 : 2))
       .attr("class", "shadow-md transition-all hover:scale-105 cursor-pointer");
 
-    // Avatars for everyone in the Family Unit
     if (showAvatar) {
       node.each(function (d) {
         const unitContent = d3.select(this);
 
         d.people.forEach((person, index) => {
-          // Calculate X offset for each avatar inside the pill
-          // If 1 person (width = radius*2): offset = 0
-          // If 2 people: spacing = radius*1.5. Offsets = -0.75*r, +0.75*r
           const totalSpacing = d.width - d.radius * 2;
           const spacingStep =
             d.people.length > 1 ? totalSpacing / (d.people.length - 1) : 0;
@@ -291,7 +277,6 @@ export default function BubbleMapTree({
       });
     }
 
-    // Node text (concatenated names)
     node
       .append("text")
       .attr("dy", (d) => d.radius + 18)
@@ -327,7 +312,7 @@ export default function BubbleMapTree({
     return (
       <div className="absolute inset-0 overflow-hidden bg-stone-50 rounded-2xl border border-stone-200/60 shadow-inner flex items-center justify-center p-4 text-center">
         <span className="text-stone-500">
-          Tính năng này không được hỗ trợ trên trình duyệt của bạn ({error.message}). Vui lòng cập nhật hoặc sử dụng trình duyệt khác.
+          T\u00ednh n\u0103ng n\u00e0y kh\u00f4ng \u0111\u01b0\u1ee3c h\u1ed7 tr\u1ee3 tr\u00ean tr\u00ecnh duy\u1ec7t c\u1ee7a b\u1ea1n ({error.message}). Vui l\u00f2ng c\u1eadp nh\u1eadt ho\u1eb7c s\u1eed d\u1ee5ng tr\u00ecnh duy\u1ec7t kh\u00e1c.
         </span>
       </div>
     );
@@ -338,7 +323,7 @@ export default function BubbleMapTree({
       <div
         id="tree-toolbar-portal"
         className="absolute top-4 left-4 z-50"
-      ></div>
+      />
 
       <div ref={containerRef} className="w-full h-full">
         <svg ref={svgRef} className="w-full h-full block" />
