@@ -37,8 +37,10 @@ interface EventsListProps {
     death_lunar_month: number | null;
     death_lunar_day: number | null;
     is_deceased: boolean;
+    avatar_url: string | null;
   }[];
   customEvents?: CustomEventRecord[];
+  familyId?: string;
 }
 
 const DAY_LABELS: Record<string, string> = {
@@ -85,7 +87,6 @@ function EventCard({
     }
   };
 
-  // Compute age or years since for display
   const yearsInfo = (() => {
     if (!event.originYear) return null;
     const now = new Date().getFullYear();
@@ -113,12 +114,9 @@ function EventCard({
     const year = d.getFullYear();
 
     let label = `${dayOfWeek}, ngày ${day}/${month}`;
-    if (event.type === "custom_event") {
-      label += `/${year}`;
-    }
-    if (event.type === "death_anniversary") {
+    if (event.type === "custom_event") label += `/${year}`;
+    if (event.type === "death_anniversary")
       label += ` (Âm lịch: ${event.eventDateLabel.replace(" ÂL", "")})`;
-    }
     return label;
   })();
 
@@ -140,7 +138,6 @@ function EventCard({
                 : "bg-white/80 border-stone-200/60 hover:border-rose-200"
       }`}
     >
-      {/* Icon */}
       <div
         className={`shrink-0 size-10 sm:size-11 flex items-center justify-center rounded-xl ${
           isToday
@@ -163,9 +160,7 @@ function EventCard({
         )}
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
-        {/* Top row: name + badge */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p
             className={`font-semibold text-[15px] sm:text-base truncate transition-colors ${
@@ -184,7 +179,6 @@ function EventCard({
                 {getZodiacSign(event.originDay, event.originMonth)}
               </span>
             )}
-          {/* Days badge — inline with name */}
           <span
             className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold leading-tight whitespace-nowrap ${
               isToday
@@ -207,14 +201,12 @@ function EventCard({
           </span>
         </div>
 
-        {/* Details */}
         <div className="flex flex-col gap-0.5 mt-1">
           <p className="text-[13px] sm:text-sm text-stone-500 flex items-center gap-1.5 leading-snug">
             <CalendarDays className="size-3.5 shrink-0" />
             <span className="font-medium text-stone-600">{dateLabel}</span>
             {yearsInfo && <span className="text-stone-400">· {yearsInfo}</span>}
           </p>
-
           {event.location && (
             <p className="text-[13px] sm:text-sm text-stone-500 flex items-center gap-1.5 leading-snug">
               <MapPin className="size-3.5 shrink-0" />
@@ -236,6 +228,7 @@ function EventCard({
 export default function EventsList({
   persons,
   customEvents = [],
+  familyId,
 }: EventsListProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<
@@ -244,7 +237,6 @@ export default function EventsList({
   const [showCount, setShowCount] = useState(20);
   const [showDeceasedBirthdays, setShowDeceasedBirthdays] = useState(false);
 
-  // Custom Event Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomEvent, setEditingCustomEvent] =
     useState<CustomEventRecord | null>(null);
@@ -262,30 +254,19 @@ export default function EventsList({
     setIsModalOpen(true);
   };
 
-  const handleModalSuccess = () => {
-    router.refresh();
-  };
+  const handleModalSuccess = () => { router.refresh(); };
 
   const [todayDate] = useState(() => {
     const today = new Date();
     const weekdays = [
-      "Chủ nhật",
-      "Thứ hai",
-      "Thứ ba",
-      "Thứ tư",
-      "Thứ năm",
-      "Thứ sáu",
-      "Thứ bảy",
+      "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư",
+      "Thứ năm", "Thứ sáu", "Thứ bảy",
     ];
     const dayOfWeek = weekdays[today.getDay()];
     const solarStr = `${dayOfWeek}, ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
     let lunarStr = "";
     try {
-      const solar = Solar.fromYmd(
-        today.getFullYear(),
-        today.getMonth() + 1,
-        today.getDate(),
-      );
+      const solar = Solar.fromYmd(today.getFullYear(), today.getMonth() + 1, today.getDate());
       const lunar = solar.getLunar();
       const lMonthRaw = lunar.getMonth();
       const isLeap = lMonthRaw < 0;
@@ -298,83 +279,59 @@ export default function EventsList({
     return { solar: solarStr, lunar: lunarStr };
   });
 
-  const allEvents = useMemo(
-    () => computeEvents(persons, customEvents),
-    [persons, customEvents],
-  );
+  const allEvents = useMemo(() => computeEvents(persons, customEvents), [persons, customEvents]);
 
   const filtered = useMemo(() => {
     let result = allEvents;
     if (filter === "past") {
-      // Past tab: all event types from the past year
       return result
         .filter((e) => e.daysUntil < 0 && e.daysUntil >= -365)
-        .sort((a, b) => b.daysUntil - a.daysUntil); // most recent first
+        .sort((a, b) => b.daysUntil - a.daysUntil);
     }
-    if (filter !== "all") {
-      result = result.filter((e) => e.type === filter);
-    }
-    if (!showDeceasedBirthdays) {
+    if (filter !== "all") result = result.filter((e) => e.type === filter);
+    if (!showDeceasedBirthdays)
       result = result.filter((e) => !(e.type === "birthday" && e.isDeceased));
-    }
-    // Only show upcoming events (daysUntil >= 0) for non-past tabs
     return result.filter((e) => e.daysUntil >= 0 && e.daysUntil <= 365);
   }, [allEvents, filter, showDeceasedBirthdays]);
 
   const visible = filtered.slice(0, showCount);
-
   const todayCount = allEvents.filter((e) => e.daysUntil === 0).length;
-  const soonCount = allEvents.filter(
-    (e) => e.daysUntil > 0 && e.daysUntil <= 7,
-  ).length;
+  const soonCount = allEvents.filter((e) => e.daysUntil > 0 && e.daysUntil <= 7).length;
+
+  // suppress unused warning — familyId available for future use
+  void familyId;
 
   return (
     <div className="space-y-5">
-      {/* Summary banner */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-3xl bg-white border border-stone-200/60 shadow-sm hover:shadow-stone-100 hover:border-stone-400 transition-all duration-300 mb-8 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6"
       >
-        {/* Subtle background flair */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-50"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-50" />
 
         <div className="relative flex items-center gap-4 sm:gap-6">
           <div className="size-16 rounded-2xl bg-stone-50 flex items-center justify-center shrink-0 border border-stone-100 shadow-sm text-stone-600">
             <CalendarDays className="size-8" />
           </div>
           <div>
-            <p className="text-xl sm:text-2xl font-bold text-stone-800 tracking-tight">
-              {todayDate.solar}
-            </p>
+            <p className="text-xl sm:text-2xl font-bold text-stone-800 tracking-tight">{todayDate.solar}</p>
             {todayDate.lunar && (
               <div className="mt-2.5 inline-flex flex-wrap items-center gap-2 px-3.5 py-1 rounded-full bg-stone-50 border border-stone-100">
-                <span className="text-xs font-medium text-stone-500 uppercase tracking-wider">
-                  Âm lịch:
-                </span>
-                <span className="text-sm font-semibold text-stone-700">
-                  {todayDate.lunar}
-                </span>
+                <span className="text-xs font-medium text-stone-500 uppercase tracking-wider">Âm lịch:</span>
+                <span className="text-sm font-semibold text-stone-700">{todayDate.lunar}</span>
               </div>
             )}
             {(todayCount > 0 || soonCount > 0) && (
               <p className="text-sm text-stone-500 mt-3 flex items-start sm:items-center gap-2.5 font-medium">
                 <span className="relative flex size-2.5 shrink-0 mt-1 sm:mt-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full size-2.5 bg-amber-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full size-2.5 bg-amber-500" />
                 </span>
                 <span className="flex flex-wrap items-center gap-1.5">
-                  {todayCount > 0 && (
-                    <span className="font-semibold text-stone-700">
-                      {todayCount} sự kiện hôm nay
-                    </span>
-                  )}
-                  {todayCount > 0 && soonCount > 0 && (
-                    <span className="hidden sm:inline">·</span>
-                  )}
-                  {soonCount > 0 && (
-                    <span>{soonCount} sự kiện trong 7 ngày tới</span>
-                  )}
+                  {todayCount > 0 && <span className="font-semibold text-stone-700">{todayCount} sự kiện hôm nay</span>}
+                  {todayCount > 0 && soonCount > 0 && <span className="hidden sm:inline">·</span>}
+                  {soonCount > 0 && <span>{soonCount} sự kiện trong 7 ngày tới</span>}
                 </span>
               </p>
             )}
@@ -390,25 +347,18 @@ export default function EventsList({
         </button>
       </motion.div>
 
-      {/* Controls */}
       <div className="flex flex-col gap-3">
-        {/* Filter tabs */}
         <div className="flex flex-wrap items-center gap-2">
-          {(
-            [
-              { key: "all", label: "Tất cả" },
-              { key: "birthday", label: "Sinh nhật" },
-              { key: "death_anniversary", label: "Ngày giỗ" },
-              { key: "custom_event", label: "Tuỳ chỉnh" },
-              { key: "past", label: "Đã qua" },
-            ] as const
-          ).map((tab) => (
+          {([
+            { key: "all", label: "Tất cả" },
+            { key: "birthday", label: "Sinh nhật" },
+            { key: "death_anniversary", label: "Ngày giỗ" },
+            { key: "custom_event", label: "Tuỳ chỉnh" },
+            { key: "past", label: "Đã qua" },
+          ] as const).map((tab) => (
             <button
               key={tab.key}
-              onClick={() => {
-                setFilter(tab.key);
-                setShowCount(20);
-              }}
+              onClick={() => { setFilter(tab.key); setShowCount(20); }}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                 filter === tab.key
                   ? filter === "past"
@@ -425,7 +375,6 @@ export default function EventsList({
           </span>
         </div>
 
-        {/* Toggle options — hide when viewing past events */}
         {filter !== "past" && (
           <div className="flex px-1">
             <label className="flex items-center gap-2.5 text-sm font-medium text-stone-600 cursor-pointer hover:text-stone-900 transition-colors select-none">
@@ -441,14 +390,11 @@ export default function EventsList({
         )}
       </div>
 
-      {/* Event list */}
       {visible.length === 0 ? (
         <div className="text-center py-16 text-stone-400">
           <CalendarDays className="size-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">Không có sự kiện nào</p>
-          <p className="text-sm mt-1">
-            Hãy bổ sung ngày sinh hoặc ngày mất cho thành viên
-          </p>
+          <p className="text-sm mt-1">Hãy bổ sung ngày sinh hoặc ngày mất cho thành viên</p>
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -463,7 +409,6 @@ export default function EventsList({
         </div>
       )}
 
-      {/* Load more */}
       {filtered.length > showCount && (
         <button
           onClick={() => setShowCount((n) => n + 20)}
@@ -478,6 +423,7 @@ export default function EventsList({
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleModalSuccess}
         eventToEdit={editingCustomEvent}
+        familyId={familyId}
       />
     </div>
   );
