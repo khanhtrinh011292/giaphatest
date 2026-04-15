@@ -183,7 +183,7 @@ export function getZodiacAnimal(
   return animals[targetYear % 12];
 }
 
-/* ── Thiên Can & Địa Chi (Vietnamese Can Chi) ─────────────────────── */
+/* ── Thiên Can & Địa Chi (Vietnamese Can Chi) ───────────────────────────────────────────────── */
 const THIEN_CAN: Record<string, string> = {
   甲: "Giáp",
   乙: "Ất",
@@ -220,6 +220,141 @@ function ganZhiToVietnamese(ganZhi: string): string {
   const can = THIEN_CAN[ganZhi[0]] ?? ganZhi[0];
   const chi = DIA_CHI[ganZhi[1]] ?? ganZhi[1];
   return `${can} ${chi}`;
+}
+
+/**
+ * Get the Can Chi (Thiên Can - Địa Chi) for a given lunar year.
+ * Returns e.g. "Giáp Thân", "Bính Tuất", etc.
+ */
+export function getCanChi(
+  year: number | null,
+  month: number | null = null,
+  day: number | null = null,
+): string | null {
+  if (!year) return null;
+  let targetYear = year;
+  if (month && day) {
+    try {
+      const solar = Solar.fromYmd(year, parseInt(month.toString()), parseInt(day.toString()));
+      targetYear = solar.getLunar().getYear();
+    } catch (_) {
+      // fallback to solar year
+    }
+  }
+  try {
+    // Get any day of that lunar year
+    const lunar = Lunar.fromYmd(targetYear, 1, 1);
+    const ganZhi = lunar.getYearInGanZhi();
+    return ganZhiToVietnamese(ganZhi);
+  } catch (_) {
+    return null;
+  }
+}
+
+// Ngũ hành mệnh theo Can Chi (60-year cycle)
+// Key: (thienCan % 10, diaChi % 12) -> mapped via standard lookup
+const MENH_NGU_HANH: string[] = [
+  // Based on standard Việt Nam traditional lookup (60 pairs)
+  // Order follows year % 60 offset from base year 4 (Giáp Tý = 4 AD)
+  // Sẫn: Mộc, Hoả, Thổ, Kim, Thủy cycle per Can pairs
+  // Cách tính: (year - 4) % 60 -> index in 60-year table
+  "Kim",  // 0: Giáp Tý (1984)
+  "Kim",  // 1: Ất Sửu
+  "Hỏa",  // 2: Bính Dần
+  "Hỏa",  // 3: Đinh Mão
+  "Mộc",  // 4: Mậu Thìn
+  "Mộc",  // 5: Kỷ Tỵ
+  "Thổ",  // 6: Canh Ngọ
+  "Thổ",  // 7: Tân Mùi
+  "Kim",  // 8: Nhâm Thân
+  "Kim",  // 9: Quý Dậu
+  "Hỏa",  // 10: Giáp Tuất
+  "Hỏa",  // 11: Ất Hợi
+  "Mộc",  // 12: Bính Tý
+  "Mộc",  // 13: Đinh Sửu
+  "Hỏa",  // 14: Mậu Dần
+  "Hỏa",  // 15: Kỷ Mão
+  "Thổ",  // 16: Canh Thìn
+  "Thổ",  // 17: Tân Tỵ
+  "Mộc",  // 18: Nhâm Ngọ
+  "Mộc",  // 19: Quý Mùi
+  "Thủy", // 20: Giáp Thân
+  "Thủy", // 21: Ất Dậu
+  "Thổ",  // 22: Bính Tuất
+  "Thổ",  // 23: Đinh Hợi
+  "Thủy", // 24: Mậu Tý
+  "Thủy", // 25: Kỷ Sửu
+  "Thổ",  // 26: Canh Dần
+  "Thổ",  // 27: Tân Mão
+  "Kim",  // 28: Nhâm Thìn
+  "Kim",  // 29: Quý Tỵ
+  "Kim",  // 30: Giáp Ngọ
+  "Kim",  // 31: Ất Mùi
+  "Hỏa",  // 32: Bính Thân
+  "Hỏa",  // 33: Đinh Dậu
+  "Mộc",  // 34: Mậu Tuất
+  "Mộc",  // 35: Kỷ Hợi
+  "Thổ",  // 36: Canh Tý
+  "Thổ",  // 37: Tân Sửu
+  "Kim",  // 38: Nhâm Dần
+  "Kim",  // 39: Quý Mão
+  "Hỏa",  // 40: Giáp Thìn
+  "Hỏa",  // 41: Ất Tỵ
+  "Thủy", // 42: Bính Ngọ
+  "Thủy", // 43: Đinh Mùi
+  "Mộc",  // 44: Mậu Thân
+  "Mộc",  // 45: Kỷ Dậu
+  "Thổ",  // 46: Canh Tuất
+  "Thổ",  // 47: Tân Hợi
+  "Thủy", // 48: Nhâm Tý
+  "Thủy", // 49: Quý Sửu
+  "Kim",  // 50: Giáp Dần
+  "Kim",  // 51: Ất Mão
+  "Thủy", // 52: Bính Thìn
+  "Thủy", // 53: Đinh Tỵ
+  "Mộc",  // 54: Mậu Ngọ
+  "Mộc",  // 55: Kỷ Mùi
+  "Thổ",  // 56: Canh Thân
+  "Thổ",  // 57: Tân Dậu
+  "Mộc",  // 58: Nhâm Tuất
+  "Mộc",  // 59: Quý Hợi
+];
+
+/**
+ * Get the Mệnh (Ngũ Hành) for a birth year.
+ * Returns e.g. "Kim", "Mộc", "Thủy", "Hỏa", "Thổ"
+ */
+export function getMenhNguHanh(
+  year: number | null,
+  month: number | null = null,
+  day: number | null = null,
+): string | null {
+  if (!year) return null;
+  let targetYear = year;
+  if (month && day) {
+    try {
+      const solar = Solar.fromYmd(year, parseInt(month.toString()), parseInt(day.toString()));
+      targetYear = solar.getLunar().getYear();
+    } catch (_) {
+      // fallback
+    }
+  }
+  // Base: Giáp Tý = year 4 AD in the traditional 60-cycle
+  // Index = (targetYear - 4) mod 60, clamped to 0..59
+  const idx = ((targetYear - 4) % 60 + 60) % 60;
+  return MENH_NGU_HANH[idx] ?? null;
+}
+
+const MENH_COLOR: Record<string, string> = {
+  Kim: "text-amber-600 bg-amber-50 border-amber-200",
+  Mộc: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  Thủy: "text-blue-700 bg-blue-50 border-blue-200",
+  Hỏa: "text-red-600 bg-red-50 border-red-200",
+  Thổ: "text-yellow-700 bg-yellow-50 border-yellow-200",
+};
+
+export function getMenhColor(menh: string): string {
+  return MENH_COLOR[menh] ?? "text-stone-600 bg-stone-50 border-stone-200";
 }
 
 /**

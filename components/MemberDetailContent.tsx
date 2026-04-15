@@ -6,7 +6,10 @@ import { Person } from "@/types";
 import {
   calculateAge,
   formatDisplayDate,
+  getCanChi,
   getLunarDateString,
+  getMenhColor,
+  getMenhNguHanh,
   getSolarDateString,
   getZodiacAnimal,
   getZodiacSign,
@@ -42,7 +45,6 @@ export default function MemberDetailContent({
   canEdit = false,
   familyId,
 }: MemberDetailContentProps) {
-  // suppress unused warning — available for future use
   void familyId;
 
   const [isNoteExpanded, setIsNoteExpanded] = useState(false);
@@ -289,6 +291,11 @@ export default function MemberDetailContent({
                   isDeceased,
                 );
                 if (!ageData) return null;
+
+                const canChi = getCanChi(person.birth_year, person.birth_month, person.birth_day);
+                const menh = getMenhNguHanh(person.birth_year, person.birth_month, person.birth_day);
+                const menhColor = menh ? getMenhColor(menh) : "";
+
                 return (
                   <motion.div
                     variants={itemVariants}
@@ -306,6 +313,22 @@ export default function MemberDetailContent({
                         {ageData.age}
                         <span className="text-xs sm:text-sm font-bold text-amber-700/60 ml-1.5 uppercase tracking-wider">tuổi</span>
                       </p>
+                      {/* Can Chi + Menh */}
+                      {(canChi || menh) && (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          {canChi && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 tracking-wide shadow-xs">
+                              {canChi}
+                            </span>
+                          )}
+                          {menh && (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border tracking-wide shadow-xs ${menhColor}`}>
+                              <span className="text-[9px] font-black uppercase opacity-70">Mệnh</span>
+                              {menh}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 );

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { toJpeg, toPng } from "html-to-image";
+import { toPng, toJpeg } from "html-to-image";
 import jsPDF from "jspdf";
 import {
   AlertCircle,
@@ -12,6 +12,44 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+
+// Preload Google Font for html-to-image
+async function embedFont(): Promise<string> {
+  try {
+    const fontUrl =
+      "https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap";
+    const css = await fetch(fontUrl).then((r) => r.text());
+    // Extract all @font-face urls and fetch as base64
+    const urlMatches = [...css.matchAll(/url\(([^)]+)\)/g)].map((m) =>
+      m[1].replace(/["']/g, "")
+    );
+    let embeddedCss = css;
+    await Promise.all(
+      urlMatches.map(async (url) => {
+        try {
+          const resp = await fetch(url);
+          const buf = await resp.arrayBuffer();
+          const b64 = btoa(
+            new Uint8Array(buf).reduce(
+              (data, byte) => data + String.fromCharCode(byte),
+              ""
+            )
+          );
+          const mime = url.endsWith(".woff2") ? "font/woff2" : "font/woff";
+          embeddedCss = embeddedCss.replace(
+            url,
+            `data:${mime};base64,${b64}`
+          );
+        } catch (_) {
+          // ignore individual font fetch errors
+        }
+      })
+    );
+    return embeddedCss;
+  } catch (_) {
+    return "";
+  }
+}
 
 export default function ExportButton() {
   const [isExporting, setIsExporting] = useState(false);
@@ -35,18 +73,21 @@ export default function ExportButton() {
       setShowMenu(false);
       setError(null);
 
-      // Add a small delay to allow UI to update (close menu) before capturing
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       const element = document.getElementById("export-container");
       if (!element) throw new Error("Không tìm thấy vùng dữ liệu để xuất.");
 
       element.classList.add("exporting");
 
+      // Embed font CSS to avoid blank text in export
+      const fontEmbedCSS = await embedFont();
+
       const exportOptions = {
         cacheBust: true,
         backgroundColor: "#f5f5f4",
         pixelRatio: 2,
+        fontEmbedCSS,
         width: element.scrollWidth,
         height: element.scrollHeight,
         style: {
@@ -57,8 +98,12 @@ export default function ExportButton() {
         },
       };
 
+      // First call warms up the font cache inside html-to-image
+      await toPng(element, exportOptions);
+      // Second call produces correct output
+      const url = await toPng(element, exportOptions);
+
       if (format === "png") {
-        const url = await toPng(element, exportOptions);
         const a = document.createElement("a");
         a.href = url;
         a.download = `giapha-sodo-${new Date().toISOString().split("T")[0]}.png`;
@@ -70,11 +115,8 @@ export default function ExportButton() {
           ...exportOptions,
           quality: 0.95,
         });
-
-        // Get the actual width and height of the element to calculate PDF dimensions
         const width = element.scrollWidth;
         const height = element.scrollHeight;
-
         const pdf = new jsPDF({
           orientation: width > height ? "landscape" : "portrait",
           unit: "px",
@@ -89,9 +131,7 @@ export default function ExportButton() {
       setTimeout(() => setError(null), 5000);
     } finally {
       const element = document.getElementById("export-container");
-      if (element) {
-        element.classList.remove("exporting");
-      }
+      if (element) element.classList.remove("exporting");
       setIsExporting(false);
     }
   };
@@ -151,9 +191,7 @@ export default function ExportButton() {
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                <span className="text-sm font-medium text-red-800 leading-snug">
-                  {error}
-                </span>
+                <span className="text-sm font-medium text-red-800 leading-snug">{error}</span>
               </div>
               <button
                 onClick={() => setError(null)}
