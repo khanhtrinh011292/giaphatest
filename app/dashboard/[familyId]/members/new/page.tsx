@@ -1,7 +1,8 @@
 import MemberForm from "@/components/MemberForm";
-import { getProfile } from "@/utils/supabase/queries";
+import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ familyId: string }>;
@@ -9,9 +10,36 @@ interface PageProps {
 
 export default async function NewMemberPage({ params }: PageProps) {
   const { familyId } = await params;
-  const profile = await getProfile();
-  const isAdmin = profile?.role === "admin";
-  const canEdit = profile?.role === "admin" || profile?.role === "editor";
+
+  const user = await getUser();
+  if (!user) redirect("/login");
+
+  const supabase = await getSupabase();
+
+  // Lấy family để biết owner
+  const { data: family } = await supabase
+    .from("families")
+    .select("owner_id")
+    .eq("id", familyId)
+    .single();
+
+  if (!family) notFound();
+
+  const isOwner = family.owner_id === user.id;
+
+  let shareRole: string | null = null;
+  if (!isOwner) {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    shareRole = share?.role ?? null;
+  }
+
+  const isAdmin = isOwner || shareRole === "admin";
+  const canEdit = isOwner || shareRole === "admin" || shareRole === "editor";
 
   if (!canEdit) {
     return (
