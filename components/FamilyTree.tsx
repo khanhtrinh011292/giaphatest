@@ -10,7 +10,7 @@ import React, {
 
 import { usePanZoom } from "@/hooks/usePanZoom";
 import { Person, Relationship } from "@/types";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, UserPlus, Users } from "lucide-react";
 import { useDashboard } from "./DashboardContext";
 import FamilyNodeCard from "./FamilyNodeCard";
 import TreeToolbar from "./TreeToolbar";
@@ -48,7 +48,7 @@ export default function FamilyTree({
     DEFAULT_AUTO_COLLAPSE_LEVEL,
   );
 
-  const { showAvatar } = useDashboard();
+  const { showAvatar, setMemberModalId } = useDashboard();
 
   const {
     scale,
@@ -283,10 +283,41 @@ export default function FamilyTree({
     );
   };
 
+  // Empty state — no persons in this family yet
+  if (personsMap.size === 0)
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-10 text-center gap-4">
+        <div className="w-20 h-20 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center">
+          <Users className="size-10" />
+        </div>
+        <div>
+          <p className="text-xl font-bold text-stone-700">Gia phả chưa có thành viên nào</p>
+          <p className="text-stone-400 text-sm mt-1">
+            Hãy thêm người đầu tiên vào cây gia phả của bạn.
+          </p>
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setMemberModalId("new")}
+            className="btn-primary flex items-center gap-2"
+          >
+            <UserPlus className="size-4" />
+            Thêm thành viên đầu tiên
+          </button>
+        )}
+      </div>
+    );
+
+  // Root not found but persons exist
   if (roots.length === 0)
     return (
-      <div className="text-center p-10 text-stone-500">
-        Kh\u00f4ng t\u00ecm th\u1ea5y d\u1eef li\u1ec7u.
+      <div className="flex-1 flex flex-col items-center justify-center p-10 text-center gap-3">
+        <div className="w-16 h-16 bg-stone-100 text-stone-400 rounded-full flex items-center justify-center">
+          <Users className="size-8" />
+        </div>
+        <p className="text-stone-500 font-medium">
+          Không tìm thấy gốc cây phù hợp. Hãy kiểm tra lại quan hệ.
+        </p>
       </div>
     );
 

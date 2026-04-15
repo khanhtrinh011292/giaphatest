@@ -17,6 +17,7 @@ const SUPERADMIN_EMAIL = "khanhtrinh011292@gmail.com";
 interface AdminUserListProps {
   initialUsers: AdminUserData[];
   currentUserId: string;
+  currentUserEmail: string;
 }
 
 interface Notification {
@@ -27,6 +28,7 @@ interface Notification {
 export default function AdminUserList({
   initialUsers,
   currentUserId,
+  currentUserEmail,
 }: AdminUserListProps) {
   const [users, setUsers] = useState<AdminUserData[]>(initialUsers);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -34,6 +36,9 @@ export default function AdminUserList({
   const [isCreating, setIsCreating] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+
+  // Only Superadmin can add new admins
+  const isSuperAdminSelf = currentUserEmail === SUPERADMIN_EMAIL;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -125,7 +130,6 @@ export default function AdminUserList({
     }
     setIsCreating(true);
     const formData = new FormData(e.currentTarget);
-    // Force admin role
     formData.set("role", "admin");
     formData.set("is_active", "true");
     try {
@@ -185,13 +189,15 @@ export default function AdminUserList({
         )}
       </AnimatePresence>
 
-      {/* Toolbar */}
-      <div className="flex justify-end">
-        <button onClick={() => setIsCreateModalOpen(true)} className="btn-primary flex items-center gap-2">
-          <UserPlus className="size-4" />
-          Thêm Admin
-        </button>
-      </div>
+      {/* Toolbar — only Superadmin sees "Thêm Admin" button */}
+      {isSuperAdminSelf && (
+        <div className="flex justify-end">
+          <button onClick={() => setIsCreateModalOpen(true)} className="btn-primary flex items-center gap-2">
+            <UserPlus className="size-4" />
+            Thêm Admin
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white/60 backdrop-blur-xl rounded-2xl shadow-sm border border-stone-200/60 overflow-hidden">
@@ -293,8 +299,8 @@ export default function AdminUserList({
         </div>
       </div>
 
-      {/* Add Admin Modal */}
-      {isCreateModalOpen && (
+      {/* Add Admin Modal — only visible to Superadmin */}
+      {isSuperAdminSelf && isCreateModalOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm">
           <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-stone-200/60 w-full max-w-md overflow-hidden">
             <div className="px-6 py-5 border-b border-stone-100/80 flex justify-between items-center bg-stone-50/50">

@@ -1,8 +1,9 @@
 import AdminUserList from "@/components/AdminUserList";
 import { AdminUserData } from "@/types";
-import { getProfile, getSupabase } from "@/utils/supabase/queries";
+import { getProfile, getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
-import { Users, BookOpen, Network, GitMerge } from "lucide-react";
+import { Users, BookOpen, Network, GitMerge, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default async function AdminUsersPage() {
   const profile = await getProfile();
@@ -12,13 +13,13 @@ export default async function AdminUsersPage() {
     redirect("/dashboard");
   }
 
+  const user = await getUser();
   const supabase = await getSupabase();
 
   const { data: users, error } = await supabase.rpc("get_admin_users");
   if (error) console.error("Error fetching users:", error);
   const typedUsers = (users as AdminUserData[]) || [];
 
-  // Stats
   const [{ count: totalFamilies }, { count: totalPersons }, { count: totalRelationships }] =
     await Promise.all([
       supabase.from("families").select("*", { count: "exact", head: true }).then(r => r),
@@ -65,12 +66,21 @@ export default async function AdminUsersPage() {
     <main className="flex-1 overflow-auto bg-stone-50/50 flex flex-col pt-8 relative w-full">
       <div className="max-w-7xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 w-full relative z-10">
 
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="title">Quản lý Website</h1>
-          <p className="text-stone-500 mt-2 text-sm sm:text-base">
-            Tổng quan hệ thống và quản lý tài khoản. Chỉ Admin mới xem được trang này.
-          </p>
+        {/* Header with back button */}
+        <div className="mb-8 flex items-start gap-4">
+          <Link
+            href="/dashboard"
+            className="btn mt-1 shrink-0"
+          >
+            <ArrowLeft className="size-4" />
+            <span className="hidden sm:inline">Quay lại</span>
+          </Link>
+          <div>
+            <h1 className="title">Quản lý Website</h1>
+            <p className="text-stone-500 mt-2 text-sm sm:text-base">
+              Tổng quan hệ thống và quản lý tài khoản. Chỉ Admin mới xem được trang này.
+            </p>
+          </div>
         </div>
 
         {/* Stats */}
@@ -105,7 +115,11 @@ export default async function AdminUsersPage() {
           <h2 className="text-lg font-bold text-stone-800">Danh sách tài khoản</h2>
           <p className="text-stone-500 text-sm mt-1">Quản lý vai trò và trạng thái người dùng.</p>
         </div>
-        <AdminUserList initialUsers={typedUsers} currentUserId={profile.id} />
+        <AdminUserList
+          initialUsers={typedUsers}
+          currentUserId={profile.id}
+          currentUserEmail={user?.email ?? ""}
+        />
       </div>
     </main>
   );

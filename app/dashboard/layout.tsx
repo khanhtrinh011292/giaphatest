@@ -25,16 +25,12 @@ export default async function DashboardLayout({
       <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
         <header className="sticky top-0 z-30 bg-white/80 border-b border-stone-200 shadow-sm transition-all duration-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="group flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-800 group-hover:text-amber-700 transition-colors">
-                  {config.siteName}
-                </h1>
-              </Link>
-            </div>
-            <div className="w-32">
-              <LogoutButton />
-            </div>
+            <Link href="/" className="group flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-800 group-hover:text-amber-700 transition-colors">
+                {config.siteName}
+              </h1>
+            </Link>
+            <LogoutButton />
           </div>
         </header>
         <main className="flex-1 flex flex-col items-center justify-center p-4">
@@ -45,17 +41,30 @@ export default async function DashboardLayout({
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-serif font-bold text-stone-800 mb-2">
+            <h2 className="text-2xl font-serif font-bold text-stone-800 mb-3">
               Tài khoản chờ duyệt
             </h2>
-            <p className="text-stone-600">
-              Tài khoản của bạn đã được đăng ký thành công. Tuy nhiên, hệ thống
-              yêu cầu Quản trị viên kích hoạt tài khoản của bạn trước khi bạn có
-              thể xem các thông tin gia đình.
+            <p className="text-stone-600 leading-relaxed">
+              Tài khoản của bạn đã được đăng ký thành công. Tuy nhiên, hệ thống yêu cầu
+              Quản trị viên kích hoạt tài khoản của bạn trước khi bạn có thể xem các
+              thông tin gia đình.
             </p>
             <p className="text-stone-500 text-sm mt-4 italic">
               Vui lòng liên hệ lại với người quản trị dòng họ để được cấp quyền sớm nhất.
             </p>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="btn"
+              >
+                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Kiểm tra lại
+              </button>
+              <LogoutButton />
+            </div>
           </div>
         </main>
         <Footer className="mt-auto bg-white border-t border-stone-200" />
@@ -63,9 +72,6 @@ export default async function DashboardLayout({
     );
   }
 
-  // Không render DashboardHeader ở đây —
-  // trang /dashboard (page.tsx) tự có header riêng,
-  // trang /dashboard/[familyId] đã có header trong [familyId]/layout.tsx
   return (
     <UserProvider user={user} profile={profile}>
       {children}
