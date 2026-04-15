@@ -6,6 +6,68 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import LogoutButton from "./LogoutButton";
 import { useUser } from "./UserProvider";
+import { useFamilyContext } from "./FamilyContextProvider";
+
+function FamilyMenuItems({ familyId, isAdmin, isOwner, onClose }: { familyId: string; isAdmin: boolean; isOwner: boolean; onClose: () => void }) {
+  const canShowData = isOwner;
+  return (
+    <>
+      <div className="px-4 py-1.5 mt-1">
+        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Gia phả hiện tại</p>
+      </div>
+
+      <Link href={`/dashboard/${familyId}/members`} onClick={onClose}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors">
+        <Network className="size-4" />
+        Cây gia phả
+      </Link>
+
+      <Link href={`/dashboard/${familyId}/kinship`} onClick={onClose}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-blue-700 hover:bg-blue-50 transition-colors">
+        <GitMerge className="size-4" />
+        Tra cứu danh xưng
+      </Link>
+
+      <Link href={`/dashboard/${familyId}/stats`} onClick={onClose}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-purple-700 hover:bg-purple-50 transition-colors">
+        <BarChart2 className="size-4" />
+        Thống kê
+      </Link>
+
+      <Link href={`/dashboard/${familyId}/share`} onClick={onClose}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-green-700 hover:bg-green-50 transition-colors">
+        <Share2 className="size-4" />
+        Chia sẻ gia phả
+      </Link>
+
+      {isAdmin && (
+        <Link href={`/dashboard/${familyId}/lineage`} onClick={onClose}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors">
+          <Sparkles className="size-4" />
+          Thứ tự gia phả
+        </Link>
+      )}
+
+      {canShowData && (
+        <Link href={`/dashboard/${familyId}/data`} onClick={onClose}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-teal-700 hover:bg-teal-50 transition-colors">
+          <Database className="size-4" />
+          Sao lưu & Phục hồi
+        </Link>
+      )}
+    </>
+  );
+}
+
+function FamilyMenuSafe({ familyId, isSystemAdmin, onClose }: { familyId: string; isSystemAdmin: boolean; onClose: () => void }) {
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const ctx = useFamilyContext();
+    return <FamilyMenuItems familyId={familyId} isAdmin={isSystemAdmin || ctx.canAdmin} isOwner={ctx.isOwner} onClose={onClose} />;
+  } catch {
+    return null;
+  }
+}
 
 export default function HeaderMenu({ familyId }: { familyId?: string }) {
   const { user, isAdmin, isSuperAdmin } = useUser();
@@ -23,10 +85,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const familyUrl = (path: string) =>
-    familyId ? `/dashboard/${familyId}${path}` : `/dashboard`;
-
-  // Quản lý Website chỉ dành cho SuperAdmin và Admin
+  // Quản lý Website chỉ dành cho Admin và SuperAdmin hệ thống
   const canManageWebsite = isAdmin;
 
   return (
@@ -74,43 +133,11 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
               </Link>
 
               {familyId && (
-                <>
-                  <div className="px-4 py-1.5 mt-1">
-                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Gia phả hiện tại</p>
-                  </div>
-
-                  <Link href={familyUrl("/members")} onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors">
-                    <Network className="size-4" />
-                    Cây gia phả
-                  </Link>
-
-                  <Link href={familyUrl("/kinship")} onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-blue-700 hover:bg-blue-50 transition-colors">
-                    <GitMerge className="size-4" />
-                    Tra cứu danh xưng
-                  </Link>
-
-                  <Link href={familyUrl("/stats")} onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-purple-700 hover:bg-purple-50 transition-colors">
-                    <BarChart2 className="size-4" />
-                    Thống kê
-                  </Link>
-
-                  <Link href={familyUrl("/share")} onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-green-700 hover:bg-green-50 transition-colors">
-                    <Share2 className="size-4" />
-                    Chia sẻ gia phả
-                  </Link>
-
-                  {isAdmin && (
-                    <Link href={familyUrl("/lineage")} onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors">
-                      <Sparkles className="size-4" />
-                      Thứ tự gia phả
-                    </Link>
-                  )}
-                </>
+                <FamilyMenuSafe
+                  familyId={familyId}
+                  isSystemAdmin={isAdmin}
+                  onClose={() => setIsOpen(false)}
+                />
               )}
 
               {canManageWebsite && (
@@ -126,14 +153,6 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                     <Globe className="size-4" />
                     Quản lý Website
                   </Link>
-
-                  {familyId && (
-                    <Link href={familyUrl("/data")} onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-teal-700 hover:bg-teal-50 transition-colors">
-                      <Database className="size-4" />
-                      Sao lưu & Phục hồi
-                    </Link>
-                  )}
                 </>
               )}
 

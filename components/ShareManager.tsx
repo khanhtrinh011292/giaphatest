@@ -38,14 +38,14 @@ type ShareLink = {
   created_at: string;
 };
 
-const ROLE_OPTIONS: { value: ShareRole; label: string; desc: string }[] = [
+// Chỉ Xem và Chỉnh sửa — đã loại bỏ Quản trị
+const ROLE_OPTIONS: { value: "viewer" | "editor"; label: string; desc: string }[] = [
   { value: "viewer", label: "👁️ Chỉ xem",   desc: "Xem sơ đồ và danh sách, không chỉnh sửa" },
   { value: "editor", label: "✏️ Chỉnh sửa", desc: "Thêm, sửa, xóa thành viên và quan hệ" },
-  { value: "admin",  label: "⚙️ Quản trị",  desc: "Toàn quyền, bao gồm quản lý chia sẻ" },
 ];
 
 function roleLabel(role: ShareRole) {
-  return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? role;
+  return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === "admin" ? "⚙️ Quản trị" : role);
 }
 
 // ── Tab: Chia sẻ qua Email ────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ function EmailShareTab({
   const router = useRouter();
   const [shares, setShares] = useState<ShareRow[]>(initialShares);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<ShareRole>("viewer");
+  const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [isPending, startTransition] = useTransition();
 
   function handleShare() {
@@ -78,7 +78,7 @@ function EmailShareTab({
     });
   }
 
-  function handleRoleChange(shareId: string, newRole: ShareRole) {
+  function handleRoleChange(shareId: string, newRole: "viewer" | "editor") {
     startTransition(async () => {
       const res = await updateShareRole(shareId, newRole);
       if ("error" in res) {
@@ -129,7 +129,7 @@ function EmailShareTab({
             <label className="block text-xs font-medium text-stone-500 mb-1">Quyền</label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value as ShareRole)}
+              onChange={(e) => setRole(e.target.value as "viewer" | "editor")}
               className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               disabled={isPending}
             >
@@ -175,8 +175,8 @@ function EmailShareTab({
                   </p>
                 </div>
                 <select
-                  value={s.role}
-                  onChange={(e) => handleRoleChange(s.id, e.target.value as ShareRole)}
+                  value={s.role === "admin" ? "editor" : s.role}
+                  onChange={(e) => handleRoleChange(s.id, e.target.value as "viewer" | "editor")}
                   disabled={isPending}
                   className="border border-stone-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-60"
                 >
@@ -255,7 +255,7 @@ function ShareLinkTab({
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const roleLabel = (r: string) => r === "editor" ? "✏️ Chỉnh sửa" : "👁️ Chỉ xem";
+  const roleLabelFn = (r: string) => r === "editor" ? "✏️ Chỉnh sửa" : "👁️ Chỉ xem";
 
   return (
     <div className="space-y-6">
@@ -317,7 +317,7 @@ function ShareLinkTab({
                   </p>
                 </div>
                 <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">
-                  {roleLabel(link.role)}
+                  {roleLabelFn(link.role)}
                 </span>
                 <button
                   onClick={() => copyToClipboard(link.token)}

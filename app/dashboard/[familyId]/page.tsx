@@ -2,7 +2,8 @@ import { DashboardProvider } from "@/components/DashboardContext";
 import DashboardViews from "@/components/DashboardViews";
 import MemberDetailModal from "@/components/MemberDetailModal";
 import ViewToggle, { ViewMode } from "@/components/ViewToggle";
-import { getPersons, getProfile, getRelationships } from "@/utils/supabase/queries";
+import { getPersons, getRelationships, getSupabase, getUser } from "@/utils/supabase/queries";
+import { redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ familyId: string }>;
@@ -15,8 +16,32 @@ export default async function FamilyDashboardPage({ params, searchParams }: Page
   const initialView = view as ViewMode | undefined;
   const initialShowAvatar = avatar !== "hide";
 
-  const profile = await getProfile();
-  const canEdit = profile?.role === "admin" || profile?.role === "editor";
+  const user = await getUser();
+  if (!user) redirect("/login");
+
+  const supabase = await getSupabase();
+
+  // Determine canEdit from family ownership or share role
+  const { data: family } = await supabase
+    .from("families")
+    .select("owner_id")
+    .eq("id", familyId)
+    .single();
+
+  let canEdit = false;
+  if (family) {
+    if (family.owner_id === user.id) {
+      canEdit = true;
+    } else {
+      const { data: share } = await supabase
+        .from("family_shares")
+        .select("role")
+        .eq("family_id", familyId)
+        .eq("shared_with", user.id)
+        .single();
+      canEdit = share?.role === "editor" || share?.role === "admin";
+    }
+  }
 
   const [persons, relationships] = await Promise.all([
     getPersons(familyId),

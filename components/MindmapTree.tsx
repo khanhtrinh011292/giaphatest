@@ -86,7 +86,7 @@ export default function MindmapTree({
           <Share2 className="size-8 text-stone-300" />
         </div>
         <p className="text-stone-500 font-medium tracking-wide">
-          Gia ph\u1ea3 tr\u1ed1ng
+          Gia phả trống
         </p>
       </div>
     );
@@ -117,7 +117,7 @@ export default function MindmapTree({
 
       <div
         id="export-container"
-        className="font-sans min-w-max pb-20 p-10 px-0 sm:px-8"
+        className="min-w-max pb-20 p-10 px-0 sm:px-8"
       >
         {roots.map((root, index) => (
           <MindmapNode
