@@ -1,67 +1,50 @@
 import config from "@/app/config";
-import HeaderMenu from "@/components/HeaderMenu";
+import DashboardNav from "@/components/DashboardNav";
+import HeaderUserMenu from "@/components/HeaderUserMenu";
 import Image from "next/image";
 import Link from "next/link";
+import { getSupabase } from "@/utils/supabase/queries";
 
-export default function DashboardHeader({ familyId }: { familyId?: string }) {
+export default async function DashboardHeader({ familyId }: { familyId?: string }) {
+  let familyName = "Gia phả";
+  if (familyId) {
+    try {
+      const supabase = await getSupabase();
+      const { data } = await supabase.from("families").select("name").eq("id", familyId).single();
+      if (data?.name) familyName = data.name;
+    } catch {}
+  }
+
   return (
-    <header className="sticky top-0 z-30 bg-white/80 border-b border-stone-200 shadow-sm transition-all duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Left: Logo + Family link */}
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          <Link
-            href="/dashboard"
-            className="group flex items-center gap-2 sm:gap-3 shrink-0"
-          >
-            <div className="relative size-8 rounded-lg overflow-hidden shrink-0 border border-stone-200/50 transition-all">
-              <Image
-                src="/icon.png"
-                alt="Logo"
-                fill
-                className="object-contain"
-                sizes="32px"
-              />
-            </div>
-            <h1 className="hidden sm:block text-xl sm:text-2xl font-serif font-bold text-stone-800 group-hover:text-amber-700 transition-colors">
-              {config.siteName}
-            </h1>
-          </Link>
+    <header className="sticky top-0 z-30 bg-white border-b border-stone-200 shadow-sm">
+      {/* Top bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+        {/* Left: Logo */}
+        <Link href="/dashboard" className="group flex items-center gap-2.5 shrink-0">
+          <div className="relative size-7 rounded-lg overflow-hidden border border-stone-200/60">
+            <Image src="/icon.png" alt="Logo" fill className="object-contain" sizes="28px" />
+          </div>
+          <span className="hidden sm:block font-serif font-bold text-stone-800 text-lg group-hover:text-amber-700 transition-colors">
+            {config.siteName}
+          </span>
+        </Link>
 
-          {/* Family breadcrumb */}
-          {familyId && (
-            <>
-              <span className="text-stone-300 font-light hidden sm:block">/</span>
-              <Link
-                href={`/dashboard/${familyId}`}
-                className="text-sm font-medium text-stone-600 hover:text-amber-700 transition-colors truncate max-w-[140px] sm:max-w-xs"
-              >
-                <FamilyName familyId={familyId} />
-              </Link>
-            </>
-          )}
-        </div>
+        {/* Center: Family name breadcrumb */}
+        {familyId && (
+          <div className="flex items-center gap-2 min-w-0 flex-1 justify-center sm:justify-start">
+            <span className="text-stone-300 hidden sm:block">/</span>
+            <span className="text-sm font-semibold text-stone-700 truncate max-w-[160px] sm:max-w-xs">
+              {familyName}
+            </span>
+          </div>
+        )}
 
-        {/* Right: Menu only */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <HeaderMenu familyId={familyId} />
-        </div>
+        {/* Right: User avatar menu */}
+        <HeaderUserMenu familyId={familyId} />
       </div>
+
+      {/* Bottom nav tabs (only when inside a family) */}
+      {familyId && <DashboardNav familyId={familyId} />}
     </header>
   );
-}
-
-// Server component nhỏ để resolve tên family
-async function FamilyName({ familyId }: { familyId: string }) {
-  try {
-    const { getSupabase } = await import("@/utils/supabase/queries");
-    const supabase = await getSupabase();
-    const { data } = await supabase
-      .from("families")
-      .select("name")
-      .eq("id", familyId)
-      .single();
-    return <>{data?.name ?? "Gia phả"}</>;
-  } catch {
-    return <>Gia phả</>;
-  }
 }
