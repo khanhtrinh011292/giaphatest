@@ -17,7 +17,7 @@ export default function ViewToggle() {
   ] as const;
 
   return (
-    <div className="flex items-center justify-center gap-2 mt-4 mb-2">
+    <div className="flex flex-col items-center gap-2 mt-4 mb-2">
       {/* View tabs */}
       <div className="flex bg-stone-200/50 p-1.5 rounded-full shadow-inner w-fit relative border border-stone-200/60 backdrop-blur-sm z-10">
         {tabs.map((tab) => {
@@ -46,25 +46,25 @@ export default function ViewToggle() {
         })}
       </div>
 
-      {/* Suggestions toggle button */}
+      {/* Suggestions toggle — own row */}
       <button
         onClick={() => setShowSuggestions(!showSuggestions)}
-        title={showSuggestions ? "Tắt gợi ý quan hệ" : "Bật gợi ý quan hệ thông minh"}
-        className={`relative flex items-center gap-1.5 px-3 py-2 sm:py-2.5 rounded-full border text-sm font-semibold transition-all duration-200 z-10 ${
+        className={`relative flex items-center gap-2 px-5 py-2 rounded-full border text-sm font-semibold transition-all duration-200 z-10 ${
           showSuggestions
             ? "bg-amber-100 border-amber-300 text-amber-700 shadow-sm shadow-amber-100"
-            : "bg-stone-100 border-stone-200/60 text-stone-400 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200"
+            : "bg-stone-100 border-stone-200/60 text-stone-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200"
         }`}
       >
-        <Lightbulb className="size-4 sm:size-4" />
-        <span className="hidden sm:block">{showSuggestions ? "Gợi ý: Bật" : "Gợi ý"}</span>
+        <Lightbulb className="size-4 shrink-0" />
+        <span>Gợi ý quan hệ thông minh</span>
         {showSuggestions && (
-          <motion.div
-            layoutId="suggestionGlow"
-            className="absolute inset-0 rounded-full bg-amber-200/30"
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+          <motion.span
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="ml-1 text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full"
+          >
+            Đang bật
+          </motion.span>
         )}
       </button>
     </div>
