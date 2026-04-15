@@ -1,6 +1,6 @@
 import DeleteMemberButton from "@/components/DeleteMemberButton";
 import MemberDetailContent from "@/components/MemberDetailContent";
-import { getProfile, getSupabase } from "@/utils/supabase/queries";
+import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -11,11 +11,37 @@ interface PageProps {
 
 export default async function MemberDetailPage({ params }: PageProps) {
   const { familyId, id } = await params;
-  const profile = await getProfile();
-  const isAdmin = profile?.role === "admin";
-  const canEdit = profile?.role === "admin" || profile?.role === "editor";
 
+  const user = await getUser();
   const supabase = await getSupabase();
+
+  // Lấy family để biết owner
+  const { data: family } = await supabase
+    .from("families")
+    .select("owner_id")
+    .eq("id", familyId)
+    .single();
+
+  if (!family) notFound();
+
+  const isOwner = family.owner_id === user?.id;
+
+  // Lấy family-level role của user hiện tại
+  let shareRole: string | null = null;
+  if (!isOwner && user) {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    shareRole = share?.role ?? null;
+  }
+
+  // isAdmin: owner hoặc family-admin (có quyền xem private data + xóa)
+  const isAdmin = isOwner || shareRole === "admin";
+  // canEdit: owner, admin, hoặc editor
+  const canEdit = isOwner || shareRole === "admin" || shareRole === "editor";
 
   const { data: person, error } = await supabase
     .from("persons")

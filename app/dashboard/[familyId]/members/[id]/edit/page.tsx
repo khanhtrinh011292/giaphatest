@@ -1,8 +1,8 @@
 import MemberForm from "@/components/MemberForm";
-import { getProfile, getSupabase } from "@/utils/supabase/queries";
+import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ familyId: string; id: string }>;
@@ -10,25 +10,57 @@ interface PageProps {
 
 export default async function EditMemberPage({ params }: PageProps) {
   const { familyId, id } = await params;
-  const profile = await getProfile();
-  const isAdmin = profile?.role === "admin";
-  const isEditor = profile?.role === "editor";
 
-  if (!isAdmin && !isEditor) {
+  const user = await getUser();
+  if (!user) redirect("/login");
+
+  const supabase = await getSupabase();
+
+  // Lấy family để biết owner
+  const { data: family } = await supabase
+    .from("families")
+    .select("owner_id")
+    .eq("id", familyId)
+    .single();
+
+  if (!family) notFound();
+
+  const isOwner = family.owner_id === user.id;
+
+  let shareRole: string | null = null;
+  if (!isOwner) {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    shareRole = share?.role ?? null;
+  }
+
+  const isAdmin = isOwner || shareRole === "admin";
+  const canEdit = isOwner || shareRole === "admin" || shareRole === "editor";
+
+  if (!canEdit) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-stone-800">Truy cập bị từ chối</h1>
-          <p className="text-stone-600 mt-2">Bạn không có quyền chỉnh sửa thành viên.</p>
-          <Link href={`/dashboard/${familyId}`} className="mt-4 inline-block text-amber-600 hover:underline">
+          <h1 className="text-2xl font-bold text-stone-800">
+            Truy cập bị từ chối
+          </h1>
+          <p className="text-stone-600 mt-2">
+            Bạn không có quyền chỉnh sửa thành viên.
+          </p>
+          <Link
+            href={`/dashboard/${familyId}`}
+            className="mt-4 inline-block text-amber-600 hover:underline"
+          >
             ← Quay lại
           </Link>
         </div>
       </div>
     );
   }
-
-  const supabase = await getSupabase();
 
   const { data: person, error } = await supabase
     .from("persons")
@@ -64,7 +96,12 @@ export default async function EditMemberPage({ params }: PageProps) {
         <h1 className="title">Chỉnh Sửa Thành Viên</h1>
       </div>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 w-full flex-1">
-        <MemberForm initialData={initialData} isEditing={true} isAdmin={isAdmin} familyId={familyId} />
+        <MemberForm
+          initialData={initialData}
+          isEditing={true}
+          isAdmin={isAdmin}
+          familyId={familyId}
+        />
       </main>
     </div>
   );
