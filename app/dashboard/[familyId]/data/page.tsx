@@ -1,5 +1,5 @@
 import DataImportExport from "@/components/DataImportExport";
-import { getProfile } from "@/utils/supabase/queries";
+import { getFamilyAccess } from "@/app/actions/data";
 import { redirect } from "next/navigation";
 
 interface PageProps {
@@ -8,9 +8,16 @@ interface PageProps {
 
 export default async function DataManagementPage({ params }: PageProps) {
   const { familyId } = await params;
-  const profile = await getProfile();
 
-  if (profile?.role !== "admin") {
+  // Dùng getFamilyAccess để check quyền — nhất quán với action layer
+  // Cả owner lẫn shared-admin đều được vào
+  const access = await getFamilyAccess(familyId);
+
+  if ("error" in access) {
+    redirect(`/dashboard/${familyId}`);
+  }
+
+  if (!access.canImport) {
     redirect(`/dashboard/${familyId}`);
   }
 
@@ -21,7 +28,7 @@ export default async function DataManagementPage({ params }: PageProps) {
           <h1 className="title">Sao lưu &amp; Phục hồi</h1>
           <p className="text-stone-500 mt-2 text-sm sm:text-base max-w-2xl">
             Quản lý dữ liệu an toàn. Tải xuống bản sao lưu hoặc phục hồi từ
-            file đã lưu. Tính năng này chỉ dành cho Quản trị viên.
+            file đã lưu. Tính năng này chỉ dành cho Owner và Admin của gia phả.
           </p>
         </div>
         <DataImportExport familyId={familyId} />

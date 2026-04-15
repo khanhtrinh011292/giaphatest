@@ -65,6 +65,21 @@ interface BackupPayload {
   custom_events?: CustomEventExport[];
 }
 
+// ─── Sanitized insert types (có thêm family_id, bỏ generated fields) ─────────
+
+type PersonInsert = Omit<PersonExport, "created_at" | "updated_at"> & {
+  family_id: string;
+};
+
+type RelationshipInsert = Omit<
+  RelationshipExport,
+  "id" | "created_at" | "updated_at"
+> & { family_id: string };
+
+type CustomEventInsert = Omit<CustomEventExport, "created_by"> & {
+  family_id: string;
+};
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function getFamilyAccess(familyId: string) {
@@ -104,10 +119,7 @@ async function getFamilyAccess(familyId: string) {
   };
 }
 
-function sanitizePerson(
-  familyId: string,
-  p: PersonExport,
-): Omit<PersonExport, "created_at" | "updated_at"> & { family_id: string } {
+function sanitizePerson(familyId: string, p: PersonExport): PersonInsert {
   return {
     id: p.id,
     family_id: familyId,
@@ -135,9 +147,7 @@ function sanitizePerson(
 function sanitizeRelationship(
   familyId: string,
   r: RelationshipExport,
-): Omit<RelationshipExport, "id" | "created_at" | "updated_at"> & {
-  family_id: string;
-} {
+): RelationshipInsert {
   return {
     family_id: familyId,
     type: r.type,
@@ -150,7 +160,7 @@ function sanitizeRelationship(
 function sanitizeCustomEvent(
   familyId: string,
   e: CustomEventExport,
-): Omit<CustomEventExport, "created_by"> & { family_id: string } {
+): CustomEventInsert {
   return {
     id: e.id,
     family_id: familyId,
@@ -194,16 +204,23 @@ export async function exportData(
       error: "Lỗi tải dữ liệu relationships: " + relationshipsError.message,
     };
 
-  const { data: allPrivateDetails, error: privateDetailsError } = await supabase
-    .from("person_details_private")
-    .select("person_id, phone_number, occupation, current_residence");
+  // FIX: filter theo family_id thay vì lấy tất cả private details
+  const personIds = (allPersons ?? []).map((p) => p.id);
+  let allPrivateDetails: PersonDetailsPrivateExport[] = [];
+  if (personIds.length > 0) {
+    const { data, error: privateDetailsError } = await supabase
+      .from("person_details_private")
+      .select("person_id, phone_number, occupation, current_residence")
+      .in("person_id", personIds);
 
-  if (privateDetailsError)
-    return {
-      error:
-        "Lỗi tải dữ liệu person_details_private: " +
-        privateDetailsError.message,
-    };
+    if (privateDetailsError)
+      return {
+        error:
+          "Lỗi tải dữ liệu person_details_private: " +
+          privateDetailsError.message,
+      };
+    allPrivateDetails = (data ?? []) as PersonDetailsPrivateExport[];
+  }
 
   const { data: allCustomEvents, error: customEventsError } = await supabase
     .from("custom_events")
@@ -218,8 +235,7 @@ export async function exportData(
 
   let exportPersons = (allPersons ?? []) as PersonExport[];
   let exportRels = (allRels ?? []) as RelationshipExport[];
-  let exportPrivateDetails = (allPrivateDetails ??
-    []) as PersonDetailsPrivateExport[];
+  let exportPrivateDetails = allPrivateDetails;
   const exportCustomEvents = (allCustomEvents ?? []) as CustomEventExport[];
 
   if (exportRootId && exportPersons.some((p) => p.id === exportRootId)) {
@@ -314,7 +330,7 @@ export async function importData(
         "Lỗi tải danh sách thành viên hiện tại: " + currentPersonsError.message,
     };
 
-  const personIds = (currentPersons ?? []).map((p) => p.id);
+  const existingPersonIds = (currentPersons ?? []).map((p) => p.id);
   const CHUNK = 200;
 
   // 2. Xoá custom_events
@@ -334,11 +350,11 @@ export async function importData(
     return { error: "Lỗi khi xoá relationships cũ: " + delRelError.message };
 
   // 4. Xoá person_details_private
-  if (personIds.length > 0) {
+  if (existingPersonIds.length > 0) {
     const { error: delPrivateError } = await supabase
       .from("person_details_private")
       .delete()
-      .in("person_id", personIds);
+      .in("person_id", existingPersonIds);
     if (delPrivateError)
       return {
         error:
@@ -357,7 +373,9 @@ export async function importData(
   // 6. Insert persons
   const persons = importPayload.persons.map((p) => sanitizePerson(familyId, p));
   for (let i = 0; i < persons.length; i += CHUNK) {
-    const { error } = await supabase.from("persons").insert(persons.slice(i, i + CHUNK));
+    const { error } = await supabase
+      .from("persons")
+      .insert(persons.slice(i, i + CHUNK));
     if (error)
       return {
         error: `Lỗi khi import persons (chunk ${i / CHUNK + 1}): ${error.message}`,
