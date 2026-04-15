@@ -1,29 +1,27 @@
 import { DashboardProvider } from "@/components/DashboardContext";
 import DashboardViews from "@/components/DashboardViews";
 import MemberDetailModal from "@/components/MemberDetailModal";
-import RelationshipSuggestions from "@/components/RelationshipSuggestions";
+import SuggestionsPanel from "@/components/SuggestionsPanel";
 import ViewToggle, { ViewMode } from "@/components/ViewToggle";
 import { getPersons, getRelationships, getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ familyId: string }>;
-  searchParams: Promise<{ view?: string; rootId?: string; avatar?: string; suggestions?: string }>;
+  searchParams: Promise<{ view?: string; rootId?: string; avatar?: string }>;
 }
 
 export default async function FamilyDashboardPage({ params, searchParams }: PageProps) {
   const { familyId } = await params;
-  const { view, rootId, avatar, suggestions } = await searchParams;
+  const { view, rootId, avatar } = await searchParams;
   const initialView = view as ViewMode | undefined;
   const initialShowAvatar = avatar !== "hide";
-  const showSuggestions = suggestions === "1";
 
   const user = await getUser();
   if (!user) redirect("/login");
 
   const supabase = await getSupabase();
 
-  // Determine canEdit from family ownership or share role
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -70,14 +68,7 @@ export default async function FamilyDashboardPage({ params, searchParams }: Page
       initialShowAvatar={initialShowAvatar}
     >
       <ViewToggle />
-      {showSuggestions && (
-        <div className="max-w-3xl mx-auto w-full px-4 pt-4">
-          <RelationshipSuggestions
-            persons={persons}
-            relationships={relationships}
-          />
-        </div>
-      )}
+      <SuggestionsPanel persons={persons} relationships={relationships} />
       <DashboardViews
         persons={persons}
         relationships={relationships}

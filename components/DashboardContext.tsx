@@ -15,6 +15,8 @@ interface DashboardState {
   setView: (view: ViewMode) => void;
   rootId: string | null;
   setRootId: (id: string | null) => void;
+  showSuggestions: boolean;
+  setShowSuggestions: (show: boolean) => void;
 }
 
 export const DashboardContext = createContext<DashboardState | undefined>(
@@ -34,7 +36,6 @@ export function DashboardProvider({
 }) {
   const searchParams = useSearchParams();
 
-  // Initialize state directly from URL to avoid flash of wrong view
   const [memberModalId, setMemberModalId] = useState<string | null>(
     () => searchParams.get("memberModalId") ?? null,
   );
@@ -48,8 +49,8 @@ export function DashboardProvider({
   const [rootId, setRootIdState] = useState<string | null>(
     () => initialRootId ?? searchParams.get("rootId") ?? null,
   );
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Initialize from URL and listen to Next.js route changes
   useEffect(() => {
     const syncFromURL = () => {
       if (typeof window === "undefined") return;
@@ -72,7 +73,6 @@ export function DashboardProvider({
     syncFromURL();
   }, [searchParams]);
 
-  // Sync to URL silently
   const updateModalId = (id: string | null) => {
     setMemberModalId(id);
     if (typeof window !== "undefined") {
@@ -134,6 +134,8 @@ export function DashboardProvider({
         setView,
         rootId,
         setRootId,
+        showSuggestions,
+        setShowSuggestions,
       }}
     >
       {children}
@@ -143,8 +145,6 @@ export function DashboardProvider({
 
 export function useDashboard(): DashboardState {
   const context = useContext(DashboardContext);
-  // Return a safe no-op fallback when used outside DashboardProvider
-  // (e.g., on the /dashboard/members/[id] standalone page)
   if (context === undefined) {
     return {
       memberModalId: null,
@@ -157,6 +157,8 @@ export function useDashboard(): DashboardState {
       setView: () => {},
       rootId: null,
       setRootId: () => {},
+      showSuggestions: false,
+      setShowSuggestions: () => {},
     };
   }
   return context;
