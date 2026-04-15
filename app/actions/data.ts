@@ -1,16 +1,11 @@
 "use server";
 
 import { Relationship } from "@/types";
-import { getIsAdmin, getSupabase } from "@/utils/supabase/queries";
+import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { revalidatePath } from "next/cache";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-/**
- * Payload shape cho file backup JSON.
- * Các field DB-managed (created_at, updated_at) được giữ để tham khảo
- * nhưng sẽ bị loại bỏ khi import lại.
- */
 interface PersonExport {
   id: string;
   full_name: string;
@@ -31,7 +26,6 @@ interface PersonExport {
   other_names: string | null;
   avatar_url: string | null;
   note: string | null;
-  // DB-managed fields (kept in export for traceability, stripped on import)
   created_at?: string;
   updated_at?: string;
 }
@@ -73,12 +67,50 @@ interface BackupPayload {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Các field được phép insert vào bảng persons (loại bỏ created_at/updated_at)
+async function getFamilyAccess(familyId: string) {
+  const user = await getUser();
+  if (!user) return { error: "Vui lòng đăng nhập." as const };
+
+  const supabase = await getSupabase();
+
+  const { data: family, error: familyError } = await supabase
+    .from("families")
+    .select("id, owner_id")
+    .eq("id", familyId)
+    .single();
+
+  if (familyError || !family)
+    return { error: "Không tìm thấy gia phả." as const };
+
+  if (family.owner_id === user.id)
+    return { supabase, user, family, canRead: true, canImport: true };
+
+  const { data: share } = await supabase
+    .from("family_shares")
+    .select("role")
+    .eq("family_id", familyId)
+    .eq("shared_with", user.id)
+    .single();
+
+  if (!share)
+    return { error: "Bạn không có quyền truy cập gia phả này." as const };
+
+  return {
+    supabase,
+    user,
+    family,
+    canRead: true,
+    canImport: share.role === "admin",
+  };
+}
+
 function sanitizePerson(
+  familyId: string,
   p: PersonExport,
-): Omit<PersonExport, "created_at" | "updated_at"> {
+): Omit<PersonExport, "created_at" | "updated_at"> & { family_id: string } {
   return {
     id: p.id,
+    family_id: familyId,
     full_name: p.full_name,
     gender: p.gender,
     birth_year: p.birth_year ?? null,
@@ -101,9 +133,13 @@ function sanitizePerson(
 }
 
 function sanitizeRelationship(
+  familyId: string,
   r: RelationshipExport,
-): Omit<RelationshipExport, "id" | "created_at" | "updated_at"> {
+): Omit<RelationshipExport, "id" | "created_at" | "updated_at"> & {
+  family_id: string;
+} {
   return {
+    family_id: familyId,
     type: r.type,
     person_a: r.person_a,
     person_b: r.person_b,
@@ -112,10 +148,12 @@ function sanitizeRelationship(
 }
 
 function sanitizeCustomEvent(
+  familyId: string,
   e: CustomEventExport,
-): Omit<CustomEventExport, "created_by"> {
+): Omit<CustomEventExport, "created_by"> & { family_id: string } {
   return {
     id: e.id,
+    family_id: familyId,
     name: e.name,
     content: e.content ?? null,
     event_date: e.event_date,
@@ -126,22 +164,20 @@ function sanitizeCustomEvent(
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 export async function exportData(
+  familyId: string,
   exportRootId?: string,
 ): Promise<BackupPayload | { error: string }> {
-  const isAdmin = await getIsAdmin();
-  if (!isAdmin) {
-    return { error: "Từ chối truy cập. Chỉ admin mới có quyền này." };
-  }
+  const access = await getFamilyAccess(familyId);
+  if ("error" in access) return { error: access.error };
 
-  const supabase = await getSupabase();
+  const { supabase } = access;
 
-  // Fetch ALL persons and relationships first to perform traversal in memory.
-  // This is safe since typical family trees are < 10,000 nodes, easily fitting in memory.
   const { data: allPersons, error: personsError } = await supabase
     .from("persons")
     .select(
       "id, full_name, gender, birth_year, birth_month, birth_day, death_year, death_month, death_day, death_lunar_year, death_lunar_month, death_lunar_day, is_deceased, is_in_law, birth_order, generation, other_names, avatar_url, note, created_at, updated_at",
     )
+    .eq("family_id", familyId)
     .order("created_at", { ascending: true });
 
   if (personsError)
@@ -150,6 +186,7 @@ export async function exportData(
   const { data: allRels, error: relationshipsError } = await supabase
     .from("relationships")
     .select("id, type, person_a, person_b, note, created_at, updated_at")
+    .eq("family_id", familyId)
     .order("created_at", { ascending: true });
 
   if (relationshipsError)
@@ -171,6 +208,7 @@ export async function exportData(
   const { data: allCustomEvents, error: customEventsError } = await supabase
     .from("custom_events")
     .select("id, name, content, event_date, location, created_by")
+    .eq("family_id", familyId)
     .order("event_date", { ascending: true });
 
   if (customEventsError)
@@ -184,11 +222,9 @@ export async function exportData(
     []) as PersonDetailsPrivateExport[];
   const exportCustomEvents = (allCustomEvents ?? []) as CustomEventExport[];
 
-  // If a root person is selected, filter the export to only their subtree
   if (exportRootId && exportPersons.some((p) => p.id === exportRootId)) {
     const includedPersonIds = new Set<string>([exportRootId]);
 
-    // 1. Traverse biological and adopted children recursively
     const findDescendants = (parentId: string) => {
       exportRels
         .filter(
@@ -205,8 +241,7 @@ export async function exportData(
     };
     findDescendants(exportRootId);
 
-    // 2. Add spouses for everyone in the tree so far
-    const descendantsArray = Array.from(includedPersonIds); // snapshot current members
+    const descendantsArray = Array.from(includedPersonIds);
     descendantsArray.forEach((personId) => {
       exportRels
         .filter(
@@ -220,7 +255,6 @@ export async function exportData(
         });
     });
 
-    // 3. Filter the payload
     exportPersons = exportPersons.filter((p) => includedPersonIds.has(p.id));
     exportRels = exportRels.filter(
       (r) =>
@@ -229,11 +263,10 @@ export async function exportData(
     exportPrivateDetails = exportPrivateDetails.filter((d) =>
       includedPersonIds.has(d.person_id),
     );
-    // custom_events are not person-scoped, so export all when subtree is selected
   }
 
   return {
-    version: 3, // v3: adds death_lunar_*, person_details_private, relationship note, custom_events
+    version: 4,
     timestamp: new Date().toISOString(),
     persons: exportPersons,
     relationships: exportRels,
@@ -245,6 +278,7 @@ export async function exportData(
 // ─── Import ───────────────────────────────────────────────────────────────────
 
 export async function importData(
+  familyId: string,
   importPayload:
     | BackupPayload
     | {
@@ -254,101 +288,104 @@ export async function importData(
         custom_events?: CustomEventExport[];
       },
 ) {
-  const isAdmin = await getIsAdmin();
-  if (!isAdmin) {
-    return { error: "Từ chối truy cập. Chỉ admin mới có quyền này." };
-  }
+  const access = await getFamilyAccess(familyId);
+  if ("error" in access) return { error: access.error };
 
-  const supabase = await getSupabase();
+  if (!access.canImport)
+    return { error: "Bạn không có quyền import dữ liệu cho gia phả này." };
 
-  if (!importPayload?.persons || !importPayload?.relationships) {
+  const { supabase } = access;
+
+  if (!importPayload?.persons || !importPayload?.relationships)
     return { error: "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại file JSON." };
-  }
 
-  if (importPayload.persons.length === 0) {
+  if (importPayload.persons.length === 0)
+    return { error: "File backup trống — không có thành viên nào để phục hồi." };
+
+  // 1. Lấy danh sách person IDs hiện tại để xoá private details
+  const { data: currentPersons, error: currentPersonsError } = await supabase
+    .from("persons")
+    .select("id")
+    .eq("family_id", familyId);
+
+  if (currentPersonsError)
     return {
-      error: "File backup trống — không có thành viên nào để phục hồi.",
+      error:
+        "Lỗi tải danh sách thành viên hiện tại: " + currentPersonsError.message,
     };
-  }
 
-  // 1. Xoá custom_events
+  const personIds = (currentPersons ?? []).map((p) => p.id);
+  const CHUNK = 200;
+
+  // 2. Xoá custom_events
   const { error: delEventsError } = await supabase
     .from("custom_events")
     .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
-
+    .eq("family_id", familyId);
   if (delEventsError)
-    return {
-      error: "Lỗi khi xoá custom_events cũ: " + delEventsError.message,
-    };
+    return { error: "Lỗi khi xoá custom_events cũ: " + delEventsError.message };
 
-  // 2. Xoá relationships (FK constraint)
+  // 3. Xoá relationships
   const { error: delRelError } = await supabase
     .from("relationships")
     .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
-
+    .eq("family_id", familyId);
   if (delRelError)
     return { error: "Lỗi khi xoá relationships cũ: " + delRelError.message };
 
-  // 3. Xoá person_details_private (FK constraint on persons)
-  const { error: delPrivateError } = await supabase
-    .from("person_details_private")
-    .delete()
-    .neq("person_id", "00000000-0000-0000-0000-000000000000");
+  // 4. Xoá person_details_private
+  if (personIds.length > 0) {
+    const { error: delPrivateError } = await supabase
+      .from("person_details_private")
+      .delete()
+      .in("person_id", personIds);
+    if (delPrivateError)
+      return {
+        error:
+          "Lỗi khi xoá person_details_private cũ: " + delPrivateError.message,
+      };
+  }
 
-  if (delPrivateError)
-    return {
-      error:
-        "Lỗi khi xoá person_details_private cũ: " + delPrivateError.message,
-    };
-
-  // 4. Xoá persons
+  // 5. Xoá persons
   const { error: delPersonsError } = await supabase
     .from("persons")
     .delete()
-    .neq("id", "00000000-0000-0000-0000-000000000000");
-
+    .eq("family_id", familyId);
   if (delPersonsError)
     return { error: "Lỗi khi xoá persons cũ: " + delPersonsError.message };
 
-  // 5. Insert persons (sanitized — chỉ giữ các field schema hiện tại)
-  const CHUNK = 200;
-  const persons = importPayload.persons.map(sanitizePerson);
-
+  // 6. Insert persons
+  const persons = importPayload.persons.map((p) => sanitizePerson(familyId, p));
   for (let i = 0; i < persons.length; i += CHUNK) {
-    const chunk = persons.slice(i, i + CHUNK);
-    const { error } = await supabase.from("persons").insert(chunk);
+    const { error } = await supabase.from("persons").insert(persons.slice(i, i + CHUNK));
     if (error)
       return {
         error: `Lỗi khi import persons (chunk ${i / CHUNK + 1}): ${error.message}`,
       };
   }
 
-  // 6. Insert relationships (stripped of id/created_at to avoid conflicts)
-  // Filter out self-relationships to avoid "no_self_relationship" constraint violation
+  // 7. Insert relationships
   const relationships = importPayload.relationships
     .filter((r) => r.person_a !== r.person_b)
-    .map(sanitizeRelationship);
-
+    .map((r) => sanitizeRelationship(familyId, r));
   for (let i = 0; i < relationships.length; i += CHUNK) {
-    const chunk = relationships.slice(i, i + CHUNK);
-    const { error } = await supabase.from("relationships").insert(chunk);
+    const { error } = await supabase
+      .from("relationships")
+      .insert(relationships.slice(i, i + CHUNK));
     if (error)
       return {
         error: `Lỗi khi import relationships (chunk ${i / CHUNK + 1}): ${error.message}`,
       };
   }
 
-  // 7. Insert person_details_private (if present in payload)
+  // 8. Insert person_details_private
   let privateDetailsCount = 0;
   const privateDetails = importPayload.person_details_private ?? [];
   if (privateDetails.length > 0) {
     for (let i = 0; i < privateDetails.length; i += CHUNK) {
-      const chunk = privateDetails.slice(i, i + CHUNK);
       const { error } = await supabase
         .from("person_details_private")
-        .insert(chunk);
+        .insert(privateDetails.slice(i, i + CHUNK));
       if (error)
         return {
           error: `Lỗi khi import person_details_private (chunk ${i / CHUNK + 1}): ${error.message}`,
@@ -357,15 +394,16 @@ export async function importData(
     privateDetailsCount = privateDetails.length;
   }
 
-  // 8. Insert custom_events (if present in payload, strip created_by)
+  // 9. Insert custom_events
   let customEventsCount = 0;
-  const customEvents = (importPayload.custom_events ?? []).map(
-    sanitizeCustomEvent,
+  const customEvents = (importPayload.custom_events ?? []).map((e) =>
+    sanitizeCustomEvent(familyId, e),
   );
   if (customEvents.length > 0) {
     for (let i = 0; i < customEvents.length; i += CHUNK) {
-      const chunk = customEvents.slice(i, i + CHUNK);
-      const { error } = await supabase.from("custom_events").insert(chunk);
+      const { error } = await supabase
+        .from("custom_events")
+        .insert(customEvents.slice(i, i + CHUNK));
       if (error)
         return {
           error: `Lỗi khi import custom_events (chunk ${i / CHUNK + 1}): ${error.message}`,
@@ -375,8 +413,11 @@ export async function importData(
   }
 
   revalidatePath("/dashboard");
-  revalidatePath("/dashboard/members");
-  revalidatePath("/dashboard/data");
+  revalidatePath(`/dashboard/${familyId}`);
+  revalidatePath(`/dashboard/${familyId}/members`);
+  revalidatePath(`/dashboard/${familyId}/events`);
+  revalidatePath(`/dashboard/${familyId}/data`);
+  revalidatePath(`/dashboard/${familyId}/stats`);
 
   return {
     success: true,

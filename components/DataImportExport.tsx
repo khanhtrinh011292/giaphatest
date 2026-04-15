@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import PersonSelector from "./PersonSelector";
 
 interface DataImportExportProps {
-  familyId?: string;
+  familyId: string;
 }
 
 export default function DataImportExport({ familyId }: DataImportExportProps) {
@@ -34,6 +34,7 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
         const { data } = await supabase
           .from("persons")
           .select("id, full_name, birth_year, gender, avatar_url, generation")
+          .eq("family_id", familyId)
           .order("birth_year", { ascending: true, nullsFirst: false });
         if (data) setPersons(data as Person[]);
       } catch (err) {
@@ -41,13 +42,13 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
       }
     }
     fetchPersons();
-  }, []);
+  }, [familyId]);
 
   const handleExport = async (format: "json" | "gedcom" | "csv") => {
     try {
       setIsExporting(true);
       const rootParam = exportRootId || undefined;
-      const data = await exportData(rootParam);
+      const data = await exportData(familyId, rootParam);
 
       if ("error" in data) {
         setExportError(data.error);
@@ -160,7 +161,7 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
         );
       }
 
-      const result = await importData({
+      const result = await importData(familyId, {
         persons: payload.persons,
         relationships: payload.relationships,
         person_details_private: payload.person_details_private,
