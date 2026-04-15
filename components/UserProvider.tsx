@@ -8,6 +8,7 @@ import { createContext, useContext, ReactNode, useMemo } from "react";
 interface UserState {
   user: User | null;
   profile: Profile | null;
+  isSuperAdmin: boolean;
   isAdmin: boolean;
   isEditor: boolean;
   supabase: SupabaseClient;
@@ -25,11 +26,12 @@ export function UserProvider({
   profile: Profile | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
-  const isAdmin = profile?.role === "admin";
+  const isSuperAdmin = profile?.role === "superadmin";
+  const isAdmin = profile?.role === "admin" || isSuperAdmin;
   const isEditor = profile?.role === "editor" || isAdmin;
 
   return (
-    <UserContext.Provider value={{ user, profile, isAdmin, isEditor, supabase }}>
+    <UserContext.Provider value={{ user, profile, isSuperAdmin, isAdmin, isEditor, supabase }}>
       {children}
     </UserContext.Provider>
   );

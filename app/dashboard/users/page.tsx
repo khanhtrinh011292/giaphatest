@@ -7,9 +7,9 @@ import Link from "next/link";
 
 export default async function AdminUsersPage() {
   const profile = await getProfile();
-  const isAdmin = profile?.role === "admin";
+  const canAccess = profile?.role === "admin" || profile?.role === "superadmin";
 
-  if (!isAdmin) {
+  if (!canAccess) {
     redirect("/dashboard");
   }
 
@@ -78,7 +78,7 @@ export default async function AdminUsersPage() {
           <div>
             <h1 className="title">Quản lý Website</h1>
             <p className="text-stone-500 mt-2 text-sm sm:text-base">
-              Tổng quan hệ thống và quản lý tài khoản. Chỉ Admin mới xem được trang này.
+              Tổng quan hệ thống và quản lý tài khoản. Chỉ Admin và SuperAdmin mới xem được trang này.
             </p>
           </div>
         </div>

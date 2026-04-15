@@ -8,7 +8,7 @@ import LogoutButton from "./LogoutButton";
 import { useUser } from "./UserProvider";
 
 export default function HeaderMenu({ familyId }: { familyId?: string }) {
-  const { user, isAdmin } = useUser();
+  const { user, isAdmin, isSuperAdmin } = useUser();
   const userEmail = user?.email;
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -25,6 +25,9 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
 
   const familyUrl = (path: string) =>
     familyId ? `/dashboard/${familyId}${path}` : `/dashboard`;
+
+  // Quản lý Website chỉ dành cho SuperAdmin và Admin
+  const canManageWebsite = isAdmin;
 
   return (
     <div className="relative" ref={menuRef}>
@@ -58,6 +61,9 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
             <div className="px-4 py-3 border-b border-stone-100 bg-stone-50/50">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-0.5">Tài khoản</p>
               <p className="text-sm font-medium text-stone-900 truncate">{userEmail}</p>
+              {isSuperAdmin && (
+                <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Super Admin</span>
+              )}
             </div>
 
             <div className="py-1">
@@ -107,10 +113,12 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                 </>
               )}
 
-              {isAdmin && (
+              {canManageWebsite && (
                 <>
                   <div className="px-4 py-2 mt-1">
-                    <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Quản trị viên</p>
+                    <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">
+                      {isSuperAdmin ? "Super Admin" : "Quản trị viên"}
+                    </p>
                   </div>
 
                   <Link href="/dashboard/users" onClick={() => setIsOpen(false)}
