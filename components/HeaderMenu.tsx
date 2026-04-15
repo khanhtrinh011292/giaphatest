@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { BarChart2, ChevronDown, Database, GitMerge, Home, Info, Network, Share2, Sparkles, UserCircle, Users } from "lucide-react";
+import { BarChart2, ChevronDown, Database, GitMerge, Globe, Home, Info, Network, Share2, Sparkles, UserCircle, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import LogoutButton from "./LogoutButton";
@@ -55,20 +55,14 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-stone-200/60 py-2 z-50 overflow-hidden"
           >
-            {/* Account info */}
             <div className="px-4 py-3 border-b border-stone-100 bg-stone-50/50">
-              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
-                Tài khoản
-              </p>
+              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-0.5">Tài khoản</p>
               <p className="text-sm font-medium text-stone-900 truncate">{userEmail}</p>
             </div>
 
             <div className="py-1">
-              <Link
-                href="/dashboard"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-              >
+              <Link href="/dashboard" onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors">
                 <Home className="size-4" />
                 Danh sách Gia phả
               </Link>
@@ -76,53 +70,36 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
               {familyId && (
                 <>
                   <div className="px-4 py-1.5 mt-1">
-                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                      Gia phả hiện tại
-                    </p>
+                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Gia phả hiện tại</p>
                   </div>
 
-                  <Link
-                    href={familyUrl("/members")}
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-                  >
+                  <Link href={familyUrl("/members")} onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors">
                     <Network className="size-4" />
                     Cây gia phả
                   </Link>
 
-                  <Link
-                    href={familyUrl("/kinship")}
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                  >
+                  <Link href={familyUrl("/kinship")} onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-blue-700 hover:bg-blue-50 transition-colors">
                     <GitMerge className="size-4" />
                     Tra cứu danh xưng
                   </Link>
 
-                  <Link
-                    href={familyUrl("/stats")}
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-purple-700 hover:bg-purple-50 transition-colors"
-                  >
+                  <Link href={familyUrl("/stats")} onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-purple-700 hover:bg-purple-50 transition-colors">
                     <BarChart2 className="size-4" />
                     Thống kê
                   </Link>
 
-                  <Link
-                    href={familyUrl("/share")}
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-green-700 hover:bg-green-50 transition-colors"
-                  >
+                  <Link href={familyUrl("/share")} onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-green-700 hover:bg-green-50 transition-colors">
                     <Share2 className="size-4" />
                     Chia sẻ gia phả
                   </Link>
 
                   {isAdmin && (
-                    <Link
-                      href={familyUrl("/lineage")}
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors"
-                    >
+                    <Link href={familyUrl("/lineage")} onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors">
                       <Sparkles className="size-4" />
                       Thứ tự gia phả
                     </Link>
@@ -133,26 +110,18 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
               {isAdmin && (
                 <>
                   <div className="px-4 py-2 mt-1">
-                    <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">
-                      Quản trị viên
-                    </p>
+                    <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Quản trị viên</p>
                   </div>
 
-                  <Link
-                    href="/dashboard/users"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-rose-700 hover:bg-rose-50 transition-colors"
-                  >
-                    <Users className="size-4" />
-                    Quản lý Người dùng
+                  <Link href="/dashboard/users" onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-rose-700 hover:bg-rose-50 transition-colors">
+                    <Globe className="size-4" />
+                    Quản lý Website
                   </Link>
 
                   {familyId && (
-                    <Link
-                      href={familyUrl("/data")}
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                    >
+                    <Link href={familyUrl("/data")} onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-teal-700 hover:bg-teal-50 transition-colors">
                       <Database className="size-4" />
                       Sao lưu & Phục hồi
                     </Link>
@@ -162,11 +131,8 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
 
               <div className="h-px bg-stone-100 my-1 mx-4" />
 
-              <Link
-                href="/about"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-rose-700 hover:bg-rose-50 transition-colors"
-              >
+              <Link href="/about" onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-rose-700 hover:bg-rose-50 transition-colors">
                 <Info className="size-4" />
                 Giới thiệu
               </Link>
