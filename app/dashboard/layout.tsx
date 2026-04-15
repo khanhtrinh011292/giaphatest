@@ -1,5 +1,4 @@
 import config from "@/app/config";
-import DashboardHeader from "@/components/DashboardHeader";
 import Footer from "@/components/Footer";
 import LogoutButton from "@/components/LogoutButton";
 import { UserProvider } from "@/components/UserProvider";
@@ -41,18 +40,9 @@ export default async function DashboardLayout({
         <main className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full text-center bg-white p-6 sm:p-8 rounded-xl sm:rounded-2xl shadow-sm border border-stone-200">
             <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="size-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
+              <svg className="size-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
             <h2 className="text-2xl font-serif font-bold text-stone-800 mb-2">
@@ -64,8 +54,7 @@ export default async function DashboardLayout({
               thể xem các thông tin gia đình.
             </p>
             <p className="text-stone-500 text-sm mt-4 italic">
-              Vui lòng liên hệ lại với người quản trị dòng họ để được cấp quyền
-              sớm nhất.
+              Vui lòng liên hệ lại với người quản trị dòng họ để được cấp quyền sớm nhất.
             </p>
           </div>
         </main>
@@ -74,16 +63,12 @@ export default async function DashboardLayout({
     );
   }
 
+  // Không render DashboardHeader ở đây —
+  // trang /dashboard (page.tsx) tự có header riêng,
+  // trang /dashboard/[familyId] đã có header trong [familyId]/layout.tsx
   return (
     <UserProvider user={user} profile={profile}>
-      <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
-        <DashboardHeader />
-        {children}
-        <Footer
-          className="mt-auto bg-white border-t border-stone-200"
-          showDisclaimer={true}
-        />
-      </div>
+      {children}
     </UserProvider>
   );
 }
