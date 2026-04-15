@@ -32,6 +32,7 @@ interface MemberDetailContentProps {
   privateData: Record<string, unknown> | null;
   isAdmin: boolean;
   canEdit?: boolean;
+  familyId?: string;
 }
 
 export default function MemberDetailContent({
@@ -39,7 +40,11 @@ export default function MemberDetailContent({
   privateData,
   isAdmin,
   canEdit = false,
+  familyId,
 }: MemberDetailContentProps) {
+  // suppress unused warning — available for future use
+  void familyId;
+
   const [isNoteExpanded, setIsNoteExpanded] = useState(false);
   const [relStats, setRelStats] = useState<{
     biologicalChildren: number;
@@ -106,7 +111,6 @@ export default function MemberDetailContent({
     >
       {/* Header / Cover */}
       <div className="h-28 sm:h-36 bg-linear-to-r from-stone-200 via-stone-100 to-stone-200 relative shrink-0">
-        {/* Decorative blur in cover */}
         <div
           className={`absolute right-0 -top-20 w-64 h-64 rounded-full blur-[60px] opacity-40 ${person.gender === "male" ? "bg-sky-300" : person.gender === "female" ? "bg-rose-300" : "bg-stone-300"}`}
         />
@@ -139,7 +143,6 @@ export default function MemberDetailContent({
               <DefaultAvatar gender={person.gender} size={128} />
             )}
           </div>
-          {/* Gender Indicator Icon */}
           <div
             className={`absolute bottom-1 right-1 sm:bottom-2 sm:right-2 size-6 sm:size-8 rounded-full ring-2 sm:ring-4 ring-white shadow-md flex items-center justify-center ${
               person.gender === "male"
@@ -219,28 +222,16 @@ export default function MemberDetailContent({
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>
-                    <h3 className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">
-                      Sinh
-                    </h3>
+                    <h3 className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Sinh</h3>
                   </div>
                   <div className="flex items-center gap-1">
                     {person.birth_year &&
-                      getZodiacAnimal(
-                        person.birth_year,
-                        person.birth_month,
-                        person.birth_day,
-                      ) && (
+                      getZodiacAnimal(person.birth_year, person.birth_month, person.birth_day) && (
                         <span className="text-[10px] font-sans font-bold text-rose-700 bg-rose-50 border border-rose-200/60 rounded-md px-1.5 py-0.5 whitespace-nowrap shadow-xs tracking-wider">
-                          Tuổi{" "}
-                          {getZodiacAnimal(
-                            person.birth_year,
-                            person.birth_month,
-                            person.birth_day,
-                          )}
+                          Tuổi{" "}{getZodiacAnimal(person.birth_year, person.birth_month, person.birth_day)}
                         </span>
                       )}
-                    {person.birth_day &&
-                      person.birth_month &&
+                    {person.birth_day && person.birth_month &&
                       getZodiacSign(person.birth_day, person.birth_month) && (
                         <span className="text-[10px] font-sans font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 rounded-md px-1.5 py-0.5 whitespace-nowrap shadow-xs tracking-wider">
                           {getZodiacSign(person.birth_day, person.birth_month)}
@@ -250,24 +241,12 @@ export default function MemberDetailContent({
                 </div>
                 <div className="space-y-1.5 pl-4 border-l-2 border-stone-100">
                   <p className="text-stone-800 font-semibold text-sm sm:text-base">
-                    {formatDisplayDate(
-                      person.birth_year,
-                      person.birth_month,
-                      person.birth_day,
-                    )}
+                    {formatDisplayDate(person.birth_year, person.birth_month, person.birth_day)}
                   </p>
-                  {(person.birth_year ||
-                    person.birth_month ||
-                    person.birth_day) && (
+                  {(person.birth_year || person.birth_month || person.birth_day) && (
                     <p className="text-sm font-medium text-stone-500 flex items-center gap-1.5">
-                      <span className="text-[10px] border border-stone-200/60 bg-stone-50/80 rounded px-1.5 py-0.5">
-                        Âm lịch
-                      </span>
-                      {getLunarDateString(
-                        person.birth_year,
-                        person.birth_month,
-                        person.birth_day,
-                      ) || "Chưa rõ"}
+                      <span className="text-[10px] border border-stone-200/60 bg-stone-50/80 rounded px-1.5 py-0.5">Âm lịch</span>
+                      {getLunarDateString(person.birth_year, person.birth_month, person.birth_day) || "Chưa rõ"}
                     </p>
                   )}
                 </div>
@@ -281,49 +260,21 @@ export default function MemberDetailContent({
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="size-2 rounded-full bg-stone-400 shadow-[0_0_8px_rgba(156,163,175,0.5)]"></span>
-                    <h3 className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">
-                      Mất
-                    </h3>
+                    <h3 className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Mất</h3>
                   </div>
                   <div className="space-y-1.5 pl-4 border-l-2 border-stone-100">
                     <p className="text-stone-800 font-semibold text-sm sm:text-base">
-                      {person.death_day ||
-                      person.death_month ||
-                      person.death_year
-                        ? formatDisplayDate(
-                            person.death_year,
-                            person.death_month,
-                            person.death_day,
-                          )
-                        : getSolarDateString(
-                            person.death_lunar_year,
-                            person.death_lunar_month,
-                            person.death_lunar_day,
-                          ) || "Chưa rõ"}
+                      {person.death_day || person.death_month || person.death_year
+                        ? formatDisplayDate(person.death_year, person.death_month, person.death_day)
+                        : getSolarDateString(person.death_lunar_year, person.death_lunar_month, person.death_lunar_day) || "Chưa rõ"}
                     </p>
-                    {(person.death_year ||
-                      person.death_month ||
-                      person.death_day ||
-                      person.death_lunar_year ||
-                      person.death_lunar_month ||
-                      person.death_lunar_day) && (
+                    {(person.death_year || person.death_month || person.death_day ||
+                      person.death_lunar_year || person.death_lunar_month || person.death_lunar_day) && (
                       <p className="text-sm font-medium text-stone-500 flex items-center gap-1.5">
-                        <span className="text-[10px] border border-stone-200/60 bg-stone-50/80 rounded px-1.5 py-0.5">
-                          Âm lịch
-                        </span>
-                        {person.death_lunar_day ||
-                        person.death_lunar_month ||
-                        person.death_lunar_year
-                          ? formatDisplayDate(
-                              person.death_lunar_year,
-                              person.death_lunar_month,
-                              person.death_lunar_day,
-                            )
-                          : getLunarDateString(
-                              person.death_year,
-                              person.death_month,
-                              person.death_day,
-                            ) || "Chưa rõ"}
+                        <span className="text-[10px] border border-stone-200/60 bg-stone-50/80 rounded px-1.5 py-0.5">Âm lịch</span>
+                        {person.death_lunar_day || person.death_lunar_month || person.death_lunar_year
+                          ? formatDisplayDate(person.death_lunar_year, person.death_lunar_month, person.death_lunar_day)
+                          : getLunarDateString(person.death_year, person.death_month, person.death_day) || "Chưa rõ"}
                       </p>
                     )}
                   </div>
@@ -333,12 +284,8 @@ export default function MemberDetailContent({
               {/* Age Card */}
               {(() => {
                 const ageData = calculateAge(
-                  person.birth_year,
-                  person.birth_month,
-                  person.birth_day,
-                  person.death_year,
-                  person.death_month,
-                  person.death_day,
+                  person.birth_year, person.birth_month, person.birth_day,
+                  person.death_year, person.death_month, person.death_day,
                   isDeceased,
                 );
                 if (!ageData) return null;
@@ -349,23 +296,15 @@ export default function MemberDetailContent({
                   >
                     <Leaf className="absolute -bottom-4 -right-4 w-20 h-20 text-amber-500/10 rotate-12" />
                     <div className="flex items-center gap-2 mb-1.5 relative z-10">
-                      <span
-                        className={`size-2 rounded-full ${ageData.isDeceased ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]" : "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"}`}
-                      ></span>
+                      <span className={`size-2 rounded-full ${ageData.isDeceased ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]" : "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"}`} />
                       <p className="text-[11px] font-bold text-amber-800/60 uppercase tracking-widest">
-                        {ageData.isDeceased
-                          ? ageData.age >= 60
-                            ? "Hưởng thọ"
-                            : "Hưởng dương"
-                          : "Tuổi"}
+                        {ageData.isDeceased ? (ageData.age >= 60 ? "Hưởng thọ" : "Hưởng dương") : "Tuổi"}
                       </p>
                     </div>
                     <div className="pl-4 relative z-10">
                       <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-linear-to-br from-amber-700 to-amber-900 tracking-tight">
                         {ageData.age}
-                        <span className="text-xs sm:text-sm font-bold text-amber-700/60 ml-1.5 uppercase tracking-wider">
-                          tuổi
-                        </span>
+                        <span className="text-xs sm:text-sm font-bold text-amber-700/60 ml-1.5 uppercase tracking-wider">tuổi</span>
                       </p>
                     </div>
                   </motion.div>
@@ -374,10 +313,8 @@ export default function MemberDetailContent({
 
               {/* Children Stats Card */}
               {relStats &&
-                (relStats.biologicalChildren > 0 ||
-                  relStats.sonInLaw > 0 ||
-                  relStats.daughterInLaw > 0 ||
-                  relStats.paternalGrandchildren > 0 ||
+                (relStats.biologicalChildren > 0 || relStats.sonInLaw > 0 ||
+                  relStats.daughterInLaw > 0 || relStats.paternalGrandchildren > 0 ||
                   relStats.maternalGrandchildren > 0) && (
                   <motion.div
                     layout
@@ -385,13 +322,10 @@ export default function MemberDetailContent({
                     className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-stone-200/60 shadow-sm transition-all hover:shadow-md hover:border-amber-200/60 sm:col-span-2 md:col-span-3"
                   >
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="size-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]"></span>
-                      <h3 className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">
-                        Hậu duệ
-                      </h3>
+                      <span className="size-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]" />
+                      <h3 className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Hậu duệ</h3>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {/* Biological Children */}
                       {relStats.biologicalChildren > 0 && (
                         <div className="bg-stone-50/80 rounded-xl p-3 border border-stone-100 flex flex-col justify-between group hover:bg-stone-100/80 transition-colors">
                           <div className="flex items-center gap-3 mb-2">
@@ -399,102 +333,69 @@ export default function MemberDetailContent({
                               <Users className="size-4" />
                             </div>
                             <div className="flex-1">
-                              <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest leading-tight">
-                                Con ruột
-                              </p>
-                              <p className="text-xl font-black text-stone-700 leading-none mt-0.5">
-                                {relStats.biologicalChildren}
-                              </p>
+                              <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest leading-tight">Con ruột</p>
+                              <p className="text-xl font-black text-stone-700 leading-none mt-0.5">{relStats.biologicalChildren}</p>
                             </div>
                           </div>
-
                           <div className="flex flex-wrap gap-1.5 mt-auto pt-1 border-t border-stone-200/50">
                             {relStats.maleBiologicalChildren > 0 && (
                               <span className="text-[11px] font-medium text-sky-700 bg-sky-100/50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                <MaleIcon className="size-3 shrink-0" />{" "}
-                                {relStats.maleBiologicalChildren}
+                                <MaleIcon className="size-3 shrink-0" />{" "}{relStats.maleBiologicalChildren}
                               </span>
                             )}
                             {relStats.femaleBiologicalChildren > 0 && (
                               <span className="text-[11px] font-medium text-rose-700 bg-rose-100/50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                <FemaleIcon className="size-3 shrink-0" />{" "}
-                                {relStats.femaleBiologicalChildren}
+                                <FemaleIcon className="size-3 shrink-0" />{" "}{relStats.femaleBiologicalChildren}
                               </span>
                             )}
                           </div>
                         </div>
                       )}
 
-                      {/* In-Laws */}
-                      {(relStats.sonInLaw > 0 ||
-                        relStats.daughterInLaw > 0) && (
+                      {(relStats.sonInLaw > 0 || relStats.daughterInLaw > 0) && (
                         <div className="bg-stone-50/80 rounded-xl p-3 border border-stone-100 flex flex-col group hover:bg-stone-100/80 transition-colors">
                           <div className="flex items-center gap-3 mb-2">
                             <div className="p-2 bg-stone-200/50 text-stone-600 rounded-lg group-hover:bg-stone-200 transition-colors">
                               <UserPlus className="size-4" />
                             </div>
-                            <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">
-                              Dâu / Rể
-                            </p>
+                            <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Dâu / Rể</p>
                           </div>
-
                           <div className="space-y-1 mt-auto w-full pt-1 border-t border-stone-200/50">
                             {relStats.daughterInLaw > 0 && (
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-stone-500 font-medium">
-                                  Con dâu
-                                </span>
-                                <span className="font-bold text-stone-700">
-                                  {relStats.daughterInLaw}
-                                </span>
+                                <span className="text-stone-500 font-medium">Con dâu</span>
+                                <span className="font-bold text-stone-700">{relStats.daughterInLaw}</span>
                               </div>
                             )}
                             {relStats.sonInLaw > 0 && (
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-stone-500 font-medium">
-                                  Con rể
-                                </span>
-                                <span className="font-bold text-stone-700">
-                                  {relStats.sonInLaw}
-                                </span>
+                                <span className="text-stone-500 font-medium">Con rể</span>
+                                <span className="font-bold text-stone-700">{relStats.sonInLaw}</span>
                               </div>
                             )}
                           </div>
                         </div>
                       )}
 
-                      {/* Grandchildren */}
-                      {(relStats.paternalGrandchildren > 0 ||
-                        relStats.maternalGrandchildren > 0) && (
+                      {(relStats.paternalGrandchildren > 0 || relStats.maternalGrandchildren > 0) && (
                         <div className="bg-stone-50/80 rounded-xl p-3 border border-stone-100 flex flex-col group hover:bg-stone-100/80 transition-colors">
                           <div className="flex items-center gap-3 mb-2">
                             <div className="p-2 bg-emerald-100/50 text-emerald-600 rounded-lg group-hover:bg-emerald-100 transition-colors">
                               <Baby className="size-4" />
                             </div>
-                            <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">
-                              Cháu
-                            </p>
+                            <p className="text-[10px] font-bold text-stone-500 uppercase tracking-widest">Cháu</p>
                           </div>
-
                           <div className="space-y-1 mt-auto w-full pt-1 border-t border-stone-200/50">
                             {relStats.paternalGrandchildren > 0 && (
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-stone-500 font-medium">
-                                  Cháu nội
-                                </span>
-                                <span className="font-bold text-stone-700">
-                                  {relStats.paternalGrandchildren}
-                                </span>
+                                <span className="text-stone-500 font-medium">Cháu nội</span>
+                                <span className="font-bold text-stone-700">{relStats.paternalGrandchildren}</span>
                               </div>
                             )}
                             {relStats.maternalGrandchildren > 0 && (
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-stone-500 font-medium">
-                                  Cháu ngoại
-                                </span>
-                                <span className="font-bold text-stone-700">
-                                  {relStats.maternalGrandchildren}
-                                </span>
+                                <span className="text-stone-500 font-medium">Cháu ngoại</span>
+                                <span className="font-bold text-stone-700">{relStats.maternalGrandchildren}</span>
                               </div>
                             )}
                           </div>
@@ -508,7 +409,6 @@ export default function MemberDetailContent({
         </motion.div>
 
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          {/* Main Info */}
           <div className="lg:col-span-2 space-y-8">
             <motion.section layout variants={itemVariants}>
               <h2 className="text-base sm:text-lg font-bold text-stone-800 mb-4 flex items-center gap-2">
@@ -520,27 +420,15 @@ export default function MemberDetailContent({
                   <div className="flex flex-col">
                     <motion.div
                       initial={false}
-                      animate={{
-                        height:
-                          !isNoteExpanded && isNoteLong ? "120px" : "auto",
-                      }}
+                      animate={{ height: !isNoteExpanded && isNoteLong ? "120px" : "auto" }}
                       className="relative overflow-hidden"
-                      transition={{
-                        type: "spring",
-                        stiffness: 100,
-                        damping: 20,
-                        duration: 0.4,
-                      }}
+                      transition={{ type: "spring", stiffness: 100, damping: 20, duration: 0.4 }}
                     >
-                      <p className="text-stone-600 whitespace-pre-wrap text-sm sm:text-base leading-relaxed">
-                        {note}
-                      </p>
-                      {/* Gradient fade overlay when collapsed */}
+                      <p className="text-stone-600 whitespace-pre-wrap text-sm sm:text-base leading-relaxed">{note}</p>
                       {!isNoteExpanded && isNoteLong && (
                         <div className="absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-white/95 via-white/40 to-transparent pointer-events-none" />
                       )}
                     </motion.div>
-
                     {isNoteLong && (
                       <button
                         onClick={() => setIsNoteExpanded(!isNoteExpanded)}
@@ -549,19 +437,14 @@ export default function MemberDetailContent({
                         <span className="underline underline-offset-4 decoration-amber-600/30 group-hover:decoration-amber-700">
                           {isNoteExpanded ? "Thu gọn" : "Xem thêm"}
                         </span>
-                        <motion.div
-                          animate={{ rotate: isNoteExpanded ? 180 : 0 }}
-                          transition={{ duration: 0.3 }}
-                        >
+                        <motion.div animate={{ rotate: isNoteExpanded ? 180 : 0 }} transition={{ duration: 0.3 }}>
                           <ChevronDown className="size-3.5" />
                         </motion.div>
                       </button>
                     )}
                   </div>
                 ) : (
-                  <p className="text-stone-400 italic text-sm sm:text-base">
-                    Chưa có ghi chú.
-                  </p>
+                  <p className="text-stone-400 italic text-sm sm:text-base">Chưa có ghi chú.</p>
                 )}
               </div>
             </motion.section>
@@ -582,15 +465,12 @@ export default function MemberDetailContent({
             </motion.section>
           </div>
 
-          {/* Sidebar / Private Info */}
           <div className="space-y-6">
             <motion.div layout variants={itemVariants}>
               {isAdmin ? (
                 <div className="bg-stone-50 p-5 sm:p-6 rounded-2xl border border-stone-200/80 shadow-sm">
                   <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2 text-sm sm:text-base border-b border-stone-200/60 pb-3">
-                    <span className="bg-amber-100/80 text-amber-700 p-1.5 rounded-lg border border-amber-200/50">
-                      🔒
-                    </span>
+                    <span className="bg-amber-100/80 text-amber-700 p-1.5 rounded-lg border border-amber-200/50">🔒</span>
                     Thông tin liên hệ
                   </h3>
                   <dl className="space-y-4 text-sm sm:text-base">
@@ -599,11 +479,7 @@ export default function MemberDetailContent({
                         <Phone className="w-3.5 h-3.5" /> Số điện thoại
                       </dt>
                       <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                        {(fullPerson.phone_number as string) || (
-                          <span className="text-stone-400 font-normal">
-                            Chưa cập nhật
-                          </span>
-                        )}
+                        {(fullPerson.phone_number as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
                       </dd>
                     </div>
                     <div>
@@ -611,11 +487,7 @@ export default function MemberDetailContent({
                         <Briefcase className="w-3.5 h-3.5" /> Nghề nghiệp
                       </dt>
                       <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                        {(fullPerson.occupation as string) || (
-                          <span className="text-stone-400 font-normal">
-                            Chưa cập nhật
-                          </span>
-                        )}
+                        {(fullPerson.occupation as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
                       </dd>
                     </div>
                     <div>
@@ -623,11 +495,7 @@ export default function MemberDetailContent({
                         <MapPin className="w-3.5 h-3.5" /> Nơi ở hiện tại
                       </dt>
                       <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                        {(fullPerson.current_residence as string) || (
-                          <span className="text-stone-400 font-normal">
-                            Chưa cập nhật
-                          </span>
-                        )}
+                        {(fullPerson.current_residence as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
                       </dd>
                     </div>
                   </dl>
@@ -635,9 +503,7 @@ export default function MemberDetailContent({
               ) : (
                 <div className="bg-stone-50/50 p-5 rounded-2xl border border-stone-200 border-dashed flex flex-col items-center justify-center text-center gap-2">
                   <span className="text-2xl opacity-50">🔒</span>
-                  <p className="text-sm font-medium text-stone-500">
-                    Thông tin liên hệ chỉ hiển thị với Quản trị viên.
-                  </p>
+                  <p className="text-sm font-medium text-stone-500">Thông tin liên hệ chỉ hiển thị với Quản trị viên.</p>
                 </div>
               )}
             </motion.div>
