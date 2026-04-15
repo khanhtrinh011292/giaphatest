@@ -68,7 +68,11 @@ export default async function FamilyDashboardPage({ params, searchParams }: Page
       initialShowAvatar={initialShowAvatar}
     >
       <ViewToggle />
-      <SuggestionsPanel persons={persons} relationships={relationships} />
+      <SuggestionsPanel
+        familyId={familyId}
+        persons={persons}
+        relationships={relationships}
+      />
       <DashboardViews
         persons={persons}
         relationships={relationships}

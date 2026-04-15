@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { useState, useTransition } from "react";
+import { confirmSuggestedRelationship } from "@/app/actions/member";
 import RelationshipSuggestions from "./RelationshipSuggestions";
 import { useDashboard } from "./DashboardContext";
 
@@ -20,13 +22,35 @@ interface Relationship {
 }
 
 export default function SuggestionsPanel({
+  familyId,
   persons,
   relationships,
 }: {
+  familyId: string;
   persons: Person[];
   relationships: Relationship[];
 }) {
   const { showSuggestions } = useDashboard();
+  const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isPending, startTransition] = useTransition();
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+
+  const handleAdd = (parentId: string, childId: string) => {
+    const key = `${parentId}-${childId}`;
+    setLoadingKey(key);
+    setErrors((prev) => { const next = { ...prev }; delete next[key]; return next; });
+
+    startTransition(async () => {
+      const result = await confirmSuggestedRelationship(familyId, parentId, childId);
+      setLoadingKey(null);
+      if (result?.error) {
+        setErrors((prev) => ({ ...prev, [key]: result.error }));
+      } else {
+        setConfirmed((prev) => new Set([...prev, key]));
+      }
+    });
+  };
 
   return (
     <AnimatePresence>
@@ -41,6 +65,10 @@ export default function SuggestionsPanel({
           <RelationshipSuggestions
             persons={persons}
             relationships={relationships}
+            confirmedKeys={confirmed}
+            errorKeys={errors}
+            loadingKey={loadingKey}
+            onAddRelationship={handleAdd}
           />
         </motion.div>
       )}
