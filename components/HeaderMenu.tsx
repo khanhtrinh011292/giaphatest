@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { BarChart2, CalendarDays, ChevronDown, Database, GitMerge, Globe, Home, Info, Network, Share2, Sparkles, UserCircle, Users } from "lucide-react";
+import { BarChart2, CalendarDays, ChevronDown, ClipboardList, Database, GitMerge, Globe, Home, Info, Lightbulb, Network, Share2, Sparkles, UserCircle, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import LogoutButton from "./LogoutButton";
@@ -38,6 +38,18 @@ function FamilyMenuItems({ familyId, isAdmin, isOwner, onClose }: { familyId: st
         className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors">
         <CalendarDays className="size-4" />
         Lịch sự kiện
+      </Link>
+
+      <Link href={`/dashboard/${familyId}/audit`} onClick={onClose}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-orange-700 hover:bg-orange-50 transition-colors">
+        <ClipboardList className="size-4" />
+        Nhật ký thay đổi
+      </Link>
+
+      <Link href={`/dashboard/${familyId}?suggestions=1`} onClick={onClose}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-yellow-700 hover:bg-yellow-50 transition-colors">
+        <Lightbulb className="size-4" />
+        Gợi ý quan hệ thông minh
       </Link>
 
       <Link href={`/dashboard/${familyId}/share`} onClick={onClose}
@@ -120,7 +132,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-stone-200/60 py-2 z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-stone-200/60 py-2 z-50 overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-stone-100 bg-stone-50/50">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-0.5">Tài khoản</p>

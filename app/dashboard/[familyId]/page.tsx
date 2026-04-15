@@ -1,20 +1,22 @@
 import { DashboardProvider } from "@/components/DashboardContext";
 import DashboardViews from "@/components/DashboardViews";
 import MemberDetailModal from "@/components/MemberDetailModal";
+import RelationshipSuggestions from "@/components/RelationshipSuggestions";
 import ViewToggle, { ViewMode } from "@/components/ViewToggle";
 import { getPersons, getRelationships, getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ familyId: string }>;
-  searchParams: Promise<{ view?: string; rootId?: string; avatar?: string }>;
+  searchParams: Promise<{ view?: string; rootId?: string; avatar?: string; suggestions?: string }>;
 }
 
 export default async function FamilyDashboardPage({ params, searchParams }: PageProps) {
   const { familyId } = await params;
-  const { view, rootId, avatar } = await searchParams;
+  const { view, rootId, avatar, suggestions } = await searchParams;
   const initialView = view as ViewMode | undefined;
   const initialShowAvatar = avatar !== "hide";
+  const showSuggestions = suggestions === "1";
 
   const user = await getUser();
   if (!user) redirect("/login");
@@ -68,6 +70,14 @@ export default async function FamilyDashboardPage({ params, searchParams }: Page
       initialShowAvatar={initialShowAvatar}
     >
       <ViewToggle />
+      {showSuggestions && (
+        <div className="max-w-3xl mx-auto w-full px-4 pt-4">
+          <RelationshipSuggestions
+            persons={persons}
+            relationships={relationships}
+          />
+        </div>
+      )}
       <DashboardViews
         persons={persons}
         relationships={relationships}
