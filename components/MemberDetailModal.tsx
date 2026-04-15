@@ -75,10 +75,13 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
 
   const formInitialData = person ? { ...person, ...(privateData ?? {}) } : undefined;
 
+  // Resolve familyId: use prop if provided, otherwise fall back to person.family_id
+  const resolvedFamilyId = familyId ?? person?.family_id;
+
   // Build member detail href
   const memberHref = person
-    ? familyId
-      ? `/dashboard/${familyId}/members/${person.id}`
+    ? resolvedFamilyId
+      ? `/dashboard/${resolvedFamilyId}/members/${person.id}`
       : `/dashboard/members/${person.id}`
     : "#";
 
@@ -133,26 +136,26 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
                   <p className="text-red-600 font-medium text-lg">{error}</p>
                   <button onClick={closeModal} className="mt-2 px-6 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-full transition-colors">Dóng</button>
                 </motion.div>
-              ) : isEditing && formInitialData ? (
+              ) : isEditing && formInitialData && resolvedFamilyId ? (
                 <motion.div key="editing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 pt-16 pb-8">
                   <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Chỉnh sửa thành viên</h2>
                   <MemberForm
                     initialData={formInitialData as Parameters<typeof MemberForm>[0]["initialData"]}
-                    isEditing={true} isAdmin={isAdmin} familyId={familyId}
+                    isEditing={true} isAdmin={isAdmin} familyId={resolvedFamilyId}
                     onSuccess={handleEditSuccess} onCancel={() => setIsEditing(false)}
                   />
                 </motion.div>
-              ) : showCreateMember ? (
+              ) : showCreateMember && resolvedFamilyId ? (
                 <motion.div key="creating" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 pt-16 pb-8">
                   <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Thêm thành viên mới</h2>
-                  <MemberForm isAdmin={isAdmin} familyId={familyId} onSuccess={handleCreateSuccess} onCancel={closeModal} />
+                  <MemberForm isAdmin={isAdmin} familyId={resolvedFamilyId} onSuccess={handleCreateSuccess} onCancel={closeModal} />
                 </motion.div>
               ) : person ? (
                 <motion.div key="details" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar">
-                  <MemberDetailContent person={person} privateData={privateData} isAdmin={isAdmin} canEdit={canEdit} familyId={familyId} />
+                  <MemberDetailContent person={person} privateData={privateData} isAdmin={isAdmin} canEdit={canEdit} familyId={resolvedFamilyId} />
                 </motion.div>
               ) : null}
             </AnimatePresence>
