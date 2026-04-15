@@ -93,7 +93,6 @@ export async function getFamilyShares(familyId: string) {
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
-  // Chỉ owner mới xem được danh sách share
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -104,7 +103,7 @@ export async function getFamilyShares(familyId: string) {
     return { error: "Bạn không có quyền xem danh sách chia sẻ." };
 
   const { data, error } = await supabase
-    .from("family_shares_with_email") // view được tạo trong SQL migration
+    .from("family_shares_with_email")
     .select("*")
     .eq("family_id", familyId)
     .order("created_at", { ascending: true });
@@ -126,7 +125,6 @@ export async function shareFamily(
 
   const supabase = await getSupabase();
 
-  // Kiểm tra ownership
   const { data: family } = await supabase
     .from("families")
     .select("owner_id, name")
@@ -136,7 +134,6 @@ export async function shareFamily(
   if (!family || family.owner_id !== user.id)
     return { error: "Bạn không có quyền chia sẻ gia phả này." };
 
-  // Tìm user theo email qua SQL function
   const { data: targetUserId, error: lookupError } = await supabase
     .rpc("get_user_id_by_email", { target_email: email });
 
@@ -144,7 +141,6 @@ export async function shareFamily(
   if (!targetUserId) return { error: "Không tìm thấy tài khoản với email này trong hệ thống." };
   if (targetUserId === user.id) return { error: "Không thể chia sẻ gia phả với chính mình." };
 
-  // Upsert share (nếu đã share rồi thì cập nhật quyền)
   const { error: shareError } = await supabase
     .from("family_shares")
     .upsert(
@@ -206,4 +202,132 @@ export async function leaveFamily(familyId: string) {
   if (error) return { error: error.message };
   revalidatePath("/dashboard");
   return { success: true };
+}
+
+// ── Tạo share link mới ───────────────────────────────────────────────────────
+export async function createShareLink(
+  familyId: string,
+  role: "viewer" | "editor" = "viewer"
+) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  // Chỉ owner mới được tạo link
+  const { data: family } = await supabase
+    .from("families")
+    .select("owner_id")
+    .eq("id", familyId)
+    .single();
+  if (!family || family.owner_id !== user.id)
+    return { error: "Bạn không có quyền tạo link chia sẻ." };
+
+  // Tạo token ngẫu nhiên 32 ký tự
+  const array = new Uint8Array(24);
+  crypto.getRandomValues(array);
+  const token = Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+
+  const { data, error } = await supabase
+    .from("family_share_links")
+    .insert({
+      family_id: familyId,
+      token,
+      created_by: user.id,
+      role,
+      expires_at: expiresAt.toISOString(),
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+  revalidatePath(`/dashboard/${familyId}/share`);
+  return { data };
+}
+
+// ── Lấy danh sách share links của một gia phả ────────────────────────────────
+export async function getShareLinks(familyId: string) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  const { data, error } = await supabase
+    .from("family_share_links")
+    .select("*")
+    .eq("family_id", familyId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (error) return { error: error.message };
+  return { data: data ?? [] };
+}
+
+// ── Thu hồi share link ────────────────────────────────────────────────────────
+export async function revokeShareLink(linkId: string) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  const { error } = await supabase
+    .from("family_share_links")
+    .update({ is_active: false })
+    .eq("id", linkId)
+    .eq("created_by", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+// ── Tham gia gia phả bằng token ───────────────────────────────────────────────
+export async function joinByShareLink(token: string) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  const { data: link, error: linkError } = await supabase
+    .from("family_share_links")
+    .select("*")
+    .eq("token", token)
+    .eq("is_active", true)
+    .gt("expires_at", new Date().toISOString())
+    .single();
+
+  if (linkError || !link) return { error: "Link không hợp lệ hoặc đã hết hạn." };
+
+  // Kiểm tra đã là thành viên chưa
+  const { data: existing } = await supabase
+    .from("family_shares")
+    .select("id")
+    .eq("family_id", link.family_id)
+    .eq("shared_with", user.id)
+    .maybeSingle();
+
+  if (existing) return { error: "Bạn đã là thành viên của gia phả này." };
+
+  // Không được tham gia gia phả của chính mình
+  const { data: ownFamily } = await supabase
+    .from("families")
+    .select("id")
+    .eq("id", link.family_id)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  if (ownFamily) return { error: "Đây là gia phả của bạn." };
+
+  const { error: shareError } = await supabase
+    .from("family_shares")
+    .insert({
+      family_id: link.family_id,
+      shared_with: user.id,
+      role: link.role,
+      shared_by: link.created_by,
+    });
+
+  if (shareError) return { error: shareError.message };
+  revalidatePath("/dashboard");
+  return { success: true, familyId: link.family_id };
 }

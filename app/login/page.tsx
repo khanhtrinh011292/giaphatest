@@ -67,14 +67,12 @@ export default function LoginPage() {
           return;
         }
 
-        // 1. Try to sign up
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
 
         if (error) {
-          // Check if error is related to missing database schema/tables
           if (
             error.message.includes("relation") &&
             error.message.includes("does not exist")
@@ -82,7 +80,6 @@ export default function LoginPage() {
             router.push("/setup");
             return;
           }
-
           setError(error.message);
         } else if (data.user?.identities && data.user.identities.length === 0) {
           setError(
@@ -90,26 +87,25 @@ export default function LoginPage() {
           );
         } else {
           if (data.session) {
+            // Có session ngay (email confirm tắt) → vào dashboard
             router.push("/dashboard");
             router.refresh();
           } else {
-            // Attempt to sign in immediately (catches auto-confirmed first admin)
+            // Thử đăng nhập ngay (trường hợp auto-confirm)
             const { data: signInData, error: signInError } =
-              await supabase.auth.signInWithPassword({
-                email,
-                password,
-              });
+              await supabase.auth.signInWithPassword({ email, password });
 
             if (!signInError && signInData.session) {
               router.push("/dashboard");
               router.refresh();
             } else {
+              // Supabase yêu cầu xác nhận email
               setSuccessMessage(
-                "Đăng ký thành công! Vui lòng chờ admin kích hoạt tài khoản để xem nội dung.",
+                "Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản trước khi đăng nhập.",
               );
-              setIsLogin(true); // Switch back to login view
-              setConfirmPassword(""); // clear confirm password
-              setPassword(""); // clear password
+              setIsLogin(true);
+              setConfirmPassword("");
+              setPassword("");
             }
           }
         }
