@@ -22,7 +22,7 @@ interface MemberFormProps {
   initialData?: Person;
   isEditing?: boolean;
   isAdmin?: boolean;
-  familyId?: string;
+  familyId: string;
   /** Called with the saved person's ID after a successful save. Overrides default router.push. */
   onSuccess?: (personId: string) => void;
   /** Called when user clicks Cancel. Overrides default router.back(). */
@@ -224,7 +224,7 @@ export default function MemberForm({
         other_names: otherNames || null,
         avatar_url: url,
         note: note || null,
-        ...(familyId ? { family_id: familyId } : {}),
+        family_id: familyId,
       });
 
       let currentPersonId = initialData?.id;
@@ -264,7 +264,7 @@ export default function MemberForm({
           phone_number: phoneNumber?.trim() || null,
           occupation: occupation?.trim() || null,
           current_residence: currentResidence?.trim() || null,
-          ...(familyId ? { family_id: familyId } : {}),
+          family_id: familyId,
         };
         const hasData = normalizedData.phone_number || normalizedData.occupation || normalizedData.current_residence;
         if (hasData) {
@@ -279,10 +279,7 @@ export default function MemberForm({
       if (onSuccess) {
         onSuccess(currentPersonId);
       } else {
-        const redirectUrl = familyId
-          ? `/dashboard/${familyId}/members/${currentPersonId}`
-          : `/dashboard/members/${currentPersonId}`;
-        router.push(redirectUrl);
+        router.push(`/dashboard/${familyId}/members/${currentPersonId}`);
         router.refresh();
       }
     } catch (err) {
