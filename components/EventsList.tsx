@@ -13,6 +13,8 @@ import {
   CalendarDays,
   Clock,
   Flower,
+  LayoutGrid,
+  List,
   MapPin,
   Plus,
   Star,
@@ -22,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import CustomEventModal from "./CustomEventModal";
 import { useDashboard } from "./DashboardContext";
+import EventCalendar from "./EventCalendar";
 
 interface EventsListProps {
   persons: {
@@ -231,6 +234,7 @@ export default function EventsList({
   familyId,
 }: EventsListProps) {
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [filter, setFilter] = useState<
     "all" | "birthday" | "death_anniversary" | "custom_event" | "past"
   >("all");
@@ -298,11 +302,11 @@ export default function EventsList({
   const todayCount = allEvents.filter((e) => e.daysUntil === 0).length;
   const soonCount = allEvents.filter((e) => e.daysUntil > 0 && e.daysUntil <= 7).length;
 
-  // suppress unused warning — familyId available for future use
   void familyId;
 
   return (
     <div className="space-y-5">
+      {/* Today banner */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -347,35 +351,60 @@ export default function EventsList({
         </button>
       </motion.div>
 
+      {/* View mode toggle + filters */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {([
-            { key: "all", label: "Tất cả" },
-            { key: "birthday", label: "Sinh nhật" },
-            { key: "death_anniversary", label: "Ngày giỗ" },
-            { key: "custom_event", label: "Tuỳ chỉnh" },
-            { key: "past", label: "Đã qua" },
-          ] as const).map((tab) => (
+          {/* View toggle */}
+          <div className="flex items-center bg-stone-100/80 rounded-xl p-1 gap-1 mr-1">
             <button
-              key={tab.key}
-              onClick={() => { setFilter(tab.key); setShowCount(20); }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                filter === tab.key
-                  ? filter === "past"
-                    ? "bg-stone-600 text-white shadow-sm"
-                    : "bg-amber-500 text-white shadow-sm"
-                  : "bg-white/80 text-stone-600 border border-stone-200/60 hover:border-amber-200 hover:text-amber-700"
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                viewMode === "list" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
               }`}
             >
-              {tab.label}
+              <List className="size-4" /> Danh sách
             </button>
-          ))}
-          <span className="ml-auto text-xs text-stone-400 self-center">
-            {filtered.length} sự kiện{filter === "past" ? " trong năm qua" : ""}
-          </span>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                viewMode === "calendar" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
+              }`}
+            >
+              <LayoutGrid className="size-4" /> Lịch
+            </button>
+          </div>
+
+          {viewMode === "list" && (
+            <>
+              {([
+                { key: "all", label: "Tất cả" },
+                { key: "birthday", label: "Sinh nhật" },
+                { key: "death_anniversary", label: "Ngày giỗ" },
+                { key: "custom_event", label: "Tuỳ chỉnh" },
+                { key: "past", label: "Đã qua" },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => { setFilter(tab.key); setShowCount(20); }}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                    filter === tab.key
+                      ? filter === "past"
+                        ? "bg-stone-600 text-white shadow-sm"
+                        : "bg-amber-500 text-white shadow-sm"
+                      : "bg-white/80 text-stone-600 border border-stone-200/60 hover:border-amber-200 hover:text-amber-700"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              <span className="ml-auto text-xs text-stone-400 self-center">
+                {filtered.length} sự kiện{filter === "past" ? " trong năm qua" : ""}
+              </span>
+            </>
+          )}
         </div>
 
-        {filter !== "past" && (
+        {viewMode === "list" && filter !== "past" && (
           <div className="flex px-1">
             <label className="flex items-center gap-2.5 text-sm font-medium text-stone-600 cursor-pointer hover:text-stone-900 transition-colors select-none">
               <input
@@ -390,32 +419,42 @@ export default function EventsList({
         )}
       </div>
 
-      {visible.length === 0 ? (
-        <div className="text-center py-16 text-stone-400">
-          <CalendarDays className="size-10 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">Không có sự kiện nào</p>
-          <p className="text-sm mt-1">Hãy bổ sung ngày sinh hoặc ngày mất cho thành viên</p>
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {visible.map((event, i) => (
-            <EventCard
-              key={`${event.personId}-${event.type}-${event.eventDateLabel}`}
-              event={event}
-              index={i}
-              onEditCustomEvent={handleOpenEditModal}
-            />
-          ))}
-        </div>
+      {/* Calendar view */}
+      {viewMode === "calendar" && (
+        <EventCalendar events={allEvents} />
       )}
 
-      {filtered.length > showCount && (
-        <button
-          onClick={() => setShowCount((n) => n + 20)}
-          className="w-full py-3 text-sm font-semibold text-stone-500 hover:text-amber-600 transition-colors"
-        >
-          Xem thêm {filtered.length - showCount} sự kiện…
-        </button>
+      {/* List view */}
+      {viewMode === "list" && (
+        <>
+          {visible.length === 0 ? (
+            <div className="text-center py-16 text-stone-400">
+              <CalendarDays className="size-10 mx-auto mb-3 opacity-40" />
+              <p className="font-medium">Không có sự kiện nào</p>
+              <p className="text-sm mt-1">Hãy bổ sung ngày sinh hoặc ngày mất cho thành viên</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {visible.map((event, i) => (
+                <EventCard
+                  key={`${event.personId}-${event.type}-${event.eventDateLabel}`}
+                  event={event}
+                  index={i}
+                  onEditCustomEvent={handleOpenEditModal}
+                />
+              ))}
+            </div>
+          )}
+
+          {filtered.length > showCount && (
+            <button
+              onClick={() => setShowCount((n) => n + 20)}
+              className="w-full py-3 text-sm font-semibold text-stone-500 hover:text-amber-600 transition-colors"
+            >
+              Xem thêm {filtered.length - showCount} sự kiện…
+            </button>
+          )}
+        </>
       )}
 
       <CustomEventModal
