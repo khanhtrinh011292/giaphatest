@@ -1,11 +1,8 @@
 import { DashboardProvider } from "@/components/DashboardContext";
 import DashboardViews from "@/components/DashboardViews";
 import MemberDetailModal from "@/components/MemberDetailModal";
-import ViewToggle from "@/components/ViewToggle";
-import { useFamilyContext } from "@/components/FamilyContextProvider";
+import ViewToggle, { ViewMode } from "@/components/ViewToggle";
 import { getPersons, getProfile, getRelationships } from "@/utils/supabase/queries";
-import { ViewMode } from "@/components/ViewToggle";
-import { getSupabase } from "@/utils/supabase/queries";
 
 interface PageProps {
   params: Promise<{ familyId: string }>;
