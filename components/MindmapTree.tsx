@@ -16,6 +16,7 @@ interface MindmapTreeProps {
   relationships: Relationship[];
   roots: Person[];
   canEdit?: boolean;
+  familyId?: string;
 }
 
 export default function MindmapTree({
@@ -23,7 +24,10 @@ export default function MindmapTree({
   relationships,
   roots,
   canEdit,
+  familyId,
 }: MindmapTreeProps) {
+  void familyId;
+
   const { showAvatar, setMemberModalId } = useDashboard();
   const [hideDaughtersInLaw, setHideDaughtersInLaw] = useState(false);
   const [hideSonsInLaw, setHideSonsInLaw] = useState(false);
@@ -82,7 +86,7 @@ export default function MindmapTree({
           <Share2 className="size-8 text-stone-300" />
         </div>
         <p className="text-stone-500 font-medium tracking-wide">
-          Gia phả trống
+          Gia ph\u1ea3 tr\u1ed1ng
         </p>
       </div>
     );
@@ -111,7 +115,6 @@ export default function MindmapTree({
         canEdit={canEdit}
       />
 
-      {/* Root Container */}
       <div
         id="export-container"
         className="font-sans min-w-max pb-20 p-10 px-0 sm:px-8"
