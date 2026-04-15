@@ -21,6 +21,7 @@ interface CustomEventModalProps {
   onClose: () => void;
   onSuccess: () => void;
   eventToEdit?: CustomEventRecord | null;
+  familyId?: string;
 }
 
 export default function CustomEventModal({
@@ -28,6 +29,7 @@ export default function CustomEventModal({
   onClose,
   onSuccess,
   eventToEdit,
+  familyId,
 }: CustomEventModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,12 +121,16 @@ export default function CustomEventModal({
 
     try {
       const supabase = createClient();
-      const payload = {
+      const payload: Record<string, unknown> = {
         name,
         event_date: eventDate,
         location: location || null,
         content: content || null,
       };
+
+      if (!eventToEdit && familyId) {
+        payload.family_id = familyId;
+      }
 
       let resultError;
       if (eventToEdit) {
@@ -397,7 +403,7 @@ export default function CustomEventModal({
                         className={`${inputClasses} pl-11 resize-none custom-scrollbar`}
                         placeholder="Ghi chú thêm về sự kiện..."
                         value={content}
-                        onChange={(e) => setContent(e.target.value)}
+                        onChange={(e) = setContent(e.target.value)}
                       />
                     </div>
                   </div>
