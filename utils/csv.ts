@@ -4,7 +4,6 @@ import Papa from "papaparse";
 
 const UTF8_BOM = "\uFEFF";
 
-
 interface PersonDetailsPrivateRow {
   person_id: string;
   phone_number: string | null;
@@ -19,6 +18,41 @@ interface CustomEventRow {
   event_date: string;
   location: string | null;
   created_by: string | null;
+}
+
+// Convert empty string fields to null after PapaParse
+function sanitizeCsvPerson(row: Record<string, unknown>): Partial<Person> {
+  const numericFields = [
+    "birth_year", "birth_month", "birth_day",
+    "death_year", "death_month", "death_day",
+    "death_lunar_year", "death_lunar_month", "death_lunar_day",
+    "birth_order", "generation",
+  ];
+  const boolFields = ["is_deceased", "is_in_law"];
+  const nullableStringFields = ["other_names", "avatar_url", "note"];
+
+  const result: Record<string, unknown> = { ...row };
+
+  for (const f of numericFields) {
+    if (result[f] === "" || result[f] === null || result[f] === undefined) {
+      result[f] = null;
+    } else {
+      const n = Number(result[f]);
+      result[f] = isNaN(n) ? null : n;
+    }
+  }
+
+  for (const f of boolFields) {
+    const v = result[f];
+    if (v === true || v === "true" || v === 1 || v === "1") result[f] = true;
+    else result[f] = false;
+  }
+
+  for (const f of nullableStringFields) {
+    if (result[f] === "" || result[f] === undefined) result[f] = null;
+  }
+
+  return result as Partial<Person>;
 }
 
 export async function exportToCsvZip(data: {
@@ -45,8 +79,7 @@ export async function exportToCsvZip(data: {
     zip.file("custom_events.csv", UTF8_BOM + Papa.unparse(data.custom_events));
   }
 
-  const zipBlob = await zip.generateAsync({ type: "blob" });
-  return zipBlob;
+  return await zip.generateAsync({ type: "blob" });
 }
 
 export async function parseCsvZip(zipBlob: Blob): Promise<{
@@ -77,10 +110,10 @@ export async function parseCsvZip(zipBlob: Blob): Promise<{
     ? relationshipsCsvRaw.slice(1)
     : relationshipsCsvRaw;
 
-  const personsParsed = Papa.parse<Partial<Person>>(personsCsvStr, {
+  const personsParsed = Papa.parse<Record<string, unknown>>(personsCsvStr, {
     header: true,
     skipEmptyLines: true,
-    dynamicTyping: true, // Tự động convert số và boolean
+    dynamicTyping: false, // Disable để sanitize thủ công, tránh lỗi type
   });
 
   const relationshipsParsed = Papa.parse<Partial<Relationship>>(
@@ -88,7 +121,7 @@ export async function parseCsvZip(zipBlob: Blob): Promise<{
     {
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: true,
+      dynamicTyping: false,
     },
   );
 
@@ -100,13 +133,15 @@ export async function parseCsvZip(zipBlob: Blob): Promise<{
     console.error("Lỗi parse relationships.csv:", relationshipsParsed.errors);
   }
 
+  const persons = personsParsed.data.map((row) => sanitizeCsvPerson(row));
+
   const result: {
     persons: Partial<Person>[];
     relationships: Partial<Relationship>[];
     person_details_private?: PersonDetailsPrivateRow[];
     custom_events?: CustomEventRow[];
   } = {
-    persons: personsParsed.data,
+    persons,
     relationships: relationshipsParsed.data,
   };
 
@@ -118,7 +153,7 @@ export async function parseCsvZip(zipBlob: Blob): Promise<{
     const privateParsed = Papa.parse<PersonDetailsPrivateRow>(privateCsvStr, {
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: true,
+      dynamicTyping: false,
     });
     if (privateParsed.errors.length > 0) {
       console.error(
@@ -126,7 +161,12 @@ export async function parseCsvZip(zipBlob: Blob): Promise<{
         privateParsed.errors,
       );
     }
-    result.person_details_private = privateParsed.data;
+    result.person_details_private = privateParsed.data.map((row) => ({
+      person_id: row.person_id,
+      phone_number: (row.phone_number as unknown as string) || null,
+      occupation: (row.occupation as unknown as string) || null,
+      current_residence: (row.current_residence as unknown as string) || null,
+    }));
   }
 
   // Parse custom_events.csv (optional, backward compat)
@@ -137,12 +177,19 @@ export async function parseCsvZip(zipBlob: Blob): Promise<{
     const eventsParsed = Papa.parse<CustomEventRow>(eventsCsvStr, {
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: true,
+      dynamicTyping: false,
     });
     if (eventsParsed.errors.length > 0) {
       console.error("Lỗi parse custom_events.csv:", eventsParsed.errors);
     }
-    result.custom_events = eventsParsed.data;
+    result.custom_events = eventsParsed.data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      content: (row.content as unknown as string) || null,
+      event_date: row.event_date,
+      location: (row.location as unknown as string) || null,
+      created_by: null,
+    }));
   }
 
   return result;
