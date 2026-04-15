@@ -7,7 +7,11 @@ import { AlertTriangle, CheckCircle2, Download, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import PersonSelector from "./PersonSelector";
 
-export default function DataImportExport() {
+interface DataImportExportProps {
+  familyId?: string;
+}
+
+export default function DataImportExport({ familyId }: DataImportExportProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -215,7 +219,6 @@ export default function DataImportExport() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Export Card */}
         <div className="bg-white/80 border border-stone-200/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative group">
-          {/* Background Decor */}
           <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/20 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-amber-300/30 transition-colors" />
           </div>
@@ -291,7 +294,6 @@ export default function DataImportExport() {
 
         {/* Import Card */}
         <div className="bg-white/80 border border-stone-200/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative group">
-          {/* Background Decor */}
           <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
             <div className="absolute top-0 right-0 w-32 h-32 bg-rose-200/20 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-rose-300/30 transition-colors" />
           </div>
