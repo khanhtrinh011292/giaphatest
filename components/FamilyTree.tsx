@@ -24,12 +24,16 @@ export default function FamilyTree({
   relationships,
   roots,
   canEdit,
+  familyId,
 }: {
   personsMap: Map<string, Person>;
   relationships: Relationship[];
   roots: Person[];
   canEdit?: boolean;
+  familyId?: string;
 }) {
+  void familyId;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [hideDaughtersInLaw, setHideDaughtersInLaw] = useState(false);
   const [hideSonsInLaw, setHideSonsInLaw] = useState(false);
@@ -38,7 +42,6 @@ export default function FamilyTree({
   const [hideMales, setHideMales] = useState(false);
   const [hideFemales, setHideFemales] = useState(false);
 
-  // Tập hợp các personId đang bị đóng (collapsed)
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
   const [hideExpandButtons, setHideExpandButtons] = useState(false);
   const [autoCollapseLevel, setAutoCollapseLevel] = useState(
@@ -62,7 +65,6 @@ export default function FamilyTree({
     },
   } = usePanZoom(containerRef);
 
-  // Center the scroll area horizontally
   const centerTree = useCallback(() => {
     if (!containerRef.current) return;
     const el = containerRef.current;
@@ -94,14 +96,12 @@ export default function FamilyTree({
       });
 
       Object.values(levelMap).forEach((levelNodes) => {
-        // Reset min-height first to get natural height
         levelNodes.forEach((node) => {
           const innerFlex = node.firstElementChild as HTMLElement;
           if (innerFlex) innerFlex.style.minHeight = "0px";
         });
 
         let maxHeight = 0;
-        // Find the maximum height in this level
         levelNodes.forEach((node) => {
           const innerFlex = node.firstElementChild as HTMLElement;
           if (innerFlex) {
@@ -109,7 +109,6 @@ export default function FamilyTree({
           }
         });
 
-        // Apply max height to all nodes in this level
         levelNodes.forEach((node) => {
           const innerFlex = node.firstElementChild as HTMLElement;
           if (innerFlex && maxHeight > 0) {
@@ -156,7 +155,6 @@ export default function FamilyTree({
       hideFemales,
     });
 
-  // Tự động đóng các nhánh từ đời autoCollapseLevel trở đi + căn giữa sau khi layout ổn định
   useEffect(() => {
     const autoCollapsed = new Set<string>();
 
@@ -183,7 +181,6 @@ export default function FamilyTree({
     roots.forEach((root) => walk(root.id, new Set(), 0));
     setCollapsedNodes(autoCollapsed);
 
-    // Double rAF: wait for React to re-render with collapsed state, then center
     const raf = requestAnimationFrame(() => {
       requestAnimationFrame(centerTree);
     });
@@ -205,14 +202,12 @@ export default function FamilyTree({
 
   const handleCenter = centerTree;
 
-  // Recursive function for rendering nodes
-  // Tracks visited IDs to prevent infinite loops from circular relationships
   const renderTreeNode = (
     personId: string,
     visited: Set<string> = new Set(),
     level: number = 0,
   ): React.ReactNode => {
-    if (visited.has(personId)) return null; // cycle guard
+    if (visited.has(personId)) return null;
     visited.add(personId);
 
     const data = getTreeData(personId);
@@ -227,7 +222,6 @@ export default function FamilyTree({
           className="node-container inline-flex flex-col items-center"
           data-level={level}
         >
-          {/* Main Person & Spouses Row */}
           <div
             className={`flex relative z-10 items-stretch h-full${showAvatar ? " bg-white rounded-2xl shadow-md border border-stone-200/80 transition-opacity" : ""}`}
           >
@@ -240,14 +234,13 @@ export default function FamilyTree({
                     isRingVisible={idx === 0}
                     isPlusVisible={idx > 0}
                     person={spouseData.person}
-                    role={spouseData.person.gender === "male" ? "Chồng" : "Vợ"}
+                    role={spouseData.person.gender === "male" ? "Ch\u1ed3ng" : "V\u1ee3"}
                     note={spouseData.note}
                     level={level}
                   />
                 </div>
               ))}
 
-            {/* Expand/Collapse Toggle – centered on the row */}
             {!hideExpandButtons && hasChildren && (
               <div
                 role="button"
@@ -265,7 +258,7 @@ export default function FamilyTree({
                   }
                 }}
                 className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white border border-stone-200/80 rounded-full size-6 flex items-center justify-center shadow-md z-100 text-stone-500 hover:text-amber-600 hover:border-amber-300 transition-colors cursor-pointer"
-                title={isCollapsed ? "Mở rộng" : "Thu gọn"}
+                title={isCollapsed ? "M\u1edf r\u1ed9ng" : "Thu g\u1ecdn"}
               >
                 {isCollapsed ? (
                   <Plus className="w-3.5 h-3.5" />
@@ -277,7 +270,6 @@ export default function FamilyTree({
           </div>
         </div>
 
-        {/* Render Children (if any and not collapsed) */}
         {hasChildren && !isCollapsed && (
           <ul>
             {data.children.map((child) => (
@@ -294,7 +286,7 @@ export default function FamilyTree({
   if (roots.length === 0)
     return (
       <div className="text-center p-10 text-stone-500">
-        Không tìm thấy dữ liệu.
+        Kh\u00f4ng t\u00ecm th\u1ea5y d\u1eef li\u1ec7u.
       </div>
     );
 
@@ -333,9 +325,8 @@ export default function FamilyTree({
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
         onClickCapture={handleClickCapture}
-        onDragStart={(e) => e.preventDefault()} // Prevent browser default dragging of links/images
+        onDragStart={(e) => e.preventDefault()}
       >
-        {/* We use a style block to inject the CSS logic for the family tree lines */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
@@ -355,7 +346,6 @@ export default function FamilyTree({
           padding: 30px 5px 0 5px;
         }
 
-        /* Connecting lines */
         .css-tree li::before, .css-tree li::after {
           content: '';
           position: absolute; top: 0; right: 50%;
@@ -367,7 +357,6 @@ export default function FamilyTree({
           border-left: 2px solid #d6d3d1;
         }
 
-        /* Remove left-right connectors from elements without siblings */
         .css-tree li:only-child::after {
           display: none;
         }
@@ -381,7 +370,6 @@ export default function FamilyTree({
           height: 30px;
         }
 
-        /* Remove top connector from first child */
         .css-tree ul:first-child > li {
           padding-top: 0px;
         }
@@ -389,12 +377,10 @@ export default function FamilyTree({
           display: none;
         }
 
-        /* Remove left connector from first child and right connector from last child */
         .css-tree li:first-child::before, .css-tree li:last-child::after {
           border: 0 none;
         }
 
-        /* Add back the vertical connector to the last nodes */
         .css-tree li:last-child::before {
           border-right: 2px solid #d6d3d1;
           border-radius: 0 12px 0 0;
@@ -403,7 +389,6 @@ export default function FamilyTree({
           border-radius: 12px 0 0 0;
         }
 
-        /* Downward connectors from parents */
         .css-tree ul ul::before {
           content: '';
           position: absolute; top: 0; left: 50%;
@@ -414,11 +399,6 @@ export default function FamilyTree({
           }}
         />
 
-        {/* 
-        Use w-max to prevent wrapping and allow scrolling. 
-        mx-auto centers it if smaller than screen. 
-        p-8 adds padding inside scroll area.
-      */}
         <div
           id="export-container"
           className={`w-max min-w-full mx-auto p-4 css-tree transition-all duration-200 ${isDragging ? "opacity-90" : ""}`}
