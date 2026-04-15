@@ -1,13 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { BarChart2, ChevronDown, Database, GitMerge, Info, Network, UserCircle, Users } from "lucide-react";
+import { BarChart2, ChevronDown, Database, GitMerge, Home, Info, Network, Share2, UserCircle, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import LogoutButton from "./LogoutButton";
 import { useUser } from "./UserProvider";
 
-export default function HeaderMenu() {
+export default function HeaderMenu({ familyId }: { familyId?: string }) {
   const { user, isAdmin } = useUser();
   const userEmail = user?.email;
   const [isOpen, setIsOpen] = useState(false);
@@ -19,10 +19,13 @@ export default function HeaderMenu() {
         setIsOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Helper: build URL with familyId prefix
+  const familyUrl = (path: string) =>
+    familyId ? `/dashboard/${familyId}${path}` : `/dashboard`;
 
   return (
     <div className="relative" ref={menuRef}>
@@ -38,7 +41,9 @@ export default function HeaderMenu() {
           )}
         </div>
         <ChevronDown
-          className={`size-4 text-stone-500 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+          className={`size-4 text-stone-500 transition-transform duration-300 ${
+            isOpen ? "rotate-180" : ""
+          }`}
         />
       </button>
 
@@ -49,54 +54,75 @@ export default function HeaderMenu() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-stone-200/60 py-2 z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-stone-200/60 py-2 z-50 overflow-hidden"
           >
+            {/* Account info */}
             <div className="px-4 py-3 border-b border-stone-100 bg-stone-50/50">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
                 Tài khoản
               </p>
-              <p className="text-sm font-medium text-stone-900 truncate">
-                {userEmail}
-              </p>
+              <p className="text-sm font-medium text-stone-900 truncate">{userEmail}</p>
             </div>
 
             <div className="py-1">
+              {/* Trang chủ gia phả */}
               <Link
                 href="/dashboard"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
               >
-                <Network className="size-4" />
-                Bảng điều khiển
+                <Home className="size-4" />
+                Danh sách Gia phả
               </Link>
 
-              <Link
-                href="/dashboard/members"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-              >
-                <Network className="size-4" />
-                Cây gia phả
-              </Link>
-              
-              <Link
-                href="/dashboard/kinship"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-              >
-                <GitMerge className="size-4" />
-                Tra cứu danh xưng
-              </Link>
+              {/* Menu trong gia phả - chỉ hiện nếu đang trong 1 family */}
+              {familyId && (
+                <>
+                  <div className="px-4 py-1.5 mt-1">
+                    <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                      Gia phả hiện tại
+                    </p>
+                  </div>
 
-              <Link
-                href="/dashboard/stats"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-purple-700 hover:bg-purple-50 transition-colors"
-              >
-                <BarChart2 className="size-4" />
-                Thống kê
-              </Link>
+                  <Link
+                    href={familyUrl("/members")}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
+                  >
+                    <Network className="size-4" />
+                    Cây gia phả
+                  </Link>
 
+                  <Link
+                    href={familyUrl("/kinship")}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                  >
+                    <GitMerge className="size-4" />
+                    Tra cứu danh xưng
+                  </Link>
+
+                  <Link
+                    href={familyUrl("/stats")}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-purple-700 hover:bg-purple-50 transition-colors"
+                  >
+                    <BarChart2 className="size-4" />
+                    Thống kê
+                  </Link>
+
+                  <Link
+                    href={familyUrl("/share")}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-green-700 hover:bg-green-50 transition-colors"
+                  >
+                    <Share2 className="size-4" />
+                    Chia sẻ gia phả
+                  </Link>
+                </>
+              )}
+
+              {/* Admin section */}
               {isAdmin && (
                 <>
                   <div className="px-4 py-2 mt-1">
@@ -104,7 +130,7 @@ export default function HeaderMenu() {
                       Quản trị viên
                     </p>
                   </div>
-                  
+
                   <Link
                     href="/dashboard/users"
                     onClick={() => setIsOpen(false)}
@@ -123,14 +149,16 @@ export default function HeaderMenu() {
                     Thứ tự gia phả
                   </Link>
 
-                  <Link
-                    href="/dashboard/data"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                  >
-                    <Database className="size-4" />
-                    Sao lưu & Phục hồi
-                  </Link>
+                  {familyId && (
+                    <Link
+                      href={familyUrl("/data")}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                    >
+                      <Database className="size-4" />
+                      Sao lưu & Phục hồi
+                    </Link>
+                  )}
                 </>
               )}
 
