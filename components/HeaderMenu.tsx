@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { BarChart2, ChevronDown, Database, GitMerge, Home, Info, Network, Share2, UserCircle, Users } from "lucide-react";
+import { BarChart2, ChevronDown, Database, GitMerge, Home, Info, Network, Share2, Sparkles, UserCircle, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import LogoutButton from "./LogoutButton";
@@ -23,7 +23,6 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Helper: build URL with familyId prefix
   const familyUrl = (path: string) =>
     familyId ? `/dashboard/${familyId}${path}` : `/dashboard`;
 
@@ -59,28 +58,26 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
             {/* Account info */}
             <div className="px-4 py-3 border-b border-stone-100 bg-stone-50/50">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
-                Tài khoản
+                T\u00e0i kho\u1ea3n
               </p>
               <p className="text-sm font-medium text-stone-900 truncate">{userEmail}</p>
             </div>
 
             <div className="py-1">
-              {/* Trang chủ gia phả */}
               <Link
                 href="/dashboard"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
               >
                 <Home className="size-4" />
-                Danh sách Gia phả
+                Danh s\u00e1ch Gia ph\u1ea3
               </Link>
 
-              {/* Menu trong gia phả - chỉ hiện nếu đang trong 1 family */}
               {familyId && (
                 <>
                   <div className="px-4 py-1.5 mt-1">
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                      Gia phả hiện tại
+                      Gia ph\u1ea3 hi\u1ec7n t\u1ea1i
                     </p>
                   </div>
 
@@ -90,7 +87,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
                   >
                     <Network className="size-4" />
-                    Cây gia phả
+                    C\u00e2y gia ph\u1ea3
                   </Link>
 
                   <Link
@@ -99,7 +96,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                   >
                     <GitMerge className="size-4" />
-                    Tra cứu danh xưng
+                    Tra c\u1ee9u danh x\u01b0ng
                   </Link>
 
                   <Link
@@ -108,7 +105,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-purple-700 hover:bg-purple-50 transition-colors"
                   >
                     <BarChart2 className="size-4" />
-                    Thống kê
+                    Th\u1ed1ng k\u00ea
                   </Link>
 
                   <Link
@@ -117,8 +114,20 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-green-700 hover:bg-green-50 transition-colors"
                   >
                     <Share2 className="size-4" />
-                    Chia sẻ gia phả
+                    Chia s\u1ebb gia ph\u1ea3
                   </Link>
+
+                  {/* Lineage - ch\u1ec9 hi\u1ec7n khi isAdmin v\u00e0 \u0111ang trong family */}
+                  {isAdmin && (
+                    <Link
+                      href={familyUrl("/lineage")}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors"
+                    >
+                      <Sparkles className="size-4" />
+                      Th\u1ee9 t\u1ef1 gia ph\u1ea3
+                    </Link>
+                  )}
                 </>
               )}
 
@@ -127,7 +136,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                 <>
                   <div className="px-4 py-2 mt-1">
                     <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">
-                      Quản trị viên
+                      Qu\u1ea3n tr\u1ecb vi\u00ean
                     </p>
                   </div>
 
@@ -137,16 +146,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                     className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-rose-700 hover:bg-rose-50 transition-colors"
                   >
                     <Users className="size-4" />
-                    Quản lý Người dùng
-                  </Link>
-
-                  <Link
-                    href="/dashboard/lineage"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-indigo-700 hover:bg-indigo-50 transition-colors"
-                  >
-                    <Network className="size-4" />
-                    Thứ tự gia phả
+                    Qu\u1ea3n l\u00fd Ng\u01b0\u1eddi d\u00f9ng
                   </Link>
 
                   {familyId && (
@@ -156,7 +156,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                       className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-teal-700 hover:bg-teal-50 transition-colors"
                     >
                       <Database className="size-4" />
-                      Sao lưu & Phục hồi
+                      Sao l\u01b0u & Ph\u1ee5c h\u1ed3i
                     </Link>
                   )}
                 </>
@@ -170,7 +170,7 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-rose-700 hover:bg-rose-50 transition-colors"
               >
                 <Info className="size-4" />
-                Giới thiệu
+                Gi\u1edbi thi\u1ec7u
               </Link>
 
               <LogoutButton />
