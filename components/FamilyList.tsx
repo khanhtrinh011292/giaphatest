@@ -56,7 +56,7 @@ export default function FamilyList({
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Xóa gia phả “${name}”? Hành động này không thể hoàn tác.`)) return;
+    if (!confirm(`Xóa gia phả "${name}"? Hành động này không thể hoàn tác.`)) return;
     setDeletingId(id);
     startTransition(async () => {
       await deleteFamily(id);
@@ -68,11 +68,9 @@ export default function FamilyList({
     e.preventDefault();
     const name = nameRef.current?.value.trim();
     if (!name) return;
-    const fd = new FormData();
-    fd.append("name", name);
-    if (descRef.current?.value) fd.append("description", descRef.current.value);
+    const desc = descRef.current?.value.trim() || undefined;
     startTransition(async () => {
-      await createFamily(fd);
+      await createFamily(name, desc);
       formRef.current?.reset();
       setShowCreate(false);
     });
@@ -179,7 +177,7 @@ export default function FamilyList({
           >
             <TreePine className="size-10 mx-auto mb-3 opacity-30" />
             <p className="text-sm font-medium">Chưa có gia phả nào</p>
-            <p className="text-xs mt-1">Bấm “Tạo mới” ở trên để bắt đầu</p>
+            <p className="text-xs mt-1">Bấm "Tạo mới" ở trên để bắt đầu</p>
           </motion.div>
         ) : (
           <div className="space-y-2">
@@ -193,12 +191,10 @@ export default function FamilyList({
                   transition={{ delay: i * 0.05, duration: 0.25 }}
                   className="group bg-white/80 border border-stone-200/60 rounded-2xl px-5 py-4 shadow-sm hover:shadow-md hover:border-amber-300/70 transition-all flex items-center gap-4"
                 >
-                  {/* Icon */}
                   <div className="size-10 rounded-xl bg-amber-50 ring-1 ring-amber-200/60 flex items-center justify-center shrink-0">
                     <TreePine className="size-5 text-amber-600" />
                   </div>
 
-                  {/* Info */}
                   <Link href={`/dashboard/${f.id}`} className="flex-1 min-w-0 group/link">
                     <p className="font-semibold text-stone-800 truncate group-hover/link:text-amber-700 transition-colors">{f.name}</p>
                     {f.description ? (
@@ -208,15 +204,12 @@ export default function FamilyList({
                     )}
                   </Link>
 
-                  {/* Badge */}
                   <span className="text-[11px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-200/60 px-2.5 py-1 rounded-full shrink-0 hidden sm:block">
                     Chủ sở hữu
                   </span>
 
-                  {/* Arrow */}
                   <ChevronRight className="size-4 text-stone-300 group-hover:text-amber-500 transition-colors shrink-0" />
 
-                  {/* Delete */}
                   <button
                     onClick={() => handleDelete(f.id, f.name)}
                     disabled={deletingId === f.id}
