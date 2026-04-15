@@ -9,9 +9,9 @@ import {
   getCanChi,
   getLunarDateString,
   getMenhColor,
+  getMenhDetail,
   getMenhNguHanh,
   getSolarDateString,
-  getZodiacAnimal,
   getZodiacSign,
 } from "@/utils/dateHelpers";
 import { motion, Variants } from "framer-motion";
@@ -23,6 +23,7 @@ import {
   Leaf,
   MapPin,
   Phone,
+  Sparkles,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -102,6 +103,9 @@ export default function MemberDetailContent({
       transition: { type: "spring", stiffness: 200, damping: 20 },
     },
   };
+
+  // Zodiac sign
+  const zodiacSign = getZodiacSign(person.birth_day, person.birth_month);
 
   return (
     <motion.div
@@ -216,30 +220,15 @@ export default function MemberDetailContent({
             )}
 
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+
               {/* Birth Card */}
               <motion.div
                 variants={itemVariants}
                 className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-stone-200/60 shadow-sm transition-all hover:shadow-md hover:border-amber-200/60"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>
-                    <h3 className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Sinh</h3>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {person.birth_year &&
-                      getZodiacAnimal(person.birth_year, person.birth_month, person.birth_day) && (
-                        <span className="text-[10px] font-sans font-bold text-rose-700 bg-rose-50 border border-rose-200/60 rounded-md px-1.5 py-0.5 whitespace-nowrap shadow-xs tracking-wider">
-                          Tuổi{" "}{getZodiacAnimal(person.birth_year, person.birth_month, person.birth_day)}
-                        </span>
-                      )}
-                    {person.birth_day && person.birth_month &&
-                      getZodiacSign(person.birth_day, person.birth_month) && (
-                        <span className="text-[10px] font-sans font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 rounded-md px-1.5 py-0.5 whitespace-nowrap shadow-xs tracking-wider">
-                          {getZodiacSign(person.birth_day, person.birth_month)}
-                        </span>
-                      )}
-                  </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"></span>
+                  <h3 className="text-[11px] font-bold text-stone-400 uppercase tracking-widest">Sinh</h3>
                 </div>
                 <div className="space-y-1.5 pl-4 border-l-2 border-stone-100">
                   <p className="text-stone-800 font-semibold text-sm sm:text-base">
@@ -283,7 +272,7 @@ export default function MemberDetailContent({
                 </motion.div>
               )}
 
-              {/* Age Card */}
+              {/* Age + Menh Card */}
               {(() => {
                 const ageData = calculateAge(
                   person.birth_year, person.birth_month, person.birth_day,
@@ -294,6 +283,7 @@ export default function MemberDetailContent({
 
                 const canChi = getCanChi(person.birth_year, person.birth_month, person.birth_day);
                 const menh = getMenhNguHanh(person.birth_year, person.birth_month, person.birth_day);
+                const menhDetail = getMenhDetail(person.birth_year, person.birth_month, person.birth_day);
                 const menhColor = menh ? getMenhColor(menh) : "";
 
                 return (
@@ -313,26 +303,41 @@ export default function MemberDetailContent({
                         {ageData.age}
                         <span className="text-xs sm:text-sm font-bold text-amber-700/60 ml-1.5 uppercase tracking-wider">tuổi</span>
                       </p>
-                      {/* Can Chi + Menh */}
-                      {(canChi || menh) && (
-                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                          {canChi && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 tracking-wide shadow-xs">
-                              {canChi}
-                            </span>
-                          )}
-                          {menh && (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border tracking-wide shadow-xs ${menhColor}`}>
-                              <span className="text-[9px] font-black uppercase opacity-70">Mệnh</span>
-                              {menh}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      {/* Can Chi + Menh chi tiết */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {canChi && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 tracking-wide shadow-xs">
+                            {canChi}
+                          </span>
+                        )}
+                        {menhDetail && menh && (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border tracking-wide shadow-xs ${menhColor}`}>
+                            <span className="text-[9px] font-black uppercase opacity-60">Mệnh</span>
+                            {menhDetail}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 );
               })()}
+
+              {/* Zodiac Sign Card — riêng biệt */}
+              {zodiacSign && (
+                <motion.div
+                  variants={itemVariants}
+                  className="bg-linear-to-br from-indigo-50/80 to-violet-50/40 rounded-2xl p-4 border border-indigo-200/50 shadow-sm transition-all hover:shadow-md hover:border-indigo-300/60 relative overflow-hidden"
+                >
+                  <Sparkles className="absolute -bottom-3 -right-3 w-16 h-16 text-indigo-400/10 rotate-12" />
+                  <div className="flex items-center gap-2 mb-2 relative z-10">
+                    <span className="size-2 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.5)]" />
+                    <h3 className="text-[11px] font-bold text-indigo-400/80 uppercase tracking-widest">Cung hoàng đạo</h3>
+                  </div>
+                  <div className="pl-4 border-l-2 border-indigo-100 relative z-10">
+                    <p className="text-stone-800 font-bold text-base sm:text-lg">{zodiacSign}</p>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Children Stats Card */}
               {relStats &&
@@ -490,45 +495,38 @@ export default function MemberDetailContent({
 
           <div className="space-y-6">
             <motion.div layout variants={itemVariants}>
-              {isAdmin ? (
-                <div className="bg-stone-50 p-5 sm:p-6 rounded-2xl border border-stone-200/80 shadow-sm">
-                  <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2 text-sm sm:text-base border-b border-stone-200/60 pb-3">
-                    <span className="bg-amber-100/80 text-amber-700 p-1.5 rounded-lg border border-amber-200/50">🔒</span>
-                    Thông tin liên hệ
-                  </h3>
-                  <dl className="space-y-4 text-sm sm:text-base">
-                    <div>
-                      <dt className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                        <Phone className="w-3.5 h-3.5" /> Số điện thoại
-                      </dt>
-                      <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                        {(fullPerson.phone_number as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                        <Briefcase className="w-3.5 h-3.5" /> Nghề nghiệp
-                      </dt>
-                      <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                        {(fullPerson.occupation as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                        <MapPin className="w-3.5 h-3.5" /> Nơi ở hiện tại
-                      </dt>
-                      <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                        {(fullPerson.current_residence as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-              ) : (
-                <div className="bg-stone-50/50 p-5 rounded-2xl border border-stone-200 border-dashed flex flex-col items-center justify-center text-center gap-2">
-                  <span className="text-2xl opacity-50">🔒</span>
-                  <p className="text-sm font-medium text-stone-500">Thông tin liên hệ chỉ hiển thị với Quản trị viên.</p>
-                </div>
-              )}
+              <div className="bg-stone-50 p-5 sm:p-6 rounded-2xl border border-stone-200/80 shadow-sm">
+                <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2 text-sm sm:text-base border-b border-stone-200/60 pb-3">
+                  <Phone className="size-4 text-amber-600" />
+                  Thông tin liên hệ
+                </h3>
+                <dl className="space-y-4 text-sm sm:text-base">
+                  <div>
+                    <dt className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                      <Phone className="w-3.5 h-3.5" /> Số điện thoại
+                    </dt>
+                    <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
+                      {(fullPerson.phone_number as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                      <Briefcase className="w-3.5 h-3.5" /> Nghề nghiệp
+                    </dt>
+                    <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
+                      {(fullPerson.occupation as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[11px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                      <MapPin className="w-3.5 h-3.5" /> Nơi ở hiện tại
+                    </dt>
+                    <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
+                      {(fullPerson.current_residence as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </motion.div>
           </div>
         </div>

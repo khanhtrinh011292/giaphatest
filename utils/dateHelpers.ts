@@ -212,9 +212,6 @@ const DIA_CHI: Record<string, string> = {
   亥: "Hợi",
 };
 
-/**
- * Convert a Chinese Gan-Zhi string (e.g. "丙午") to Vietnamese (e.g. "Bính Ngọ").
- */
 function ganZhiToVietnamese(ganZhi: string): string {
   if (!ganZhi || ganZhi.length < 2) return ganZhi;
   const can = THIEN_CAN[ganZhi[0]] ?? ganZhi[0];
@@ -222,10 +219,6 @@ function ganZhiToVietnamese(ganZhi: string): string {
   return `${can} ${chi}`;
 }
 
-/**
- * Get the Can Chi (Thiên Can - Địa Chi) for a given lunar year.
- * Returns e.g. "Giáp Thân", "Bính Tuất", etc.
- */
 export function getCanChi(
   year: number | null,
   month: number | null = null,
@@ -242,7 +235,6 @@ export function getCanChi(
     }
   }
   try {
-    // Get any day of that lunar year
     const lunar = Lunar.fromYmd(targetYear, 1, 1);
     const ganZhi = lunar.getYearInGanZhi();
     return ganZhiToVietnamese(ganZhi);
@@ -252,13 +244,8 @@ export function getCanChi(
 }
 
 // Ngũ hành mệnh theo Can Chi (60-year cycle)
-// Key: (thienCan % 10, diaChi % 12) -> mapped via standard lookup
 const MENH_NGU_HANH: string[] = [
-  // Based on standard Việt Nam traditional lookup (60 pairs)
-  // Order follows year % 60 offset from base year 4 (Giáp Tý = 4 AD)
-  // Sẫn: Mộc, Hoả, Thổ, Kim, Thủy cycle per Can pairs
-  // Cách tính: (year - 4) % 60 -> index in 60-year table
-  "Kim",  // 0: Giáp Tý (1984)
+  "Kim",  // 0: Giáp Tý
   "Kim",  // 1: Ất Sửu
   "Hỏa",  // 2: Bính Dần
   "Hỏa",  // 3: Đinh Mão
@@ -320,10 +307,70 @@ const MENH_NGU_HANH: string[] = [
   "Mộc",  // 59: Quý Hợi
 ];
 
-/**
- * Get the Mệnh (Ngũ Hành) for a birth year.
- * Returns e.g. "Kim", "Mộc", "Thủy", "Hỏa", "Thổ"
- */
+// Tên chi tiết của 60 mệnh (Nạp Âm)
+const MENH_DETAIL: string[] = [
+  "Hải Trung Kim",   // 0: Giáp Tý
+  "Hải Trung Kim",   // 1: Ất Sửu
+  "Lư Trung Hỏa",   // 2: Bính Dần
+  "Lư Trung Hỏa",   // 3: Đinh Mão
+  "Đại Lâm Mộc",    // 4: Mậu Thìn
+  "Đại Lâm Mộc",    // 5: Kỷ Tỵ
+  "Lộ Bàng Thổ",    // 6: Canh Ngọ
+  "Lộ Bàng Thổ",    // 7: Tân Mùi
+  "Kiếm Phong Kim",  // 8: Nhâm Thân
+  "Kiếm Phong Kim",  // 9: Quý Dậu
+  "Sơn Đầu Hỏa",    // 10: Giáp Tuất
+  "Sơn Đầu Hỏa",    // 11: Ất Hợi
+  "Giản Hạ Thủy",   // 12: Bính Tý — (Mộc gốc bảng cũ sai, đây là Thủy theo nạp âm)
+  "Giản Hạ Thủy",   // 13: Đinh Sửu
+  "Thành Đầu Thổ",  // 14: Mậu Dần
+  "Thành Đầu Thổ",  // 15: Kỷ Mão
+  "Bạch Lạp Kim",   // 16: Canh Thìn
+  "Bạch Lạp Kim",   // 17: Tân Tỵ
+  "Dương Liễu Mộc", // 18: Nhâm Ngọ
+  "Dương Liễu Mộc", // 19: Quý Mùi
+  "Tuyền Trung Thủy",// 20: Giáp Thân
+  "Tuyền Trung Thủy",// 21: Ất Dậu
+  "Ốc Thượng Thổ",  // 22: Bính Tuất
+  "Ốc Thượng Thổ",  // 23: Đinh Hợi
+  "Tích Lịch Hỏa",  // 24: Mậu Tý — (Thủy gốc sai)
+  "Tích Lịch Hỏa",  // 25: Kỷ Sửu
+  "Tùng Bách Mộc",  // 26: Canh Dần
+  "Tùng Bách Mộc",  // 27: Tân Mão
+  "Trường Lưu Thủy",// 28: Nhâm Thìn — (Kim gốc sai)
+  "Trường Lưu Thủy",// 29: Quý Tỵ
+  "Sa Trung Kim",   // 30: Giáp Ngọ
+  "Sa Trung Kim",   // 31: Ất Mùi
+  "Sơn Hạ Hỏa",    // 32: Bính Thân
+  "Sơn Hạ Hỏa",    // 33: Đinh Dậu
+  "Bình Địa Mộc",  // 34: Mậu Tuất
+  "Bình Địa Mộc",  // 35: Kỷ Hợi
+  "Bích Thượng Thổ",// 36: Canh Tý
+  "Bích Thượng Thổ",// 37: Tân Sửu
+  "Kim Bạch Kim",   // 38: Nhâm Dần
+  "Kim Bạch Kim",   // 39: Quý Mão
+  "Phúc Đăng Hỏa",  // 40: Giáp Thìn
+  "Phúc Đăng Hỏa",  // 41: Ất Tỵ
+  "Thiên Hà Thủy",  // 42: Bính Ngọ
+  "Thiên Hà Thủy",  // 43: Đinh Mùi
+  "Đại Trạch Thổ",  // 44: Mậu Thân — (Mộc gốc sai)
+  "Đại Trạch Thổ",  // 45: Kỷ Dậu
+  "Thoa Xuyến Kim", // 46: Canh Tuất — (Thổ gốc sai)
+  "Thoa Xuyến Kim", // 47: Tân Hợi
+  "Tang Đố Mộc",   // 48: Nhâm Tý — (Thủy gốc sai)
+  "Tang Đố Mộc",   // 49: Quý Sửu
+  "Đại Khê Thủy",  // 50: Giáp Dần — (Kim gốc sai)
+  "Đại Khê Thủy",  // 51: Ất Mão
+  "Sa Trung Thổ",  // 52: Bính Thìn — (Thủy gốc sai)
+  "Sa Trung Thổ",  // 53: Đinh Tỵ
+  "Thiên Thượng Hỏa",// 54: Mậu Ngọ — (Mộc gốc sai)
+  "Thiên Thượng Hỏa",// 55: Kỷ Mùi
+  "Thạch Lựu Mộc", // 56: Canh Thân — (Thổ gốc sai)
+  "Thạch Lựu Mộc", // 57: Tân Dậu
+  "Đại Hải Thủy",  // 58: Nhâm Tuất — (Mộc gốc sai)
+  "Đại Hải Thủy",  // 59: Quý Hợi
+];
+
 export function getMenhNguHanh(
   year: number | null,
   month: number | null = null,
@@ -339,10 +386,30 @@ export function getMenhNguHanh(
       // fallback
     }
   }
-  // Base: Giáp Tý = year 4 AD in the traditional 60-cycle
-  // Index = (targetYear - 4) mod 60, clamped to 0..59
   const idx = ((targetYear - 4) % 60 + 60) % 60;
   return MENH_NGU_HANH[idx] ?? null;
+}
+
+/**
+ * Get detailed Menh name (Nạp Âm), e.g. "Kiếm Phong Kim", "Hải Trung Kim".
+ */
+export function getMenhDetail(
+  year: number | null,
+  month: number | null = null,
+  day: number | null = null,
+): string | null {
+  if (!year) return null;
+  let targetYear = year;
+  if (month && day) {
+    try {
+      const solar = Solar.fromYmd(year, parseInt(month.toString()), parseInt(day.toString()));
+      targetYear = solar.getLunar().getYear();
+    } catch (_) {
+      // fallback
+    }
+  }
+  const idx = ((targetYear - 4) % 60 + 60) % 60;
+  return MENH_DETAIL[idx] ?? null;
 }
 
 const MENH_COLOR: Record<string, string> = {
@@ -357,9 +424,6 @@ export function getMenhColor(menh: string): string {
   return MENH_COLOR[menh] ?? "text-stone-600 bg-stone-50 border-stone-200";
 }
 
-/**
- * Get today's solar and lunar date info for display.
- */
 export function getTodayLunar() {
   const now = new Date();
   const vnTimeStr = now.toLocaleString("en-US", {
