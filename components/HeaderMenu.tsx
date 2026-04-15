@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { BarChart2, ChevronDown, Database, GitMerge, Globe, Home, Info, Network, Share2, Sparkles, UserCircle, Users } from "lucide-react";
+import { BarChart2, CalendarDays, ChevronDown, Database, GitMerge, Globe, Home, Info, Network, Share2, Sparkles, UserCircle, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import LogoutButton from "./LogoutButton";
@@ -34,6 +34,12 @@ function FamilyMenuItems({ familyId, isAdmin, isOwner, onClose }: { familyId: st
         Thống kê
       </Link>
 
+      <Link href={`/dashboard/${familyId}/events`} onClick={onClose}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors">
+        <CalendarDays className="size-4" />
+        Lịch sự kiện
+      </Link>
+
       <Link href={`/dashboard/${familyId}/share`} onClick={onClose}
         className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-green-700 hover:bg-green-50 transition-colors">
         <Share2 className="size-4" />
@@ -52,7 +58,7 @@ function FamilyMenuItems({ familyId, isAdmin, isOwner, onClose }: { familyId: st
         <Link href={`/dashboard/${familyId}/data`} onClick={onClose}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-teal-700 hover:bg-teal-50 transition-colors">
           <Database className="size-4" />
-          Sao lưu & Phục hồi
+          Sao lưu &amp; Phục hồi
         </Link>
       )}
     </>
@@ -85,7 +91,6 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Quản lý Website chỉ dành cho Admin và SuperAdmin hệ thống
   const canManageWebsite = isAdmin;
 
   return (
