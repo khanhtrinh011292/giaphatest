@@ -46,6 +46,7 @@ export default function RelationshipManager({
   
   const personId = person.id;
   const personGender = person.gender;
+  const familyId = person.family_id;
 
   // If inside DashboardProvider → open modal; otherwise → navigate to full page
   const handlePersonClick = (id: string) => {
@@ -348,6 +349,7 @@ export default function RelationshipManager({
       else if (newRelType === "adopted_child") type = "adopted_child";
 
       const { error } = await supabase.from("relationships").insert({
+        family_id: familyId,
         person_a: personA,
         person_b: personB,
         type: type,
@@ -432,6 +434,7 @@ export default function RelationshipManager({
 
         // 1. Insert Person
         const personPayload: {
+          family_id: string;
           full_name: string;
           gender: "male" | "female" | "other";
           birth_year?: number;
@@ -439,6 +442,7 @@ export default function RelationshipManager({
           is_in_law?: boolean;
           generation?: number;
         } = {
+          family_id: familyId,
           full_name: child.name.trim(),
           gender: child.gender,
           is_in_law: false,
@@ -471,6 +475,7 @@ export default function RelationshipManager({
 
         // 2. Insert Relationship to Main Person (parent)
         await supabase.from("relationships").insert({
+          family_id: familyId,
           person_a: personId,
           person_b: newChildId,
           type: "biological_child",
@@ -479,6 +484,7 @@ export default function RelationshipManager({
         // 3. Insert Relationship to Second Parent (spouse), if selected
         if (selectedSpouseId && selectedSpouseId !== "unknown") {
           await supabase.from("relationships").insert({
+            family_id: familyId,
             person_a: selectedSpouseId,
             person_b: newChildId,
             type: "biological_child",
@@ -539,12 +545,14 @@ export default function RelationshipManager({
             : "female";
 
       const personPayload: {
+        family_id: string;
         full_name: string;
         gender: "male" | "female" | "other";
         birth_year?: number;
         is_in_law?: boolean;
         generation?: number;
       } = {
+        family_id: familyId,
         full_name: newSpouseName.trim(),
         gender: newSpouseGender,
         is_in_law: person.is_in_law === true ? false : true,
@@ -572,6 +580,7 @@ export default function RelationshipManager({
 
       // 2. Insert Marriage Relationship
       const { error: relError } = await supabase.from("relationships").insert({
+        family_id: familyId,
         person_a: personId,
         person_b: newSpouseId,
         type: "marriage",
