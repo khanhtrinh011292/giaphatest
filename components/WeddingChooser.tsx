@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   tinhHopTuoi,
   suggestDaysInMonth,
@@ -10,7 +10,7 @@ import {
   type CompatResult,
   type GioHoangDao,
 } from "@/utils/thongThu";
-import { Heart, Calendar, Clock, Star, ChevronDown, ChevronUp, Info, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, Star, ChevronDown, ChevronUp, Info, AlertTriangle } from "lucide-react";
 
 const MONTH_NAMES = [
   "Tháng 1","Tháng 2","Tháng 3","Tháng 4","Tháng 5","Tháng 6",
@@ -86,7 +86,6 @@ function DayCard({
         <p className="text-xs text-stone-400 mt-1">{day.score}/100 điểm</p>
       </button>
 
-      {/* Chi tiết lý do */}
       <div className="px-4 pb-3">
         <button
           onClick={() => setExpanded(v => !v)}
@@ -144,28 +143,32 @@ export default function WeddingChooser() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  // Tuổi — chia sẻ giữa cả 3 phần
   const [groomYear, setGroomYear] = useState("");
   const [brideYear, setBrideYear] = useState("");
-  const [compatResult, setCompatResult] = useState<CompatResult | null>(null);
   const [showCompatDetail, setShowCompatDetail] = useState(false);
 
-  // Trạch Nhật
   const [selYear, setSelYear] = useState(currentYear);
   const [selMonth, setSelMonth] = useState(currentMonth);
   const [selectedDay, setSelectedDay] = useState<DayRating | null>(null);
+
+  // ref để auto-scroll xuống phần Giờ Hoàng Đạo
+  const gioRef = useRef<HTMLElement>(null);
 
   const groomY = groomYear ? parseInt(groomYear) : undefined;
   const brideY = brideYear ? parseInt(brideYear) : undefined;
   const hasAge = !!(groomY && brideY && groomY >= 1900 && brideY >= 1900);
 
-  // Danh sách ngày — auto re-filter khi có tuổi
+  // Tự động tính Phối Mệnh ngay khi có đủ tuổi
+  const compatResult = useMemo<CompatResult | null>(
+    () => hasAge ? tinhHopTuoi(groomY!, brideY!) : null,
+    [groomY, brideY, hasAge]
+  );
+
   const suggestedDays = useMemo(
     () => suggestDaysInMonth(selYear, selMonth, 65, groomY, brideY),
     [selYear, selMonth, groomY, brideY]
   );
 
-  // Giờ Hoàng Đạo — dùng can chi ngày thực + tuổi
   const gioHD = useMemo((): GioHoangDao[] => {
     if (!selectedDay) return [];
     const [yStr, mStr, dStr] = selectedDay.solarDate.split("-");
@@ -175,31 +178,20 @@ export default function WeddingChooser() {
     );
   }, [selectedDay, groomY, brideY]);
 
-  function handleCalcCompat() {
-    if (!hasAge) return;
-    setCompatResult(tinhHopTuoi(groomY!, brideY!));
-  }
+  // Auto-scroll khi selectedDay thay đổi
+  useEffect(() => {
+    if (selectedDay && gioRef.current) {
+      setTimeout(() => {
+        gioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [selectedDay]);
 
   const groomCC = groomY && groomY >= 1900 ? getCanChi(groomY) : null;
   const brideCC = brideY && brideY >= 1900 ? getCanChi(brideY) : null;
 
   return (
     <main className="flex-1 w-full">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-rose-50 via-amber-50 to-white border-b border-stone-100">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-          <div className="flex items-center gap-3">
-            <div className="size-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-              <Heart className="size-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-stone-900">Coi Ngày Cưới</h1>
-              <p className="text-stone-500 text-sm mt-0.5">Theo Thông Thư — Trạch Nhật · Phối Mệnh · Giờ Hoàng Đạo</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-10">
 
         {/* ── PHẦN 1: Nhập tuổi ── */}
@@ -210,14 +202,13 @@ export default function WeddingChooser() {
           </div>
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 space-y-4">
 
-            {/* Năm sinh */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-stone-500 mb-1.5">Năm sinh Chú rể</label>
                 <input
                   type="number" min={1900} max={2100}
                   value={groomYear}
-                  onChange={e => { setGroomYear(e.target.value); setSelectedDay(null); setCompatResult(null); }}
+                  onChange={e => { setGroomYear(e.target.value); setSelectedDay(null); }}
                   placeholder="VD: 1995"
                   className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
                 />
@@ -230,7 +221,7 @@ export default function WeddingChooser() {
                 <input
                   type="number" min={1900} max={2100}
                   value={brideYear}
-                  onChange={e => { setBrideYear(e.target.value); setSelectedDay(null); setCompatResult(null); }}
+                  onChange={e => { setBrideYear(e.target.value); setSelectedDay(null); }}
                   placeholder="VD: 1997"
                   className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
                 />
@@ -239,15 +230,6 @@ export default function WeddingChooser() {
                 )}
               </div>
             </div>
-
-            {/* Hợp tuổi */}
-            <button
-              onClick={handleCalcCompat}
-              disabled={!hasAge}
-              className="w-full btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Tính hợp tuổi (Phối Mệnh)
-            </button>
 
             {!hasAge && (
               <p className="text-xs text-stone-400 text-center">
@@ -352,7 +334,7 @@ export default function WeddingChooser() {
 
         {/* ── PHẦN 3: Giờ Hoàng Đạo ── */}
         {selectedDay && (
-          <section>
+          <section ref={gioRef}>
             <div className="flex items-center gap-2 mb-5">
               <Clock className="size-4 text-amber-500" />
               <h2 className="text-base font-bold text-stone-800">3. Giờ Hoàng Đạo</h2>
@@ -373,7 +355,6 @@ export default function WeddingChooser() {
                 {gioHD.map(g => <GioCard key={g.chi} g={g} />)}
               </div>
 
-              {/* Chú giải màu */}
               <div className="flex flex-wrap gap-3 mb-4 text-xs">
                 <div className="flex items-center gap-1.5">
                   <div className="size-3 rounded-full bg-amber-400" />
