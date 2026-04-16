@@ -4,7 +4,7 @@ import MemberDetailContent from "@/components/MemberDetailContent";
 import MemberForm from "@/components/MemberForm";
 import { Person } from "@/types";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, ArrowLeft, Edit2, ExternalLink, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Edit2, ExternalLink, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -26,8 +26,10 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [person, setPerson] = useState<Person | null>(null);
   const [privateData, setPrivateData] = useState<Partial<Person> | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const closeModal = () => { setMemberModalId(null); setShowCreateMember(false); setIsEditing(false); };
+  const closeModal = () => { setMemberModalId(null); setShowCreateMember(false); setIsEditing(false); setConfirmDelete(false); };
 
   const fetchData = useCallback(async (id: string) => {
     setLoading(true);
@@ -55,7 +57,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
     else if (showCreateMember) { setIsOpen(true); setIsEditing(false); setPerson(null); setPrivateData(null); setError(null); }
     else {
       setIsOpen(false);
-      timeoutId = setTimeout(() => { setPerson(null); setPrivateData(null); setError(null); setIsEditing(false); }, 300);
+      timeoutId = setTimeout(() => { setPerson(null); setPrivateData(null); setError(null); setIsEditing(false); setConfirmDelete(false); }, 300);
     }
     return () => { if (timeoutId) clearTimeout(timeoutId); };
   }, [memberId, showCreateMember, fetchData]);
@@ -77,6 +79,21 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
     setTimeout(() => router.refresh(), 100);
   };
 
+  const handleDelete = async () => {
+    if (!person) return;
+    setIsDeleting(true);
+    try {
+      const { error: delError } = await supabase.from("persons").delete().eq("id", person.id);
+      if (delError) throw new Error(delError.message);
+      closeModal();
+      router.refresh();
+    } catch (err) {
+      setError((err as Error)?.message || "Xóa thất bại.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formInitialData = person ? { ...person, ...(privateData ?? {}) } : undefined;
   const resolvedFamilyId = familyId ?? person?.family_id;
   const memberHref = person
@@ -94,6 +111,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
           <motion.div layout initial={{ scale: 0.96, opacity: 0, y: 15 }} animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.96, opacity: 0, y: 15 }} transition={{ duration: 0.25, ease: "easeOut" }}
             className="relative bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-stone-200">
+
             <div className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 flex items-center gap-2">
               {isEditing ? (
                 <button onClick={() => setIsEditing(false)}
@@ -112,6 +130,34 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
                         className="flex items-center gap-1.5 px-4 py-2 bg-amber-100/80 text-amber-800 rounded-full hover:bg-amber-200 font-semibold text-sm shadow-sm border border-amber-200/50 transition-colors">
                         <Edit2 className="size-4" /><span className="hidden sm:inline">Chỉnh sửa</span>
                       </button>
+                    )}
+                    {canEdit && (
+                      confirmDelete ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-red-600 font-semibold hidden sm:inline">Xác nhận xóa?</span>
+                          <button
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="flex items-center gap-1 px-3 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 font-semibold text-sm shadow-sm transition-colors disabled:opacity-60"
+                          >
+                            {isDeleting ? <span className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Trash2 className="size-4" />}
+                            <span className="hidden sm:inline">Xóa</span>
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(false)}
+                            className="px-3 py-2 bg-stone-100/80 text-stone-600 rounded-full hover:bg-stone-200 font-semibold text-sm shadow-sm border border-stone-200/50 transition-colors"
+                          >
+                            Hủy
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDelete(true)}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-red-50/80 text-red-700 rounded-full hover:bg-red-100 font-semibold text-sm shadow-sm border border-red-200/50 transition-colors"
+                        >
+                          <Trash2 className="size-4" /><span className="hidden sm:inline">Xóa</span>
+                        </button>
+                      )
                     )}
                   </>
                 )

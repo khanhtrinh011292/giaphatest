@@ -10,7 +10,7 @@ import {
   type CompatResult,
   type GioHoangDao,
 } from "@/utils/thongThu";
-import { Calendar, Clock, Star, ChevronDown, ChevronUp, Info, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, Star, ChevronDown, ChevronUp, Info, AlertTriangle, Check, CheckCircle2 } from "lucide-react";
 
 const MONTH_NAMES = [
   "Tháng 1","Tháng 2","Tháng 3","Tháng 4","Tháng 5","Tháng 6",
@@ -126,8 +126,8 @@ function GioCard({ g }: { g: GioHoangDao }) {
       </p>
       <p className="text-xs text-stone-500 mt-0.5">{g.time}</p>
       {g.isHoangDao && !xungHai && (
-        <span className="inline-block mt-1 text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">
-          Hoàng Đạo ✔
+        <span className="inline-flex items-center gap-0.5 mt-1 text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">
+          <Check className="size-2.5" />Hoàng Đạo
         </span>
       )}
       {g.isHoangDao && xungHai && (
@@ -151,14 +151,12 @@ export default function WeddingChooser() {
   const [selMonth, setSelMonth] = useState(currentMonth);
   const [selectedDay, setSelectedDay] = useState<DayRating | null>(null);
 
-  // ref để auto-scroll xuống phần Giờ Hoàng Đạo
   const gioRef = useRef<HTMLElement>(null);
 
   const groomY = groomYear ? parseInt(groomYear) : undefined;
   const brideY = brideYear ? parseInt(brideYear) : undefined;
   const hasAge = !!(groomY && brideY && groomY >= 1900 && brideY >= 1900);
 
-  // Tự động tính Phối Mệnh ngay khi có đủ tuổi
   const compatResult = useMemo<CompatResult | null>(
     () => hasAge ? tinhHopTuoi(groomY!, brideY!) : null,
     [groomY, brideY, hasAge]
@@ -178,7 +176,6 @@ export default function WeddingChooser() {
     );
   }, [selectedDay, groomY, brideY]);
 
-  // Auto-scroll khi selectedDay thay đổi
   useEffect(() => {
     if (selectedDay && gioRef.current) {
       setTimeout(() => {
@@ -232,8 +229,9 @@ export default function WeddingChooser() {
             </div>
 
             {!hasAge && (
-              <p className="text-xs text-stone-400 text-center">
-                ℹ️ Nhập năm sinh để kết quả chọn ngày & giờ tự động lọc theo tuổi
+              <p className="text-xs text-stone-400 text-center flex items-center justify-center gap-1">
+                <Info className="size-3.5 shrink-0" />
+                Nhập năm sinh để kết quả chọn ngày & giờ tự động lọc theo tuổi
               </p>
             )}
 
@@ -300,8 +298,8 @@ export default function WeddingChooser() {
                 ))}
               </select>
               {hasAge && (
-                <span className="text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                  ✅ Đã lọc theo tuổi
+                <span className="text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <CheckCircle2 className="size-3.5" />Đã lọc theo tuổi
                 </span>
               )}
             </div>
