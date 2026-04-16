@@ -16,8 +16,6 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
   const { memberModalId: memberId, setMemberModalId, showCreateMember, setShowCreateMember } = useDashboard();
   const { isAdmin, supabase } = useUser();
 
-  // Quyền chỉnh sửa lấy từ FamilyContext (owner/editor/admin của gia phả này)
-  // Fallback an toàn nếu component được dùng ngoài FamilyContextProvider
   const familyCtx = useFamilyContextOptional();
   const canEdit = familyCtx ? familyCtx.canWrite : isAdmin;
 
@@ -106,12 +104,10 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
               ) : (
                 person && (
                   <>
-                    {/* Nút Xem: hiện với tất cả role */}
                     <Link href={memberHref}
                       className="flex items-center gap-1.5 px-4 py-2 bg-stone-100/80 text-stone-700 rounded-full hover:bg-stone-200 font-semibold text-sm shadow-sm border border-stone-200/50 transition-colors">
                       <ExternalLink className="size-4" /><span className="hidden sm:inline">Xem</span>
                     </Link>
-                    {/* Nút Chỉnh sửa: chỉ hiện khi có quyền canWrite trong family này */}
                     {canEdit && (
                       <button onClick={() => setIsEditing(true)}
                         className="flex items-center gap-1.5 px-4 py-2 bg-amber-100/80 text-amber-800 rounded-full hover:bg-amber-200 font-semibold text-sm shadow-sm border border-amber-200/50 transition-colors">
@@ -170,7 +166,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
               ) : person ? (
                 <motion.div key="details" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar">
-                  <MemberDetailContent person={person} privateData={privateData} isAdmin={isAdmin} canEdit={canEdit} familyId={resolvedFamilyId} />
+                  <MemberDetailContent person={person} privateData={privateData} isAdmin={isAdmin} canEdit={canEdit} />
                 </motion.div>
               ) : null}
             </AnimatePresence>

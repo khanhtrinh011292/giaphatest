@@ -81,7 +81,6 @@ export default function DashboardViews({
               initialPersons={persons}
               relationships={relationships}
               canEdit={canEdit}
-              familyId={familyId}
             />
           </div>
         )}
