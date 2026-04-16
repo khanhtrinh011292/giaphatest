@@ -42,7 +42,7 @@ export default async function FamilyLayout({
 
   if (!profile?.is_active) {
     return (
-      <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+      <div className="min-h-svh bg-stone-50 text-stone-900 flex flex-col font-sans">
         <header className="sticky top-0 z-30 bg-white/80 border-b border-stone-200 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <Link href="/" className="text-xl font-serif font-bold text-stone-800 hover:text-amber-700 transition-colors">
@@ -102,7 +102,7 @@ export default async function FamilyLayout({
 
   return (
     <FamilyContextProvider context={context}>
-      <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+      <div className="min-h-svh bg-stone-50 text-stone-900 flex flex-col font-sans">
         <DashboardHeader familyId={familyId} familyName={family.name} />
         {children}
         <Footer className="mt-auto bg-white border-t border-stone-200" showDisclaimer={true} />
