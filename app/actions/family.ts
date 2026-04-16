@@ -25,7 +25,6 @@ export async function getFamilies(): Promise<
       .order("created_at", { ascending: true }),
   ]);
 
-  // #4: Kiểm tra lỗi Supabase thay vì silent fail
   if (ownedRes.error) return { error: ownedRes.error.message };
   if (sharedRes.error) return { error: sharedRes.error.message };
 
@@ -71,6 +70,8 @@ export async function updateFamily(
   if (error) return { error: error.message };
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/${familyId}`);
+  // Fix #3: revalidate layout để DashboardHeader cập nhật tên mới ngay
+  revalidatePath(`/dashboard/${familyId}`, "layout");
   return { success: true };
 }
 
@@ -87,7 +88,6 @@ export async function deleteFamily(familyId: string) {
     .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
-  // #2: revalidate cả sub-routes của gia phả vừa xóa
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/${familyId}`, "layout");
   return { success: true };
@@ -330,6 +330,8 @@ export async function joinByShareLink(token: string) {
     });
 
   if (shareError) return { error: shareError.message };
+  // Fix #4: revalidate cả family mới join để hiển thị ngay
   revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/${link.family_id}`, "layout");
   return { success: true, familyId: link.family_id };
 }

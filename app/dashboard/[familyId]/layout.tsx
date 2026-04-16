@@ -3,7 +3,6 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { FamilyContextProvider } from "@/components/FamilyContextProvider";
 import Footer from "@/components/Footer";
 import LogoutButton from "@/components/LogoutButton";
-import { UserProvider } from "@/components/UserProvider";
 import { FamilyContext } from "@/types";
 import { getProfile, getSupabase, getUser } from "@/utils/supabase/queries";
 import Link from "next/link";
@@ -45,7 +44,7 @@ export default async function FamilyLayout({
     );
   }
 
-  // #5: Dùng lại supabase client từ getSupabase() — được cache() nên chỉ tạo 1 lần/request
+  // Dùng lại supabase client từ getSupabase() — được cache() nên chỉ tạo 1 lần/request
   const supabase = await getSupabase();
 
   const { data: family, error: familyError } = await supabase
@@ -84,15 +83,13 @@ export default async function FamilyLayout({
   };
 
   return (
-    <UserProvider user={user} profile={profile}>
-      <FamilyContextProvider context={context}>
-        <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
-          {/* #1: Truyền familyName xuống thay vì query lại trong DashboardHeader */}
-          <DashboardHeader familyId={familyId} familyName={family.name} />
-          {children}
-          <Footer className="mt-auto bg-white border-t border-stone-200" showDisclaimer={true} />
-        </div>
-      </FamilyContextProvider>
-    </UserProvider>
+    // Fix #1: Bỏ UserProvider thừa — dashboard/layout.tsx đã wrap rồi
+    <FamilyContextProvider context={context}>
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+        <DashboardHeader familyId={familyId} familyName={family.name} />
+        {children}
+        <Footer className="mt-auto bg-white border-t border-stone-200" showDisclaimer={true} />
+      </div>
+    </FamilyContextProvider>
   );
 }

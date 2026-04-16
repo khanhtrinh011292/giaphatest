@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import CreateFamilyForm from "@/components/CreateFamilyForm";
 import DeleteFamilyButton from "@/components/DeleteFamilyButton";
 import Image from "next/image";
+import type { Metadata } from "next";
 import {
   BookOpen,
   ChevronRight,
@@ -13,6 +14,11 @@ import {
   Share2,
   Users,
 } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: `Gia phả của tôi | ${config.siteName}`,
+  description: "Quản lý và chia sẻ gia phả dòng họ của bạn.",
+};
 
 const ROLE_LABEL: Record<string, string> = {
   viewer: "Xem",
@@ -27,6 +33,8 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export default async function FamiliesPage() {
+  // Fix #2: Layout đã guard nhưng page vẫn cần getUser/getProfile để lấy displayName
+  // Nhờ cache() nên không tạo thêm DB request
   const user = await getUser();
   if (!user) redirect("/login");
 
