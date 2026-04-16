@@ -23,7 +23,6 @@ export default async function BoardPage({
     .single();
   if (!family) redirect("/dashboard");
 
-  // Chỉ chủ sở hữu mới đăng được bảng tin
   const isOwner = family.owner_id === user.id;
 
   const { data: announcements } = await supabase
@@ -35,27 +34,33 @@ export default async function BoardPage({
 
   return (
     <main className="flex-1 py-8 px-4">
-      <div className="max-w-xl mx-auto space-y-6">
+      {/* Tiêu đề */}
+      <div className="max-w-5xl mx-auto mb-6">
+        <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-0.5">Gia phả</p>
+        <h1 className="text-2xl font-serif font-bold text-stone-800">{family.name}</h1>
+      </div>
 
-        {/* Tiêu đề */}
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-0.5">Gia phả</p>
-            <h1 className="text-2xl font-serif font-bold text-stone-800">{family.name}</h1>
-          </div>
+      {/* Layout 2 cột: Bảng tin (trái) + Danh mục sticky (phải) */}
+      <div className="max-w-5xl mx-auto flex gap-6 items-start">
+        {/* Cột trái: Bảng tin */}
+        <div className="flex-1 min-w-0">
+          <AnnouncementBoard
+            familyId={familyId}
+            isOwner={isOwner}
+            userId={user.id}
+            initialAnnouncements={announcements ?? []}
+          />
         </div>
 
-        {/* ============ BẢNG TIN ============ */}
-        <AnnouncementBoard
-          familyId={familyId}
-          isOwner={isOwner}
-          userId={user.id}
-          initialAnnouncements={announcements ?? []}
-        />
+        {/* Cột phải: Danh mục sticky — ẩn trên mobile */}
+        <div className="hidden lg:block w-72 shrink-0 sticky top-24 self-start">
+          <FamilyQuickLinks familyId={familyId} isOwner={isOwner} />
+        </div>
+      </div>
 
-        {/* ============ TRUY CỬ P NHANH ============ */}
+      {/* Danh mục hiện trên mobile (bên dưới bảng tin) */}
+      <div className="lg:hidden max-w-5xl mx-auto mt-6">
         <FamilyQuickLinks familyId={familyId} isOwner={isOwner} />
-
       </div>
     </main>
   );
