@@ -13,14 +13,33 @@ interface BabyNameSuggesterProps {
   familyId: string;
 }
 
+type SurnameMode = "father" | "mother" | "combined";
+
+const SURNAME_OPTIONS: { value: SurnameMode; label: string; desc: string }[] = [
+  { value: "father", label: "Họ bố", desc: "Toàn bộ dùng họ bố" },
+  { value: "mother", label: "Họ mẹ", desc: "Toàn bộ dùng họ mẹ" },
+  { value: "combined", label: "Kết hợp", desc: "Xen kẽ họ bố và họ mẹ" },
+];
+
 export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) {
   const [fatherName, setFatherName] = useState("");
   const [motherName, setMotherName] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
+  const [surnameMode, setSurnameMode] = useState<SurnameMode>("father");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Preview họ sẽ dùng
+  const fatherSurname = fatherName.trim().split(/\s+/)[0] || "";
+  const motherSurname = motherName.trim().split(/\s+/)[0] || "";
+  const previewSurname =
+    surnameMode === "father" ? fatherSurname
+    : surnameMode === "mother" ? motherSurname
+    : fatherSurname && motherSurname
+      ? `${fatherSurname} / ${motherSurname}`
+      : fatherSurname || motherSurname;
 
   const fetchSuggestions = useCallback(async () => {
     if (!fatherName.trim() && !motherName.trim()) {
@@ -40,6 +59,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
             father_name: fatherName,
             mother_name: motherName,
             gender,
+            surname_mode: surnameMode,
           }),
         }
       );
@@ -52,7 +72,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
     } finally {
       setLoading(false);
     }
-  }, [familyId, fatherName, motherName, gender]);
+  }, [familyId, fatherName, motherName, gender, surnameMode]);
 
   const duplicateCount = suggestions.filter((s) => s.duplicate).length;
   const safeCount = suggestions.filter((s) => !s.duplicate).length;
@@ -70,7 +90,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
         </div>
       </div>
 
-      {/* Inputs */}
+      {/* Inputs bố / mẹ */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Tên bố</label>
@@ -92,6 +112,42 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
           />
         </div>
+      </div>
+
+      {/* Chọn họ */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Họ của con</label>
+        <div className="grid grid-cols-3 gap-2">
+          {SURNAME_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSurnameMode(opt.value)}
+              className={`relative py-2.5 px-3 rounded-xl border text-sm font-medium transition-all ${
+                surnameMode === opt.value
+                  ? "bg-amber-500 text-white border-amber-500 shadow-md"
+                  : "bg-gray-50 text-gray-600 border-gray-200 hover:border-amber-300 hover:bg-amber-50"
+              }`}
+            >
+              <span className="block font-semibold">{opt.label}</span>
+              <span className={`block text-[11px] mt-0.5 ${
+                surnameMode === opt.value ? "text-amber-100" : "text-gray-400"
+              }`}>
+                {opt.desc}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Preview họ */}
+        {previewSurname && (
+          <p className="mt-2 text-xs text-gray-500">
+            Họ sẽ dùng:
+            <span className="ml-1 font-semibold text-amber-700">{previewSurname}</span>
+            {surnameMode === "combined" && fatherSurname && motherSurname && (
+              <span className="ml-1 text-gray-400">(xen kẽ 10 – 10)</span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Gender Toggle */}
@@ -166,23 +222,23 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
                     : "bg-green-50 border-green-200 hover:shadow-sm"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400 w-5">{i + 1}.</span>
-                  <span className={`text-sm font-medium ${
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-gray-400 w-5 shrink-0">{i + 1}.</span>
+                  <span className={`text-sm font-medium truncate ${
                     s.duplicate ? "text-orange-700" : "text-gray-800"
                   }`}>
                     {s.name}
                   </span>
                 </div>
                 {s.duplicate ? (
-                  <div className="group relative">
-                    <AlertTriangle className="w-4 h-4 text-orange-400 cursor-help shrink-0" />
+                  <div className="group relative shrink-0 ml-1">
+                    <AlertTriangle className="w-4 h-4 text-orange-400 cursor-help" />
                     <div className="absolute right-0 bottom-6 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition z-10 pointer-events-none">
                       Trùng với: {s.duplicateWith}
                     </div>
                   </div>
                 ) : (
-                  <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-green-400 shrink-0 ml-1" />
                 )}
               </div>
             ))}
