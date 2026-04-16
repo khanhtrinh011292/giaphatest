@@ -16,7 +16,6 @@ export default async function BoardPage({
 
   const supabase = await getSupabase();
 
-  // Chỉ select các field cần thiết, không query lại family vì layout đã kiểm tra quyền
   const { data: family } = await supabase
     .from("families")
     .select("id, name, owner_id")
@@ -26,7 +25,7 @@ export default async function BoardPage({
 
   const isOwner = family.owner_id === user.id;
 
-  // Nếu không phải owner, kiểm tra share role có quyền post không (admin)
+  // Admin cũng có quyền đăng bảng tin
   let canPost = isOwner;
   if (!isOwner) {
     const { data: share } = await supabase
@@ -53,10 +52,10 @@ export default async function BoardPage({
         <h1 className="text-2xl font-serif font-bold text-stone-800">{family.name}</h1>
       </div>
 
-      {/* Layout 2 cột: Bảng tin (trái) + Danh mục sticky (phải) */}
-      <div className="max-w-5xl mx-auto flex gap-6 items-start">
+      {/* Layout responsive: stack trên mobile, 2 cột trên desktop */}
+      <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
         {/* Cột trái: Bảng tin */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 w-full">
           <AnnouncementBoard
             familyId={familyId}
             isOwner={canPost}
@@ -65,15 +64,10 @@ export default async function BoardPage({
           />
         </div>
 
-        {/* Cột phải: Danh mục sticky — ẩn trên mobile */}
-        <div className="hidden lg:block w-72 shrink-0 sticky top-24 self-start">
+        {/* Cột phải: Danh mục — sticky trên desktop, bình thường trên mobile */}
+        <div className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-24 lg:self-start">
           <FamilyQuickLinks familyId={familyId} isOwner={isOwner} />
         </div>
-      </div>
-
-      {/* Danh mục hiện trên mobile (bên dưới bảng tin) */}
-      <div className="lg:hidden max-w-5xl mx-auto mt-6">
-        <FamilyQuickLinks familyId={familyId} isOwner={isOwner} />
       </div>
     </main>
   );
