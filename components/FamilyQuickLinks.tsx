@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   Network, GitMerge, BarChart2, CalendarDays,
-  Baby, ClipboardList, Share2, Sparkles, Database, Map
+  Baby, ClipboardList, Share2, Sparkles, Database, Map, Heart
 } from "lucide-react";
 
 interface QuickLink {
@@ -48,11 +48,20 @@ function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
     {
       href: `/dashboard/${familyId}/events`,
       label: "Lịch sự kiện",
-      sub: "Giỗ, sinh nhật, rằm, mùng 1,...",
+      sub: "Giỗ, sinh nhật, rằm, mụng 1,...",
       icon: <CalendarDays className="w-5 h-5" />,
       color: "text-rose-600",
       bg: "hover:bg-rose-50",
       border: "border-rose-100",
+    },
+    {
+      href: `/dashboard/${familyId}/wedding`,
+      label: "Coi Ngày Cưới",
+      sub: "Trạch Nhật · Phối Mệnh · Giờ Hoàng Đạo",
+      icon: <Heart className="w-5 h-5" />,
+      color: "text-pink-600",
+      bg: "hover:bg-pink-50",
+      border: "border-pink-100",
     },
     {
       href: `/dashboard/${familyId}/baby-names`,
