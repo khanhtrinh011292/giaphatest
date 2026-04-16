@@ -10,7 +10,6 @@ import {
 } from "@/app/actions/family";
 import { ShareRole } from "@/types";
 import {
-  ArrowLeftIcon,
   ClipboardCopyIcon,
   LinkIcon,
   MailIcon,
@@ -18,7 +17,6 @@ import {
   Trash2Icon,
   UserPlusIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
@@ -362,19 +360,11 @@ export default function ShareManager({
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/dashboard/${familyId}`}
-          className="p-2 rounded-lg hover:bg-stone-100 text-stone-500 transition-colors"
-        >
-          <ArrowLeftIcon className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-serif font-bold text-stone-800">Chia sẻ Gia phả</h1>
-          <p className="text-sm text-stone-500 mt-0.5">
-            Mời người khác cùng xem hoặc chỉnh sửa gia phả của bạn.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-serif font-bold text-stone-800">Chia sẻ Gia phả</h1>
+        <p className="text-sm text-stone-500 mt-0.5">
+          Mời người khác cùng xem hoặc chỉnh sửa gia phả của bạn.
+        </p>
       </div>
 
       {/* Status */}
