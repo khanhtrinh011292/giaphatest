@@ -1,5 +1,6 @@
 import BackToBoardButton from "@/components/BackToBoardButton";
 import LineageManager from "@/components/LineageManager";
+import { useFamilyContext } from "@/components/FamilyContextProvider";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
 
@@ -9,6 +10,11 @@ export default async function LineagePage({
   params: Promise<{ familyId: string }>;
 }) {
   const { familyId } = await params;
+
+  // Layout đã kiểm tra quyền và cung cấp FamilyContext
+  // canAdmin được tính từ context nên không cần query lại
+  // Tuy nhiên layout là Server Component không thể pass context trực tiếp
+  // Nên vẫn cần đọc user để biết userId, nhưng tái dùng cache getUser
   const user = await getUser();
   if (!user) redirect("/login");
 
@@ -22,7 +28,9 @@ export default async function LineagePage({
 
   if (!family) redirect("/dashboard");
 
-  let canAdmin = family.owner_id === user.id;
+  // Kiểm tra canAdmin — tái sử dụng cache Supabase client
+  const isOwner = family.owner_id === user.id;
+  let canAdmin = isOwner;
   if (!canAdmin) {
     const { data: share } = await supabase
       .from("family_shares")

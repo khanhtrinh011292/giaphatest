@@ -14,6 +14,7 @@ export default async function DataManagementPage({ params }: PageProps) {
 
   const supabase = await getSupabase();
 
+  // Tái sử dụng cached Supabase client — không tạo thêm connection mới
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -22,14 +23,14 @@ export default async function DataManagementPage({ params }: PageProps) {
 
   if (!family) redirect("/dashboard");
 
-  const isOwner = family.owner_id === user!.id;
+  const isOwner = family.owner_id === user.id;
 
   if (!isOwner) {
     const { data: share } = await supabase
       .from("family_shares")
       .select("role")
       .eq("family_id", familyId)
-      .eq("shared_with", user!.id)
+      .eq("shared_with", user.id)
       .single();
     if (share?.role !== "admin") redirect(`/dashboard/${familyId}`);
   }
