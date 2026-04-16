@@ -10,8 +10,10 @@ import type { Metadata } from "next";
 import {
   BookOpen,
   ChevronRight,
+  Heart,
   PlusCircle,
   Share2,
+  Sparkles,
   Users,
 } from "lucide-react";
 
@@ -33,8 +35,6 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export default async function FamiliesPage() {
-  // Fix #2: Layout đã guard nhưng page vẫn cần getUser/getProfile để lấy displayName
-  // Nhờ cache() nên không tạo thêm DB request
   const user = await getUser();
   if (!user) redirect("/login");
 
@@ -86,6 +86,29 @@ export default async function FamiliesPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-10">
+
+        {/* Công cụ nhanh */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="size-4 text-rose-500" />
+            <h2 className="text-base font-bold text-stone-800">Công cụ</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Link
+              href="/dashboard/wedding"
+              className="group flex items-center gap-4 bg-white rounded-2xl border border-stone-200 px-5 py-4 shadow-sm hover:shadow-md hover:border-rose-300 transition-all duration-200"
+            >
+              <div className="size-10 rounded-xl bg-gradient-to-br from-rose-100 to-pink-100 text-rose-600 flex items-center justify-center shrink-0 shadow-xs">
+                <Heart className="size-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-stone-900 group-hover:text-rose-600 transition-colors">Coi Ngày Cưới</p>
+                <p className="text-xs text-stone-400 mt-0.5">Theo Thông Thư — Trạch Nhật · Phối Mệnh · Giờ Hoàng Đạo</p>
+              </div>
+              <ChevronRight className="size-4 text-stone-300 group-hover:text-rose-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </Link>
+          </div>
+        </section>
 
         {/* Gia phả của tôi */}
         <section>
