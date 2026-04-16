@@ -43,7 +43,7 @@ const RelationshipManager = dynamic(
 
 interface MemberDetailContentProps {
   person: Person;
-  privateData: Record<string, unknown> | null;
+  privateData: Partial<Person> | null;
   isAdmin: boolean;
   canEdit?: boolean;
 }
@@ -80,8 +80,8 @@ export default function MemberDetailContent({
     [],
   );
 
-  const fullPerson = { ...person, ...privateData };
-  const note = (fullPerson.note as string) || "";
+  const fullPerson: Person = { ...person, ...privateData };
+  const note = fullPerson.note || "";
   const isNoteLong = note.length > 300;
 
   const isDeceased =
@@ -510,7 +510,7 @@ export default function MemberDetailContent({
                       <Phone className="w-3.5 h-3.5" /> Số điện thoại
                     </dt>
                     <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                      {(fullPerson.phone_number as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
+                      {fullPerson.phone_number || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
                     </dd>
                   </div>
                   <div>
@@ -518,7 +518,7 @@ export default function MemberDetailContent({
                       <Briefcase className="w-3.5 h-3.5" /> Nghề nghiệp
                     </dt>
                     <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                      {(fullPerson.occupation as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
+                      {fullPerson.occupation || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
                     </dd>
                   </div>
                   <div>
@@ -526,7 +526,7 @@ export default function MemberDetailContent({
                       <MapPin className="w-3.5 h-3.5" /> Nơi ở hiện tại
                     </dt>
                     <dd className="text-stone-900 font-medium bg-white px-3 py-2 rounded-lg border border-stone-200/60 shadow-xs">
-                      {(fullPerson.current_residence as string) || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
+                      {fullPerson.current_residence || <span className="text-stone-400 font-normal">Chưa cập nhật</span>}
                     </dd>
                   </div>
                 </dl>

@@ -71,7 +71,7 @@ export default async function EditMemberPage({ params }: PageProps) {
 
   if (error || !person) notFound();
 
-  let privateData = null;
+  let privateData: Record<string, unknown> | null = null;
   if (isAdmin) {
     const { data } = await supabase
       .from("person_details_private")
@@ -81,7 +81,14 @@ export default async function EditMemberPage({ params }: PageProps) {
     privateData = data;
   }
 
-  const initialData = isAdmin ? { ...person, ...privateData } : { ...person };
+  // Strip DB-only keys (person_id, family_id) from privateData before merging
+  // to prevent overwriting the person's own family_id
+  const { person_id: _pid, family_id: _fid, ...safePrivate } =
+    (privateData as Record<string, unknown> & { person_id?: unknown; family_id?: unknown }) ?? {};
+
+  const initialData = isAdmin
+    ? { ...person, ...safePrivate }
+    : { ...person };
 
   return (
     <div className="flex-1 w-full flex flex-col pb-8">

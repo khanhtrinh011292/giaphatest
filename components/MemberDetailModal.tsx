@@ -25,7 +25,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [person, setPerson] = useState<Person | null>(null);
-  const [privateData, setPrivateData] = useState<Record<string, unknown> | null>(null);
+  const [privateData, setPrivateData] = useState<Partial<Person> | null>(null);
 
   const closeModal = () => { setMemberModalId(null); setShowCreateMember(false); setIsEditing(false); };
 
@@ -43,8 +43,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
         setPrivateData(null);
       }
     } catch (err) {
-      // @ts-expect-error
-      setError(err?.message || "Đã xảy ra lỗi hệ thống.");
+      setError((err as Error)?.message || "Đã xảy ra lỗi hệ thống.");
     } finally {
       setLoading(false);
     }
