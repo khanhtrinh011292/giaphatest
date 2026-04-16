@@ -1,7 +1,6 @@
 "use client";
 
 import DefaultAvatar from "@/components/DefaultAvatar";
-import RelationshipManager from "@/components/RelationshipManager";
 import { Person } from "@/types";
 import {
   calculateAge,
@@ -28,8 +27,19 @@ import {
   Users,
 } from "lucide-react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import { FemaleIcon, MaleIcon } from "./GenderIcons";
+import LoadingComponent from "@/components/LoadingComponent";
+
+// Lazy load RelationshipManager (~49KB) — chỉ load khi mở modal thành viên
+const RelationshipManager = dynamic(
+  () => import("@/components/RelationshipManager"),
+  {
+    ssr: false,
+    loading: () => <LoadingComponent />,
+  }
+);
 
 interface MemberDetailContentProps {
   person: Person;
@@ -104,7 +114,6 @@ export default function MemberDetailContent({
     },
   };
 
-  // Zodiac sign
   const zodiacSign = getZodiacSign(person.birth_day, person.birth_month);
 
   return (
@@ -303,7 +312,6 @@ export default function MemberDetailContent({
                         {ageData.age}
                         <span className="text-xs sm:text-sm font-bold text-amber-700/60 ml-1.5 uppercase tracking-wider">tuổi</span>
                       </p>
-                      {/* Can Chi + Menh chi tiết */}
                       <div className="flex flex-wrap items-center gap-1.5 mt-2">
                         {canChi && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 tracking-wide shadow-xs">
@@ -322,7 +330,7 @@ export default function MemberDetailContent({
                 );
               })()}
 
-              {/* Zodiac Sign Card — riêng biệt */}
+              {/* Zodiac Sign Card */}
               {zodiacSign && (
                 <motion.div
                   variants={itemVariants}
