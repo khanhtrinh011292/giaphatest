@@ -28,8 +28,7 @@ interface ImportRow {
   ghi_chu: string | null;
   stt_cha: string | null;
   stt_me: string | null;
-  // internal tracking
-  _rowId: string; // unique key per row (e.g. "1", "2", ...)
+  _rowId: string;
   _errors: string[];
 }
 
@@ -45,15 +44,18 @@ const GENDER_MAP: Record<string, Gender> = {
   male: "male",
   m: "male",
   "0": "male",
-  nữ: "female",
+  "n\u1eef": "female",
   nu: "female",
   female: "female",
   f: "female",
   "1": "female",
-  khác: "other",
+  "kh\u00e1c": "other",
   khac: "other",
   other: "other",
 };
+
+const STEPS = ["upload", "preview", "done"] as const;
+type Step = (typeof STEPS)[number];
 
 const normalize = (s: unknown): string =>
   String(s ?? "")
@@ -73,7 +75,6 @@ const parseRows = (data: Record<string, unknown>[]): ImportRow[] => {
     .map((row, i) => {
       const errors: string[] = [];
 
-      // Flexible column name matching
       const get = (keys: string[]): unknown => {
         for (const k of keys) {
           const found = Object.keys(row).find(
@@ -84,22 +85,41 @@ const parseRows = (data: Record<string, unknown>[]): ImportRow[] => {
         return undefined;
       };
 
-      const ho_ten = String(get(["ho_ten", "ho ten", "ho va ten", "full_name", "ten", "name"]) ?? "").trim();
-      const gioi_tinh_raw = normalize(get(["gioi_tinh", "gioi tinh", "gender", "giới tính"]));
+      const ho_ten = String(
+        get(["ho_ten", "ho ten", "ho va ten", "full_name", "ten", "name"]) ?? "",
+      ).trim();
+      const gioi_tinh_raw = normalize(
+        get(["gioi_tinh", "gioi tinh", "gender", "gi\u1edbi t\u00ednh"]),
+      );
       const gioi_tinh: Gender = GENDER_MAP[gioi_tinh_raw] ?? "male";
-      const nam_sinh = toInt(get(["nam_sinh", "nam sinh", "birth_year", "năm sinh", "namsinh"]));
-      const the_he = toInt(get(["the_he", "the he", "generation", "thế hệ", "doi", "đời"]));
-      const thu_tu_sinh = toInt(get(["thu_tu_sinh", "thu tu sinh", "birth_order", "thứ tự", "stt"]));
-      const ghi_chu = String(get(["ghi_chu", "ghi chu", "note", "ghi chú"]) ?? "").trim() || null;
-      const stt_cha = String(get(["stt_cha", "ma_cha", "cha", "bo", "father_id", "father"]) ?? "").trim() || null;
-      const stt_me = String(get(["stt_me", "ma_me", "me", "mother_id", "mother"]) ?? "").trim() || null;
+      const nam_sinh = toInt(
+        get(["nam_sinh", "nam sinh", "birth_year", "n\u0103m sinh", "namsinh"]),
+      );
+      const the_he = toInt(
+        get(["the_he", "the he", "generation", "th\u1ebf h\u1ec7", "doi", "\u0111\u1eddi"]),
+      );
+      const thu_tu_sinh = toInt(
+        get(["thu_tu_sinh", "thu tu sinh", "birth_order", "th\u1ee9 t\u1ef1", "stt"]),
+      );
+      const ghi_chu =
+        String(
+          get(["ghi_chu", "ghi chu", "note", "ghi ch\u00fa"]) ?? "",
+        ).trim() || null;
+      const stt_cha =
+        String(
+          get(["stt_cha", "ma_cha", "cha", "bo", "father_id", "father"]) ?? "",
+        ).trim() || null;
+      const stt_me =
+        String(
+          get(["stt_me", "ma_me", "me", "mother_id", "mother"]) ?? "",
+        ).trim() || null;
 
-      if (!ho_ten) errors.push("Thiếu Họ Tên");
+      if (!ho_ten) errors.push("Thi\u1ebfu H\u1ecd T\u00ean");
       if (nam_sinh !== null && (nam_sinh < 1 || nam_sinh > 2100))
-        errors.push("Năm sinh không hợp lệ");
+        errors.push("N\u0103m sinh kh\u00f4ng h\u1ee3p l\u1ec7");
 
       return {
-        rowIndex: i + 2, // Excel row number (1=header)
+        rowIndex: i + 2,
         ho_ten,
         gioi_tinh,
         nam_sinh,
@@ -112,7 +132,7 @@ const parseRows = (data: Record<string, unknown>[]): ImportRow[] => {
         _errors: errors,
       } satisfies ImportRow;
     })
-    .filter((r) => r.ho_ten !== ""); // skip blank rows
+    .filter((r) => r.ho_ten !== "");
 };
 
 interface Props {
@@ -121,21 +141,23 @@ interface Props {
   onSuccess: () => void;
 }
 
-export default function ImportMembersModal({ familyId, onClose, onSuccess }: Props) {
+export default function ImportMembersModal({
+  familyId,
+  onClose,
+  onSuccess,
+}: Props) {
   const supabase = createClient();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [step, setStep] = useState<"upload" | "preview" | "done">("upload");
+  const [step, setStep] = useState<Step>("upload");
   const [rows, setRows] = useState<ImportRow[]>([]);
-  const [fileName, setFileName] = useState("");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
   const processFile = useCallback((file: File) => {
-    setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -150,7 +172,9 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
         setRows(parsed);
         setStep("preview");
       } catch {
-        alert("Không thể đọc file. Vui lòng dùng file .xlsx hoặc .csv đúng định dạng.");
+        alert(
+          "Kh\u00f4ng th\u1ec3 \u0111\u1ecdc file. Vui l\u00f2ng d\u00f9ng file .xlsx ho\u1eb7c .csv \u0111\u00fang \u0111\u1ecbnh d\u1ea1ng.",
+        );
       }
     };
     reader.readAsArrayBuffer(file);
@@ -173,12 +197,21 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ["ho_ten", "gioi_tinh", "nam_sinh", "the_he", "thu_tu_sinh", "stt_cha", "stt_me", "ghi_chu"],
-      ["Nguyễn Văn Tổ", "nam", "1920", "1", "1", "", "", "Tổ tiên khai lập"],
-      ["Nguyễn Thị Tổ Mẫu", "nữ", "1925", "1", "", "", "", "Vợ cả"],
-      ["Nguyễn Văn A", "nam", "1950", "2", "1", "1", "2", "Con trưởng"],
-      ["Nguyễn Thị B", "nữ", "1955", "2", "2", "1", "2", "Con thứ hai"],
-      ["Nguyễn Văn C", "nam", "1975", "3", "1", "3", "", "Cháu đích tôn"],
+      [
+        "ho_ten",
+        "gioi_tinh",
+        "nam_sinh",
+        "the_he",
+        "thu_tu_sinh",
+        "stt_cha",
+        "stt_me",
+        "ghi_chu",
+      ],
+      ["Nguy\u1ec5n V\u0103n T\u1ed5", "nam", "1920", "1", "1", "", "", "T\u1ed5 ti\u00ean khai l\u1eadp"],
+      ["Nguy\u1ec5n Th\u1ecb T\u1ed5 M\u1eabu", "n\u1eef", "1925", "1", "", "", "", "V\u1ee3 c\u1ea3"],
+      ["Nguy\u1ec5n V\u0103n A", "nam", "1950", "2", "1", "1", "2", "Con tr\u01b0\u1edfng"],
+      ["Nguy\u1ec5n Th\u1ecb B", "n\u1eef", "1955", "2", "2", "1", "2", "Con th\u1ee9 hai"],
+      ["Nguy\u1ec5n V\u0103n C", "nam", "1975", "3", "1", "3", "", "Ch\u00e1u \u0111\u00edch t\u00f4n"],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "GiaPha");
@@ -192,11 +225,9 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
     const details: ImportResult["details"] = [];
     let successCount = 0;
     let failedCount = 0;
-
-    // Map: _rowId → inserted DB person id (for relationship resolution)
     const rowIdToPersonId: Record<string, string> = {};
 
-    // Phase 1: Insert all persons
+    // Phase 1: Insert persons
     for (const row of validRows) {
       try {
         const payload: Record<string, unknown> = {
@@ -232,18 +263,18 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
       }
     }
 
-    // Phase 2: Insert relationships (cha → con, mẹ → con)
+    // Phase 2: Insert relationships
     for (const row of validRows) {
       const childId = rowIdToPersonId[row._rowId];
       if (!childId) continue;
 
-      const parents: { stt: string; label: string }[] = [];
-      if (row.stt_cha) parents.push({ stt: row.stt_cha, label: "cha" });
-      if (row.stt_me) parents.push({ stt: row.stt_me, label: "mẹ" });
+      const parents: { stt: string }[] = [];
+      if (row.stt_cha) parents.push({ stt: row.stt_cha });
+      if (row.stt_me) parents.push({ stt: row.stt_me });
 
       for (const { stt } of parents) {
         const parentId = rowIdToPersonId[stt];
-        if (!parentId) continue; // parent not found in this import batch — skip silently
+        if (!parentId) continue;
 
         const { error } = await supabase.from("relationships").insert({
           family_id: familyId,
@@ -253,24 +284,30 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
         });
 
         if (error) {
-          // Non-critical — log to detail
           const detail = details.find((d) => d.name === row.ho_ten);
           if (detail) {
-            detail.message = (detail.message ?? "") + ` (Quan hệ thất bại)`;
+            detail.message =
+              (detail.message ?? "") + " (Quan h\u1ec7 th\u1ea5t b\u1ea1i)";
           }
         }
       }
     }
 
-    setResult({ success: successCount, failed: failedCount, skipped: errorRows.length, details });
+    setResult({
+      success: successCount,
+      failed: failedCount,
+      skipped: errorRows.length,
+      details,
+    });
     setStep("done");
     setImporting(false);
     router.refresh();
   };
 
+  const stepIndex = STEPS.indexOf(step);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -279,7 +316,6 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
         onClick={onClose}
       />
 
-      {/* Modal */}
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -294,96 +330,173 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
               <FileSpreadsheet className="size-5 text-emerald-600" />
             </div>
             <div>
-              <h2 className="font-serif font-bold text-stone-800 text-lg">Import từ Excel / CSV</h2>
+              <h2 className="font-serif font-bold text-stone-800 text-lg">
+                Import t\u1eeb Excel / CSV
+              </h2>
               <p className="text-xs text-stone-500 mt-0.5">
-                {step === "upload" && "Tải lên file danh sách thành viên"}
-                {step === "preview" && `Xem trước — ${rows.length} hàng tìm thấy (${validRows.length} hợp lệ)`}
-                {step === "done" && "Hoàn tất import"}
+                {step === "upload" &&
+                  "T\u1ea3i l\u00ean file danh s\u00e1ch th\u00e0nh vi\u00ean"}
+                {step === "preview" &&
+                  `Xem tr\u01b0\u1edbc \u2014 ${rows.length} h\u00e0ng (${validRows.length} h\u1ee3p l\u1ec7)`}
+                {step === "done" && "Ho\u00e0n t\u1ea5t import"}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-xl transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-stone-100 rounded-xl transition-colors"
+          >
             <X className="size-5 text-stone-500" />
           </button>
         </div>
 
         {/* Steps indicator */}
-        <div className="flex items-center gap-0 px-6 pt-4 pb-2 shrink-0">
-          {(["upload", "preview", "done"] as const).map((s, i) => (
-            <div key={s} className="flex items-center gap-0">
-              <div className={`flex items-center justify-center size-6 rounded-full text-xs font-bold transition-colors
-                ${
-                  step === s
-                    ? "bg-emerald-500 text-white"
-                    : (step === "preview" && i === 0) || step === "done"
-                    ? "bg-emerald-100 text-emerald-600"
-                    : "bg-stone-100 text-stone-400"
-                }`}>
-                {((step === "preview" && i === 0) || step === "done") && i < (["upload", "preview", "done"].indexOf(step)) ? (
-                  <CheckCircle2 className="size-4" />
-                ) : (i + 1)}
+        <div className="flex items-center px-6 pt-4 pb-2 shrink-0">
+          {STEPS.map((s, i) => {
+            const isActive = step === s;
+            const isDone = i < stepIndex;
+            return (
+              <div key={s} className="flex items-center">
+                <div
+                  className={`flex items-center justify-center size-6 rounded-full text-xs font-bold transition-colors ${
+                    isActive
+                      ? "bg-emerald-500 text-white"
+                      : isDone
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-stone-100 text-stone-400"
+                  }`}
+                >
+                  {isDone ? <CheckCircle2 className="size-4" /> : i + 1}
+                </div>
+                <span
+                  className={`ml-1.5 text-xs font-medium hidden sm:inline ${
+                    isActive ? "text-stone-700" : "text-stone-400"
+                  }`}
+                >
+                  {s === "upload"
+                    ? "T\u1ea3i file"
+                    : s === "preview"
+                      ? "Xem tr\u01b0\u1edbc"
+                      : "K\u1ebft qu\u1ea3"}
+                </span>
+                {i < STEPS.length - 1 && (
+                  <div className="mx-3 h-px w-8 bg-stone-200" />
+                )}
               </div>
-              <span className={`ml-1.5 text-xs font-medium hidden sm:inline ${
-                step === s ? "text-stone-700" : "text-stone-400"
-              }`}>
-                {s === "upload" ? "Tải file" : s === "preview" ? "Xem trước" : "Kết quả"}
-              </span>
-              {i < 2 && <div className="mx-3 h-px w-8 bg-stone-200" />}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <AnimatePresence mode="wait">
-
-            {/* ── STEP 1: Upload ── */}
+            {/* STEP 1: Upload */}
             {step === "upload" && (
-              <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {/* Download template */}
+              <motion.div
+                key="upload"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
                 <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-amber-800">Tải file mẫu</p>
-                    <p className="text-xs text-amber-700 mt-0.5">File mẫu .xlsx với đầy đủ cột và dữ liệu ví dụ</p>
+                    <p className="text-sm font-semibold text-amber-800">
+                      T\u1ea3i file m\u1eabu
+                    </p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      File m\u1eabu .xlsx v\u1edbi \u0111\u1ea7y \u0111\u1ee7 c\u1ed9t v\u00e0 d\u1eef li\u1ec7u v\u00ed d\u1ee5
+                    </p>
                   </div>
                   <button
                     onClick={downloadTemplate}
                     className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors shrink-0"
                   >
-                    <Download className="size-4" /> Tải file mẫu
+                    <Download className="size-4" /> T\u1ea3i file m\u1eabu
                   </button>
                 </div>
 
-                {/* Columns guide */}
                 <div className="mb-5 bg-stone-50 border border-stone-200 rounded-xl p-4">
-                  <p className="text-xs font-bold text-stone-600 uppercase tracking-wide mb-3">Các cột trong file</p>
+                  <p className="text-xs font-bold text-stone-600 uppercase tracking-wide mb-3">
+                    C\u00e1c c\u1ed9t trong file
+                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {[
-                      { col: "ho_ten", desc: "Họ và tên đầy đủ", required: true },
-                      { col: "gioi_tinh", desc: 'nam / nữ / khác', required: false },
-                      { col: "nam_sinh", desc: "Năm sinh (VD: 1990)", required: false },
-                      { col: "the_he", desc: "Thuộc đời thứ (VD: 1, 2, 3...)", required: false },
-                      { col: "thu_tu_sinh", desc: "Thứ tự trong gia đình", required: false },
-                      { col: "stt_cha", desc: "STT hàng của người cha trong file", required: false },
-                      { col: "stt_me", desc: "STT hàng của người mẹ trong file", required: false },
-                      { col: "ghi_chu", desc: "Ghi chú tự do", required: false },
-                    ].map(({ col, desc, required }) => (
-                      <div key={col} className="flex items-start gap-2">
-                        <code className={`text-xs px-1.5 py-0.5 rounded font-mono shrink-0 ${
-                          required ? "bg-red-100 text-red-700" : "bg-stone-200 text-stone-600"
-                        }`}>{col}</code>
-                        <span className="text-xs text-stone-600">{desc} {required && <span className="text-red-500">*</span>}</span>
-                      </div>
-                    ))}
+                    {([
+                      {
+                        col: "ho_ten",
+                        desc: "H\u1ecd v\u00e0 t\u00ean \u0111\u1ea7y \u0111\u1ee7",
+                        required: true,
+                      },
+                      {
+                        col: "gioi_tinh",
+                        desc: "nam / n\u1eef / kh\u00e1c",
+                        required: false,
+                      },
+                      {
+                        col: "nam_sinh",
+                        desc: "N\u0103m sinh (VD: 1990)",
+                        required: false,
+                      },
+                      {
+                        col: "the_he",
+                        desc: "Thu\u1ed9c \u0111\u1eddi th\u1ee9 (VD: 1, 2, 3...)",
+                        required: false,
+                      },
+                      {
+                        col: "thu_tu_sinh",
+                        desc: "Th\u1ee9 t\u1ef1 trong gia \u0111\u00ecnh",
+                        required: false,
+                      },
+                      {
+                        col: "stt_cha",
+                        desc: "STT h\u00e0ng c\u1ee7a ng\u01b0\u1eddi cha",
+                        required: false,
+                      },
+                      {
+                        col: "stt_me",
+                        desc: "STT h\u00e0ng c\u1ee7a ng\u01b0\u1eddi m\u1eb9",
+                        required: false,
+                      },
+                      {
+                        col: "ghi_chu",
+                        desc: "Ghi ch\u00fa t\u1ef1 do",
+                        required: false,
+                      },
+                    ] as { col: string; desc: string; required: boolean }[]).map(
+                      ({ col, desc, required }) => (
+                        <div key={col} className="flex items-start gap-2">
+                          <code
+                            className={`text-xs px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                              required
+                                ? "bg-red-100 text-red-700"
+                                : "bg-stone-200 text-stone-600"
+                            }`}
+                          >
+                            {col}
+                          </code>
+                          <span className="text-xs text-stone-600">
+                            {desc}{" "}
+                            {required && (
+                              <span className="text-red-500">*</span>
+                            )}
+                          </span>
+                        </div>
+                      ),
+                    )}
                   </div>
                   <p className="mt-3 text-xs text-stone-500 italic">
-                    * <code className="bg-stone-200 px-1 rounded">stt_cha</code> / <code className="bg-stone-200 px-1 rounded">stt_me</code>: điền số thứ tự hàng (không tính hàng tiêu đề) của bố/mẹ trong file. Ví dụ: nếu bố ở hàng 1 thì điền "1".
+                    *{" "}
+                    <code className="bg-stone-200 px-1 rounded">stt_cha</code> /{" "}
+                    <code className="bg-stone-200 px-1 rounded">stt_me</code>:
+                    \u0111i\u1ec1n s\u1ed1 th\u1ee9 t\u1ef1 h\u00e0ng (kh\u00f4ng t\u00ednh h\u00e0ng ti\u00eau \u0111\u1ec1) c\u1ee7a b\u1ed1/m\u1eb9
+                    trong file.
                   </p>
                 </div>
 
-                {/* Drop zone */}
                 <div
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
@@ -393,11 +506,17 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
                       : "border-stone-300 bg-stone-50/50 hover:border-emerald-300 hover:bg-emerald-50/30"
                   }`}
                 >
-                  <Upload className={`size-10 mb-3 transition-colors ${
-                    dragOver ? "text-emerald-500" : "text-stone-400"
-                  }`} />
-                  <p className="font-semibold text-stone-700 text-sm">Kéo thả file vào đây hoặc click để chọn</p>
-                  <p className="text-xs text-stone-400 mt-1">Hỗ trợ .xlsx, .xls, .csv — tối đa 5MB</p>
+                  <Upload
+                    className={`size-10 mb-3 transition-colors ${
+                      dragOver ? "text-emerald-500" : "text-stone-400"
+                    }`}
+                  />
+                  <p className="font-semibold text-stone-700 text-sm">
+                    K\u00e9o th\u1ea3 file v\u00e0o \u0111\u00e2y ho\u1eb7c click \u0111\u1ec3 ch\u1ecdn
+                  </p>
+                  <p className="text-xs text-stone-400 mt-1">
+                    H\u1ed7 tr\u1ee3 .xlsx, .xls, .csv \u2014 t\u1ed1i \u0111a 5MB
+                  </p>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -409,40 +528,54 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
               </motion.div>
             )}
 
-            {/* ── STEP 2: Preview ── */}
+            {/* STEP 2: Preview */}
             {step === "preview" && (
-              <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {/* Summary bar */}
+              <motion.div
+                key="preview"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
                 <div className="flex flex-wrap gap-3 mb-4">
                   <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
                     <CheckCircle2 className="size-4 text-emerald-500" />
-                    <span className="text-sm font-semibold text-emerald-700">{validRows.length} hợp lệ</span>
+                    <span className="text-sm font-semibold text-emerald-700">
+                      {validRows.length} h\u1ee3p l\u1ec7
+                    </span>
                   </div>
                   {errorRows.length > 0 && (
                     <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">
                       <AlertCircle className="size-4 text-red-500" />
-                      <span className="text-sm font-semibold text-red-700">{errorRows.length} lỗi (sẽ bỏ qua)</span>
+                      <span className="text-sm font-semibold text-red-700">
+                        {errorRows.length} l\u1ed7i (s\u1ebd b\u1ecf qua)
+                      </span>
                     </div>
                   )}
                   <div className="ml-auto">
                     <button
-                      onClick={() => { setStep("upload"); setRows([]); }}
+                      onClick={() => {
+                        setStep("upload");
+                        setRows([]);
+                      }}
                       className="text-xs text-stone-500 hover:text-stone-700 underline"
                     >
-                      Đổi file khác
+                      \u0110\u1ed5i file kh\u00e1c
                     </button>
                   </div>
                 </div>
 
-                {/* Error rows accordion */}
                 {errorRows.length > 0 && (
                   <div className="mb-4">
                     <button
                       onClick={() => setShowErrors((v) => !v)}
                       className="flex items-center gap-2 text-xs font-semibold text-red-600 hover:text-red-700"
                     >
-                      {showErrors ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
-                      {showErrors ? "Ẩn" : "Xem"} {errorRows.length} hàng bị lỗi
+                      {showErrors ? (
+                        <ChevronUp className="size-3.5" />
+                      ) : (
+                        <ChevronDown className="size-3.5" />
+                      )}
+                      {showErrors ? "\u1ea8n" : "Xem"} {errorRows.length} h\u00e0ng b\u1ecb l\u1ed7i
                     </button>
                     <AnimatePresence>
                       {showErrors && (
@@ -454,10 +587,19 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
                         >
                           <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-1.5">
                             {errorRows.map((r) => (
-                              <div key={r._rowId} className="flex items-center gap-2 text-xs">
-                                <span className="text-stone-500">Hàng {r.rowIndex}:</span>
-                                <span className="font-medium text-stone-700">{r.ho_ten || "(trống)"}</span>
-                                <span className="text-red-600">— {r._errors.join(", ")}</span>
+                              <div
+                                key={r._rowId}
+                                className="flex items-center gap-2 text-xs"
+                              >
+                                <span className="text-stone-500">
+                                  H\u00e0ng {r.rowIndex}:
+                                </span>
+                                <span className="font-medium text-stone-700">
+                                  {r.ho_ten || "(tr\u1ed1ng)"}
+                                </span>
+                                <span className="text-red-600">
+                                  \u2014 {r._errors.join(", ")}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -467,140 +609,217 @@ export default function ImportMembersModal({ familyId, onClose, onSuccess }: Pro
                   </div>
                 )}
 
-                {/* Preview table */}
-                {validRows.length > 0 && (
+                {validRows.length > 0 ? (
                   <div className="overflow-x-auto rounded-xl border border-stone-200">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-stone-50 border-b border-stone-200">
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">#</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">Họ Tên</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">Giới tính</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">Năm sinh</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">Đời</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">STT</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">Cha</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">Mẹ</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap">Ghi chú</th>
+                          {[
+                            "#",
+                            "H\u1ecd T\u00ean",
+                            "Gi\u1edbi t\u00ednh",
+                            "N\u0103m sinh",
+                            "\u0110\u1eddi",
+                            "STT",
+                            "Cha",
+                            "M\u1eb9",
+                            "Ghi ch\u00fa",
+                          ].map((h) => (
+                            <th
+                              key={h}
+                              className="text-left px-3 py-2.5 font-semibold text-stone-600 whitespace-nowrap"
+                            >
+                              {h}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
                         {validRows.map((r) => (
-                          <tr key={r._rowId} className="border-b border-stone-100 hover:bg-stone-50 transition-colors">
-                            <td className="px-3 py-2 text-stone-400">{r.rowIndex}</td>
-                            <td className="px-3 py-2 font-medium text-stone-800 whitespace-nowrap">{r.ho_ten}</td>
+                          <tr
+                            key={r._rowId}
+                            className="border-b border-stone-100 hover:bg-stone-50 transition-colors"
+                          >
+                            <td className="px-3 py-2 text-stone-400">
+                              {r.rowIndex}
+                            </td>
+                            <td className="px-3 py-2 font-medium text-stone-800 whitespace-nowrap">
+                              {r.ho_ten}
+                            </td>
                             <td className="px-3 py-2">
-                              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                r.gioi_tinh === "male" ? "bg-sky-100 text-sky-700" :
-                                r.gioi_tinh === "female" ? "bg-rose-100 text-rose-700" :
-                                "bg-stone-100 text-stone-600"
-                              }`}>
-                                {r.gioi_tinh === "male" ? "Nam" : r.gioi_tinh === "female" ? "Nữ" : "Khác"}
+                              <span
+                                className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  r.gioi_tinh === "male"
+                                    ? "bg-sky-100 text-sky-700"
+                                    : r.gioi_tinh === "female"
+                                      ? "bg-rose-100 text-rose-700"
+                                      : "bg-stone-100 text-stone-600"
+                                }`}
+                              >
+                                {r.gioi_tinh === "male"
+                                  ? "Nam"
+                                  : r.gioi_tinh === "female"
+                                    ? "N\u1eef"
+                                    : "Kh\u00e1c"}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-stone-600">{r.nam_sinh ?? "—"}</td>
-                            <td className="px-3 py-2 text-stone-600">{r.the_he ?? "—"}</td>
-                            <td className="px-3 py-2 text-stone-600">{r.thu_tu_sinh ?? "—"}</td>
-                            <td className="px-3 py-2 text-stone-500">{r.stt_cha ?? "—"}</td>
-                            <td className="px-3 py-2 text-stone-500">{r.stt_me ?? "—"}</td>
-                            <td className="px-3 py-2 text-stone-500 max-w-[120px] truncate" title={r.ghi_chu ?? ""}>{r.ghi_chu ?? "—"}</td>
+                            <td className="px-3 py-2 text-stone-600">
+                              {r.nam_sinh ?? "\u2014"}
+                            </td>
+                            <td className="px-3 py-2 text-stone-600">
+                              {r.the_he ?? "\u2014"}
+                            </td>
+                            <td className="px-3 py-2 text-stone-600">
+                              {r.thu_tu_sinh ?? "\u2014"}
+                            </td>
+                            <td className="px-3 py-2 text-stone-500">
+                              {r.stt_cha ?? "\u2014"}
+                            </td>
+                            <td className="px-3 py-2 text-stone-500">
+                              {r.stt_me ?? "\u2014"}
+                            </td>
+                            <td
+                              className="px-3 py-2 text-stone-500 max-w-[120px] truncate"
+                              title={r.ghi_chu ?? ""}
+                            >
+                              {r.ghi_chu ?? "\u2014"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                )}
-
-                {validRows.length === 0 && (
+                ) : (
                   <div className="text-center py-10 text-stone-400">
                     <AlertCircle className="size-10 mx-auto mb-2 opacity-40" />
-                    <p className="text-sm">Không có hàng hợp lệ nào để import.</p>
+                    <p className="text-sm">
+                      Kh\u00f4ng c\u00f3 h\u00e0ng h\u1ee3p l\u1ec7 n\u00e0o \u0111\u1ec3 import.
+                    </p>
                   </div>
                 )}
               </motion.div>
             )}
 
-            {/* ── STEP 3: Done ── */}
+            {/* STEP 3: Done */}
             {step === "done" && result && (
-              <motion.div key="done" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <motion.div
+                key="done"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
                 <div className="flex flex-col items-center py-6 gap-4">
-                  <div className={`p-4 rounded-full ${
-                    result.failed === 0 ? "bg-emerald-50" : "bg-amber-50"
-                  }`}>
-                    <CheckCircle2 className={`size-12 ${
-                      result.failed === 0 ? "text-emerald-500" : "text-amber-500"
-                    }`} />
+                  <div
+                    className={`p-4 rounded-full ${
+                      result.failed === 0 ? "bg-emerald-50" : "bg-amber-50"
+                    }`}
+                  >
+                    <CheckCircle2
+                      className={`size-12 ${
+                        result.failed === 0
+                          ? "text-emerald-500"
+                          : "text-amber-500"
+                      }`}
+                    />
                   </div>
                   <div className="text-center">
                     <p className="text-xl font-bold text-stone-800">
-                      {result.failed === 0 ? "Import thành công!" : "Import hoàn tất (có lỗi)"}
+                      {result.failed === 0
+                        ? "Import th\u00e0nh c\u00f4ng!"
+                        : "Import ho\u00e0n t\u1ea5t (c\u00f3 l\u1ed7i)"}
                     </p>
                     <div className="flex items-center justify-center gap-4 mt-3">
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-emerald-600">{result.success}</p>
-                        <p className="text-xs text-stone-500">Thành công</p>
+                        <p className="text-2xl font-bold text-emerald-600">
+                          {result.success}
+                        </p>
+                        <p className="text-xs text-stone-500">Th\u00e0nh c\u00f4ng</p>
                       </div>
                       {result.failed > 0 && (
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-red-500">{result.failed}</p>
-                          <p className="text-xs text-stone-500">Thất bại</p>
+                          <p className="text-2xl font-bold text-red-500">
+                            {result.failed}
+                          </p>
+                          <p className="text-xs text-stone-500">Th\u1ea5t b\u1ea1i</p>
                         </div>
                       )}
                       {result.skipped > 0 && (
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-stone-400">{result.skipped}</p>
-                          <p className="text-xs text-stone-500">Bỏ qua</p>
+                          <p className="text-2xl font-bold text-stone-400">
+                            {result.skipped}
+                          </p>
+                          <p className="text-xs text-stone-500">B\u1ecf qua</p>
                         </div>
                       )}
                     </div>
                   </div>
-
                   {result.details.some((d) => d.status === "error") && (
                     <div className="w-full bg-red-50 border border-red-200 rounded-xl p-3 max-h-40 overflow-y-auto">
-                      {result.details.filter((d) => d.status === "error").map((d, i) => (
-                        <p key={i} className="text-xs text-red-700 flex gap-2">
-                          <span className="font-medium shrink-0">{d.name}:</span>
-                          <span>{d.message}</span>
-                        </p>
-                      ))}
+                      {result.details
+                        .filter((d) => d.status === "error")
+                        .map((d, i) => (
+                          <p key={i} className="text-xs text-red-700 flex gap-2">
+                            <span className="font-medium shrink-0">{d.name}:</span>
+                            <span>{d.message}</span>
+                          </p>
+                        ))}
                     </div>
                   )}
                 </div>
               </motion.div>
             )}
-
           </AnimatePresence>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-stone-100 bg-stone-50/50 shrink-0">
           {step === "upload" && (
-            <button onClick={onClose} className="btn">Đóng</button>
+            <button onClick={onClose} className="btn">
+              \u0110\u00f3ng
+            </button>
           )}
           {step === "preview" && (
             <>
-              <button onClick={() => { setStep("upload"); setRows([]); }} className="btn">← Quay lại</button>
+              <button
+                onClick={() => {
+                  setStep("upload");
+                  setRows([]);
+                }}
+                className="btn"
+              >
+                \u2190 Quay l\u1ea1i
+              </button>
               <button
                 onClick={handleImport}
                 disabled={importing || validRows.length === 0}
                 className="btn-primary"
               >
                 {importing ? (
-                  <><Loader2 className="size-4 animate-spin" /> Đang import...</>
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> \u0110ang
+                    import...
+                  </>
                 ) : (
-                  <><Upload className="size-4" /> Import {validRows.length} thành viên</>
+                  <>
+                    <Upload className="size-4" /> Import {validRows.length}{" "}
+                    th\u00e0nh vi\u00ean
+                  </>
                 )}
               </button>
             </>
           )}
           {step === "done" && (
             <>
-              <button onClick={onClose} className="btn">Đóng</button>
+              <button onClick={onClose} className="btn">
+                \u0110\u00f3ng
+              </button>
               <button
-                onClick={() => { onSuccess(); onClose(); }}
+                onClick={() => {
+                  onSuccess();
+                  onClose();
+                }}
                 className="btn-primary"
               >
-                Xem danh sách thành viên
+                Xem danh s\u00e1ch th\u00e0nh vi\u00ean
               </button>
             </>
           )}
