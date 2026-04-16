@@ -13,13 +13,7 @@ interface BabyNameSuggesterProps {
   familyId: string;
 }
 
-type SurnameMode = "father" | "mother" | "combined";
-
-const SURNAME_OPTIONS: { value: SurnameMode; label: string; desc: string }[] = [
-  { value: "father", label: "Họ bố", desc: "Toàn bộ dùng họ bố" },
-  { value: "mother", label: "Họ mẹ", desc: "Toàn bộ dùng họ mẹ" },
-  { value: "combined", label: "Kết hợp", desc: "Xen kẽ họ bố và họ mẹ" },
-];
+type SurnameMode = "father" | "combined";
 
 export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) {
   const [fatherName, setFatherName] = useState("");
@@ -31,15 +25,16 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Preview họ sẽ dùng
   const fatherSurname = fatherName.trim().split(/\s+/)[0] || "";
   const motherSurname = motherName.trim().split(/\s+/)[0] || "";
-  const previewSurname =
-    surnameMode === "father" ? fatherSurname
-    : surnameMode === "mother" ? motherSurname
-    : fatherSurname && motherSurname
-      ? `${fatherSurname} / ${motherSurname}`
-      : fatherSurname || motherSurname;
+
+  // Preview tên mẫu
+  const previewExample =
+    surnameMode === "combined" && fatherSurname && motherSurname
+      ? `${fatherSurname} ${motherSurname} Thanh Ngân`
+      : fatherSurname
+      ? `${fatherSurname} Thanh Ngân`
+      : null;
 
   const fetchSuggestions = useCallback(async () => {
     if (!fatherName.trim() && !motherName.trim()) {
@@ -115,37 +110,51 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
       </div>
 
       {/* Chọn họ */}
-      <div className="mb-4">
+      <div className="mb-5">
         <label className="block text-sm font-medium text-gray-700 mb-2">Họ của con</label>
-        <div className="grid grid-cols-3 gap-2">
-          {SURNAME_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setSurnameMode(opt.value)}
-              className={`relative py-2.5 px-3 rounded-xl border text-sm font-medium transition-all ${
-                surnameMode === opt.value
-                  ? "bg-amber-500 text-white border-amber-500 shadow-md"
-                  : "bg-gray-50 text-gray-600 border-gray-200 hover:border-amber-300 hover:bg-amber-50"
-              }`}
-            >
-              <span className="block font-semibold">{opt.label}</span>
-              <span className={`block text-[11px] mt-0.5 ${
-                surnameMode === opt.value ? "text-amber-100" : "text-gray-400"
-              }`}>
-                {opt.desc}
-              </span>
-            </button>
-          ))}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Họ bố */}
+          <button
+            onClick={() => setSurnameMode("father")}
+            className={`py-3 px-4 rounded-xl border text-left transition-all ${
+              surnameMode === "father"
+                ? "bg-amber-500 text-white border-amber-500 shadow-md"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:border-amber-300 hover:bg-amber-50"
+            }`}
+          >
+            <span className="block text-sm font-semibold">Họ bố</span>
+            <span className={`block text-xs mt-0.5 ${
+              surnameMode === "father" ? "text-amber-100" : "text-gray-400"
+            }`}>
+              {fatherSurname ? `VD: ${fatherSurname} Thanh Ngân` : "VD: Nguyễn Thanh Ngân"}
+            </span>
+          </button>
+
+          {/* Kết hợp họ bố + họ mẹ */}
+          <button
+            onClick={() => setSurnameMode("combined")}
+            className={`py-3 px-4 rounded-xl border text-left transition-all ${
+              surnameMode === "combined"
+                ? "bg-purple-500 text-white border-purple-500 shadow-md"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:border-purple-300 hover:bg-purple-50"
+            }`}
+          >
+            <span className="block text-sm font-semibold">Họ bố + Họ mẹ</span>
+            <span className={`block text-xs mt-0.5 ${
+              surnameMode === "combined" ? "text-purple-100" : "text-gray-400"
+            }`}>
+              {fatherSurname && motherSurname
+                ? `VD: ${fatherSurname} ${motherSurname} Thanh Ngân`
+                : "VD: Phạm Trần Thanh Ngân"}
+            </span>
+          </button>
         </div>
 
-        {/* Preview họ */}
-        {previewSurname && (
+        {/* Preview tên đầy đủ */}
+        {previewExample && (
           <p className="mt-2 text-xs text-gray-500">
-            Họ sẽ dùng:
-            <span className="ml-1 font-semibold text-amber-700">{previewSurname}</span>
-            {surnameMode === "combined" && fatherSurname && motherSurname && (
-              <span className="ml-1 text-gray-400">(xen kẽ 10 – 10)</span>
-            )}
+            Cấu trúc tên:
+            <span className="ml-1 font-semibold text-gray-700">{previewExample}</span>
           </p>
         )}
       </div>
