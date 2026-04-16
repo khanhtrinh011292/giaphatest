@@ -10,10 +10,24 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useDashboard } from "./DashboardContext";
 import { useUser } from "./UserProvider";
+import { useFamilyContext } from "./FamilyContextProvider";
 
 export default function MemberDetailModal({ familyId }: { familyId?: string }) {
   const { memberModalId: memberId, setMemberModalId, showCreateMember, setShowCreateMember } = useDashboard();
-  const { isAdmin, isEditor: canEdit, supabase } = useUser();
+  const { isAdmin, supabase } = useUser();
+
+  // Quyền chỉnh sửa lấy từ FamilyContext (owner/editor/admin của gia phả này)
+  // Fallback an toàn nếu component được dùng ngoài FamilyContextProvider
+  let canEdit = false;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const familyCtx = useFamilyContext();
+    canEdit = familyCtx.canWrite;
+  } catch {
+    // Không có FamilyContext — fallback về isAdmin
+    canEdit = isAdmin;
+  }
+
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -74,9 +88,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
   };
 
   const formInitialData = person ? { ...person, ...(privateData ?? {}) } : undefined;
-
   const resolvedFamilyId = familyId ?? person?.family_id;
-
   const memberHref = person
     ? resolvedFamilyId
       ? `/dashboard/${resolvedFamilyId}/members/${person.id}`
@@ -101,12 +113,12 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
               ) : (
                 person && (
                   <>
-                    {/* N\u00fat Xem: hi\u1ec7n v\u1edbi t\u1ea5t c\u1ea3 role */}
+                    {/* N\u00fat Xem: hi\u1ec7n v\u1edbi t\u1ea5t c\u1ea3 */}
                     <Link href={memberHref}
                       className="flex items-center gap-1.5 px-4 py-2 bg-stone-100/80 text-stone-700 rounded-full hover:bg-stone-200 font-semibold text-sm shadow-sm border border-stone-200/50 transition-colors">
                       <ExternalLink className="size-4" /><span className="hidden sm:inline">Xem</span>
                     </Link>
-                    {/* N\u00fat Ch\u1ec9nh s\u1eeda: ch\u1ec9 hi\u1ec7n v\u1edbi editor tr\u1edf l\u00ean */}
+                    {/* N\u00fat Ch\u1ec9nh s\u1eeda: ch\u1ec9 hi\u1ec7n khi c\u00f3 quy\u1ec1n canWrite trong family n\u00e0y */}
                     {canEdit && (
                       <button onClick={() => setIsEditing(true)}
                         className="flex items-center gap-1.5 px-4 py-2 bg-amber-100/80 text-amber-800 rounded-full hover:bg-amber-200 font-semibold text-sm shadow-sm border border-amber-200/50 transition-colors">
