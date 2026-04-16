@@ -1,7 +1,7 @@
 import { createFamily, deleteFamily, getFamilies } from "@/app/actions/family";
 import config from "@/app/config";
 import { getUser } from "@/utils/supabase/queries";
-import { PlusIcon, TrashIcon, UsersIcon } from "lucide-react";
+import { UsersIcon } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import CreateFamilyForm from "@/components/CreateFamilyForm";
@@ -21,7 +21,6 @@ export default async function FamiliesPage() {
   }
 
   const { owned, shared } = result;
-  const hasAny = owned.length > 0 || shared.length > 0;
 
   return (
     <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-10">
@@ -50,7 +49,7 @@ export default async function FamiliesPage() {
             {owned.map((family) => (
               <li key={family.id} className="group flex items-center gap-3 bg-white rounded-xl border border-stone-200 px-4 py-3 shadow-sm hover:border-amber-300 transition-colors">
                 <Link
-                  href={`/dashboard/${family.id}`}
+                  href={`/dashboard/${family.id}/board`}
                   className="flex-1 min-w-0"
                 >
                   <p className="font-medium text-stone-800 truncate">{family.name}</p>
@@ -77,7 +76,7 @@ export default async function FamiliesPage() {
           <ul className="space-y-2">
             {shared.map((s) => (
               <li key={s.id} className="flex items-center gap-3 bg-white rounded-xl border border-stone-200 px-4 py-3 shadow-sm hover:border-blue-300 transition-colors">
-                <Link href={`/dashboard/${s.family.id}`} className="flex-1 min-w-0">
+                <Link href={`/dashboard/${s.family.id}/board`} className="flex-1 min-w-0">
                   <p className="font-medium text-stone-800 truncate">{s.family.name}</p>
                   {s.family.description && (
                     <p className="text-xs text-stone-400 truncate mt-0.5">{s.family.description}</p>
