@@ -29,7 +29,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
     setError(null);
     try {
       const { data: personData, error: personError } = await supabase.from("persons").select("*").eq("id", id).single();
-      if (personError || !personData) throw new Error("Không thể tải thông tin thành viên.");
+      if (personError || !personData) throw new Error("Kh\u00f4ng th\u1ec3 t\u1ea3i th\u00f4ng tin th\u00e0nh vi\u00ean.");
       setPerson(personData);
       if (isAdmin) {
         const { data: privData } = await supabase.from("person_details_private").select("*").eq("person_id", id).single();
@@ -39,7 +39,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
       }
     } catch (err) {
       // @ts-expect-error
-      setError(err?.message || "Đã xảy ra lỗi hệ thống.");
+      setError(err?.message || "\u0110\u00e3 x\u1ea3y ra l\u1ed7i h\u1ec7 th\u1ed1ng.");
     } finally {
       setLoading(false);
     }
@@ -75,10 +75,8 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
 
   const formInitialData = person ? { ...person, ...(privateData ?? {}) } : undefined;
 
-  // Resolve familyId: use prop if provided, otherwise fall back to person.family_id
   const resolvedFamilyId = familyId ?? person?.family_id;
 
-  // Build member detail href
   const memberHref = person
     ? resolvedFamilyId
       ? `/dashboard/${resolvedFamilyId}/members/${person.id}`
@@ -98,19 +96,23 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
               {isEditing ? (
                 <button onClick={() => setIsEditing(false)}
                   className="flex items-center gap-1.5 px-4 py-2 bg-stone-100/80 text-stone-700 rounded-full hover:bg-stone-200 font-semibold text-sm shadow-sm border border-stone-200/50 transition-colors">
-                  <ArrowLeft className="size-4" /><span className="hidden sm:inline">Quay lại</span>
+                  <ArrowLeft className="size-4" /><span className="hidden sm:inline">Quay l\u1ea1i</span>
                 </button>
               ) : (
-                canEdit && person && (
+                person && (
                   <>
+                    {/* N\u00fat Xem: hi\u1ec7n v\u1edbi t\u1ea5t c\u1ea3 role */}
                     <Link href={memberHref}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-amber-100/80 text-amber-800 rounded-full hover:bg-amber-200 font-semibold text-sm shadow-sm border border-amber-200/50 transition-colors">
+                      className="flex items-center gap-1.5 px-4 py-2 bg-stone-100/80 text-stone-700 rounded-full hover:bg-stone-200 font-semibold text-sm shadow-sm border border-stone-200/50 transition-colors">
                       <ExternalLink className="size-4" /><span className="hidden sm:inline">Xem</span>
                     </Link>
-                    <button onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-amber-100/80 text-amber-800 rounded-full hover:bg-amber-200 font-semibold text-sm shadow-sm border border-amber-200/50 transition-colors">
-                      <Edit2 className="size-4" /><span className="hidden sm:inline">Chỉnh sửa</span>
-                    </button>
+                    {/* N\u00fat Ch\u1ec9nh s\u1eeda: ch\u1ec9 hi\u1ec7n v\u1edbi editor tr\u1edf l\u00ean */}
+                    {canEdit && (
+                      <button onClick={() => setIsEditing(true)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-amber-100/80 text-amber-800 rounded-full hover:bg-amber-200 font-semibold text-sm shadow-sm border border-amber-200/50 transition-colors">
+                        <Edit2 className="size-4" /><span className="hidden sm:inline">Ch\u1ec9nh s\u1eeda</span>
+                      </button>
+                    )}
                   </>
                 )
               )}
@@ -125,7 +127,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
                 <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="flex-1 min-h-[500px] flex items-center justify-center flex-col gap-4">
                   <div className="size-10 border-4 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-stone-500 font-medium">Đang tải...</p>
+                  <p className="text-stone-500 font-medium">\u0110ang t\u1ea3i...</p>
                 </motion.div>
               ) : error ? (
                 <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -134,12 +136,12 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
                     <AlertCircle className="size-8" />
                   </div>
                   <p className="text-red-600 font-medium text-lg">{error}</p>
-                  <button onClick={closeModal} className="mt-2 px-6 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-full transition-colors">Dóng</button>
+                  <button onClick={closeModal} className="mt-2 px-6 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-full transition-colors">\u0110\u00f3ng</button>
                 </motion.div>
               ) : isEditing && formInitialData && resolvedFamilyId ? (
                 <motion.div key="editing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 pt-16 pb-8">
-                  <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Chỉnh sửa thành viên</h2>
+                  <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Ch\u1ec9nh s\u1eeda th\u00e0nh vi\u00ean</h2>
                   <MemberForm
                     initialData={formInitialData as Parameters<typeof MemberForm>[0]["initialData"]}
                     isEditing={true} isAdmin={isAdmin} familyId={resolvedFamilyId}
@@ -149,7 +151,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
               ) : showCreateMember && resolvedFamilyId ? (
                 <motion.div key="creating" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 pt-16 pb-8">
-                  <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Thêm thành viên mới</h2>
+                  <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Th\u00eam th\u00e0nh vi\u00ean m\u1edbi</h2>
                   <MemberForm isAdmin={isAdmin} familyId={resolvedFamilyId} onSuccess={handleCreateSuccess} onCancel={closeModal} />
                 </motion.div>
               ) : person ? (
