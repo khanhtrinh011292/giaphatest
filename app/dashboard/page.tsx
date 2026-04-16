@@ -21,9 +21,9 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const ROLE_COLOR: Record<string, string> = {
-  viewer: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800",
-  editor: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
-  admin: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800",
+  viewer: "bg-sky-50 text-sky-700 border-sky-200",
+  editor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  admin: "bg-violet-50 text-violet-700 border-violet-200",
 };
 
 export default async function FamiliesPage() {
@@ -48,10 +48,10 @@ export default async function FamiliesPage() {
   return (
     <main className="flex-1 w-full">
       {/* Hero Header */}
-      <div className="bg-gradient-to-br from-amber-50 via-stone-50 to-white dark:from-stone-900 dark:via-stone-950 dark:to-stone-950 border-b border-stone-100 dark:border-stone-800">
+      <div className="bg-gradient-to-br from-amber-50 via-stone-50 to-white border-b border-stone-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
           <div className="flex items-center gap-4">
-            <div className="size-14 rounded-2xl overflow-hidden shrink-0 shadow-sm border border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800">
+            <div className="size-14 rounded-2xl overflow-hidden shrink-0 shadow-sm border border-stone-100 bg-white">
               <Image
                 src="/icon.png"
                 alt={config.siteName}
@@ -62,11 +62,11 @@ export default async function FamiliesPage() {
               />
             </div>
             <div>
-              <p className="text-xl sm:text-2xl font-black tracking-tight text-stone-900 dark:text-stone-100 uppercase">
+              <p className="text-xl sm:text-2xl font-black tracking-tight text-stone-900 uppercase">
                 {config.siteName}
               </p>
-              <p className="text-stone-500 dark:text-stone-400 mt-0.5 text-sm sm:text-base">
-                Chào, <span className="font-semibold text-stone-700 dark:text-stone-200">{displayName}</span>.
+              <p className="text-stone-500 mt-0.5 text-sm sm:text-base">
+                Chào, <span className="font-semibold text-stone-700">{displayName}</span>.
                 {" "}
                 {totalFamilies === 0
                   ? "Bắt đầu bằng cách tạo gia phả đầu tiên."
@@ -84,9 +84,9 @@ export default async function FamiliesPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <BookOpen className="size-4 text-amber-600" />
-              <h2 className="text-base font-bold text-stone-800 dark:text-stone-200">Gia phả của tôi</h2>
+              <h2 className="text-base font-bold text-stone-800">Gia phả của tôi</h2>
               {owned.length > 0 && (
-                <span className="text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
                   {owned.length}
                 </span>
               )}
@@ -94,41 +94,41 @@ export default async function FamiliesPage() {
           </div>
 
           {owned.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/30 p-10 text-center">
-              <div className="size-14 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                <Users className="size-6 text-stone-400 dark:text-stone-500" />
+            <div className="rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50/50 p-10 text-center">
+              <div className="size-14 bg-white border border-stone-200 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <Users className="size-6 text-stone-400" />
               </div>
-              <p className="text-sm font-medium text-stone-600 dark:text-stone-400 mb-1">Bạn chưa có gia phả nào</p>
-              <p className="text-xs text-stone-400 dark:text-stone-500">Tạo gia phả đầu tiên bên dưới để bắt đầu lưu giữ ký ức dòng họ.</p>
+              <p className="text-sm font-medium text-stone-600 mb-1">Bạn chưa có gia phả nào</p>
+              <p className="text-xs text-stone-400">Tạo gia phả đầu tiên bên dưới để bắt đầu lưu giữ ký ức dòng họ.</p>
             </div>
           ) : (
             <div className="grid gap-3">
               {owned.map((family) => (
                 <div
                   key={family.id}
-                  className="group flex items-center gap-3 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700 transition-all duration-200 pr-3"
+                  className="group flex items-center gap-3 bg-white rounded-2xl border border-stone-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all duration-200 pr-3"
                 >
                   <Link
                     href={`/dashboard/${family.id}/board`}
                     className="flex items-center gap-4 flex-1 min-w-0 px-5 py-4"
                   >
-                    <div className="size-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 font-bold text-lg font-serif shadow-xs">
+                    <div className="size-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700 flex items-center justify-center shrink-0 font-bold text-lg font-serif shadow-xs">
                       {family.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-stone-900 dark:text-stone-100 truncate group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">
+                      <p className="font-semibold text-stone-900 truncate group-hover:text-amber-700 transition-colors">
                         {family.name}
                       </p>
                       {family.description ? (
-                        <p className="text-xs text-stone-400 dark:text-stone-500 truncate mt-0.5">{family.description}</p>
+                        <p className="text-xs text-stone-400 truncate mt-0.5">{family.description}</p>
                       ) : (
-                        <p className="text-xs text-stone-300 dark:text-stone-600 mt-0.5 italic">Chưa có mô tả</p>
+                        <p className="text-xs text-stone-300 mt-0.5 italic">Chưa có mô tả</p>
                       )}
                     </div>
-                    <ChevronRight className="size-4 text-stone-300 dark:text-stone-600 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+                    <ChevronRight className="size-4 text-stone-300 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                   </Link>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2.5 py-1 rounded-full hidden sm:inline-flex items-center gap-1">
+                    <span className="text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full hidden sm:inline-flex items-center gap-1">
                       👑 Chủ sở hữu
                     </span>
                     <DeleteFamilyButton familyId={family.id} familyName={family.name} />
@@ -144,8 +144,8 @@ export default async function FamiliesPage() {
           <section>
             <div className="flex items-center gap-2 mb-4">
               <Share2 className="size-4 text-sky-500" />
-              <h2 className="text-base font-bold text-stone-800 dark:text-stone-200">Được chia sẻ với tôi</h2>
-              <span className="text-xs font-bold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-400 px-2 py-0.5 rounded-full">
+              <h2 className="text-base font-bold text-stone-800">Được chia sẻ với tôi</h2>
+              <span className="text-xs font-bold bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full">
                 {shared.length}
               </span>
             </div>
@@ -154,27 +154,27 @@ export default async function FamiliesPage() {
                 <Link
                   key={s.id}
                   href={`/dashboard/${s.family.id}/board`}
-                  className="group flex items-center gap-4 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 px-5 py-4 shadow-sm hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition-all duration-200"
+                  className="group flex items-center gap-4 bg-white rounded-2xl border border-stone-200 px-5 py-4 shadow-sm hover:shadow-md hover:border-sky-300 transition-all duration-200"
                 >
-                  <div className="size-10 rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 dark:from-sky-900/40 dark:to-blue-900/40 text-sky-700 dark:text-sky-400 flex items-center justify-center shrink-0 font-bold text-lg font-serif shadow-xs">
+                  <div className="size-10 rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 text-sky-700 flex items-center justify-center shrink-0 font-bold text-lg font-serif shadow-xs">
                     {s.family.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-stone-900 dark:text-stone-100 truncate group-hover:text-sky-700 dark:group-hover:text-sky-400 transition-colors">
+                    <p className="font-semibold text-stone-900 truncate group-hover:text-sky-700 transition-colors">
                       {s.family.name}
                     </p>
                     {s.family.description ? (
-                      <p className="text-xs text-stone-400 dark:text-stone-500 truncate mt-0.5">{s.family.description}</p>
+                      <p className="text-xs text-stone-400 truncate mt-0.5">{s.family.description}</p>
                     ) : (
-                      <p className="text-xs text-stone-300 dark:text-stone-600 mt-0.5 italic">Chưa có mô tả</p>
+                      <p className="text-xs text-stone-300 mt-0.5 italic">Chưa có mô tả</p>
                     )}
                   </div>
                   <span className={`text-[11px] font-bold border px-2.5 py-1 rounded-full shrink-0 hidden sm:inline-flex items-center ${
-                    ROLE_COLOR[s.role] ?? "bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:border-stone-700"
+                    ROLE_COLOR[s.role] ?? "bg-stone-100 text-stone-600 border-stone-200"
                   }`}>
                     {ROLE_LABEL[s.role] ?? s.role}
                   </span>
-                  <ChevronRight className="size-4 text-stone-300 dark:text-stone-600 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ChevronRight className="size-4 text-stone-300 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                 </Link>
               ))}
             </div>
@@ -184,8 +184,8 @@ export default async function FamiliesPage() {
         {/* Tạo gia phả mới */}
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <PlusCircle className="size-4 text-stone-500 dark:text-stone-400" />
-            <h2 className="text-base font-bold text-stone-800 dark:text-stone-200">Tạo gia phả mới</h2>
+            <PlusCircle className="size-4 text-stone-500" />
+            <h2 className="text-base font-bold text-stone-800">Tạo gia phả mới</h2>
           </div>
           <CreateFamilyForm />
         </section>

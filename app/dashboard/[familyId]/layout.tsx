@@ -23,30 +23,32 @@ export default async function FamilyLayout({
 
   const profile = await getProfile(user.id);
 
+  // Tài khoản chờ duyệt
   if (!profile?.is_active) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans">
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-stone-950/90 border-b border-stone-200 dark:border-stone-800 shadow-sm">
+      <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
+        <header className="sticky top-0 z-30 bg-white/80 border-b border-stone-200 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/" className="text-xl font-serif font-bold text-stone-800 dark:text-stone-100 hover:text-amber-700 transition-colors">
+            <Link href="/" className="text-xl font-serif font-bold text-stone-800 hover:text-amber-700 transition-colors">
               {config.siteName}
             </Link>
             <div className="w-32"><LogoutButton /></div>
           </div>
         </header>
         <main className="flex-1 flex items-center justify-center p-4">
-          <div className="max-w-md text-center bg-white dark:bg-stone-900 p-8 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800">
-            <h2 className="text-2xl font-serif font-bold text-stone-800 dark:text-stone-100 mb-2">Tài khoản chờ duyệt</h2>
-            <p className="text-stone-600 dark:text-stone-400">Vui lòng liên hệ quản trị viên để được kích hoạt tài khoản.</p>
+          <div className="max-w-md text-center bg-white p-8 rounded-2xl shadow-sm border border-stone-200">
+            <h2 className="text-2xl font-serif font-bold text-stone-800 mb-2">Tài khoản chờ duyệt</h2>
+            <p className="text-stone-600">Vui lòng liên hệ quản trị viên để được kích hoạt tài khoản.</p>
           </div>
         </main>
-        <Footer className="mt-auto bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800" />
+        <Footer className="mt-auto bg-white border-t border-stone-200" />
       </div>
     );
   }
 
   const supabase = await getSupabase();
 
+  // Lấy thông tin family
   const { data: family, error: familyError } = await supabase
     .from("families")
     .select("*")
@@ -66,7 +68,7 @@ export default async function FamilyLayout({
       .eq("shared_with", user.id)
       .single();
 
-    if (!share) redirect("/dashboard");
+    if (!share) redirect("/dashboard"); // Không có quyền
     shareRole = share.role;
   }
 
@@ -85,10 +87,10 @@ export default async function FamilyLayout({
   return (
     <UserProvider user={user} profile={profile}>
       <FamilyContextProvider context={context}>
-        <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex flex-col font-sans">
+        <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
           <DashboardHeader familyId={familyId} />
           {children}
-          <Footer className="mt-auto bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800" showDisclaimer={true} />
+          <Footer className="mt-auto bg-white border-t border-stone-200" showDisclaimer={true} />
         </div>
       </FamilyContextProvider>
     </UserProvider>
