@@ -17,11 +17,11 @@ interface QuickLink {
 }
 
 function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
-  const all: QuickLink[] = [
+  return [
     {
       href: `/dashboard/${familyId}?view=tree`,
       label: "Cây gia phả",
-      sub: "Xem sơ đồ gia đình",
+      sub: "Danh sách, Sơ đồ cây, Mindmap, Bong bóng",
       icon: <Network className="w-5 h-5" />,
       color: "text-amber-600",
       bg: "hover:bg-amber-50",
@@ -102,7 +102,6 @@ function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
         }]
       : []),
   ];
-  return all;
 }
 
 export default function FamilyQuickLinks({
