@@ -49,7 +49,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
     setSelectedDay(today.getDate());
   };
 
-  // Build a map: day -> events for current month/year
   const eventsByDay = useMemo(() => {
     const map = new Map<number, DayEvent[]>();
     for (const ev of events) {
@@ -63,8 +62,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
         });
       }
     }
-    // Also include events whose recurring anniversary falls this month
-    // (already done above since computeEvents sets nextOccurrence)
     return map;
   }, [events, viewYear, viewMonth]);
 
@@ -107,12 +104,10 @@ export default function EventCalendar({ events }: EventCalendarProps) {
 
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-px bg-stone-100/60 border-t border-stone-100">
-        {/* Empty cells before month start */}
         {Array.from({ length: firstDow }).map((_, i) => (
           <div key={`empty-${i}`} className="bg-stone-50/40 min-h-[52px] sm:min-h-[64px]" />
         ))}
 
-        {/* Day cells */}
         {Array.from({ length: daysInMonth }).map((_, idx) => {
           const day = idx + 1;
           const dayEvents = eventsByDay.get(day) ?? [];
@@ -138,7 +133,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 {day}
               </span>
 
-              {/* Dot indicators */}
               {dayEvents.length > 0 && (
                 <div className="flex items-center gap-[3px] flex-wrap justify-center px-1">
                   {hasBirthday && <span className="size-1.5 rounded-full bg-blue-400" />}
@@ -185,40 +179,63 @@ export default function EventCalendar({ events }: EventCalendarProps) {
               </button>
             </div>
             <div className="space-y-2">
-              {selectedEvents.map((ev, i) => (
-                <button
-                  key={i}
-                  onClick={() => { if (ev.personId && ev.type !== "custom_event") setMemberModalId(ev.personId); }}
-                  className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
-                    ev.dot === "birthday"
-                      ? "bg-blue-50 border-blue-100 hover:border-blue-300"
-                      : ev.dot === "custom"
-                        ? "bg-purple-50 border-purple-100 hover:border-purple-300"
-                        : "bg-rose-50 border-rose-100 hover:border-rose-300"
-                  }`}
-                >
-                  <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    ev.dot === "birthday" ? "bg-blue-100 text-blue-500" :
-                    ev.dot === "custom" ? "bg-purple-100 text-purple-500" :
-                    "bg-rose-100 text-rose-500"
-                  }`}>
-                    {ev.dot === "birthday" ? <Cake className="size-4" /> :
-                     ev.dot === "custom" ? <Star className="size-4" /> :
-                     <Flower className="size-4" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-stone-800 truncate">{ev.personName}</p>
-                    <p className="text-xs text-stone-500">
-                      {ev.dot === "birthday" ? "Sinh nhật"
-                       : ev.dot === "custom" ? "Sự kiện"
-                       : `Ngày giỗ · ${ev.eventDateLabel}`}
-                      {ev.originYear && ev.dot === "birthday" && (
-                        <span className="ml-1 text-stone-400">· {new Date().getFullYear() - ev.originYear} tuổi</span>
-                      )}
-                    </p>
-                  </div>
-                </button>
-              ))}
+              {selectedEvents.map((ev, i) => {
+                // Build solar date label for the nextOccurrence
+                const d = ev.nextOccurrence;
+                const solarLabel = `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => { if (ev.personId && ev.type !== "custom_event") setMemberModalId(ev.personId); }}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                      ev.dot === "birthday"
+                        ? "bg-blue-50 border-blue-100 hover:border-blue-300"
+                        : ev.dot === "custom"
+                          ? "bg-purple-50 border-purple-100 hover:border-purple-300"
+                          : "bg-rose-50 border-rose-100 hover:border-rose-300"
+                    }`}
+                  >
+                    <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      ev.dot === "birthday" ? "bg-blue-100 text-blue-500" :
+                      ev.dot === "custom" ? "bg-purple-100 text-purple-500" :
+                      "bg-rose-100 text-rose-500"
+                    }`}>
+                      {ev.dot === "birthday" ? <Cake className="size-4" /> :
+                       ev.dot === "custom" ? <Star className="size-4" /> :
+                       <Flower className="size-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-stone-800 truncate">{ev.personName}</p>
+                      <div className="flex flex-col gap-0.5 mt-0.5">
+                        {ev.dot === "death" ? (
+                          <>
+                            {/* Solar date of this year's anniversary */}
+                            <p className="text-xs text-stone-500">
+                              Ngày giỗ · {solarLabel}
+                            </p>
+                            {/* Lunar date (the canonical date of commemoration) */}
+                            <p className="text-xs font-semibold text-rose-600 flex items-center gap-1">
+                              <span>🌙</span>
+                              <span>{ev.eventDateLabel}</span>
+                              {ev.originYear && (
+                                <span className="font-normal text-stone-400 ml-1">· {new Date().getFullYear() - ev.originYear} năm</span>
+                              )}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-stone-500">
+                            {ev.dot === "birthday" ? "Sinh nhật" : "Sự kiện"}
+                            {ev.originYear && ev.dot === "birthday" && (
+                              <span className="ml-1 text-stone-400">· {new Date().getFullYear() - ev.originYear} tuổi</span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </motion.div>
         )}

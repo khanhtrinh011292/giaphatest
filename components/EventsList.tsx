@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   List,
   MapPin,
+  Moon,
   Plus,
   Star,
 } from "lucide-react";
@@ -76,6 +77,7 @@ function EventCard({
 }) {
   const isBirthday = event.type === "birthday";
   const isCustom = event.type === "custom_event";
+  const isDeathAnniversary = event.type === "death_anniversary";
   const isToday = event.daysUntil === 0;
   const isPast = event.daysUntil < 0;
   const isSoon = event.daysUntil > 0 && event.daysUntil <= 7;
@@ -96,11 +98,12 @@ function EventCard({
     const diff = now - event.originYear;
     if (diff <= 0) return null;
     if (isBirthday) return `${diff} tuổi`;
-    if (event.type === "death_anniversary") return `${diff} năm`;
+    if (isDeathAnniversary) return `${diff} năm`;
     return null;
   })();
 
-  const dateLabel = (() => {
+  // Solar date of this occurrence (the actual calendar date it falls on)
+  const solarDateLabel = (() => {
     const weekdays = [
       "Chủ nhật",
       "Thứ hai",
@@ -116,12 +119,14 @@ function EventCard({
     const month = (d.getMonth() + 1).toString().padStart(2, "0");
     const year = d.getFullYear();
 
-    let label = `${dayOfWeek}, ngày ${day}/${month}`;
-    if (event.type === "custom_event") label += `/${year}`;
-    if (event.type === "death_anniversary")
-      label += ` (Âm lịch: ${event.eventDateLabel.replace(" ÂL", "")})`;
-    return label;
+    if (isCustom) return `${dayOfWeek}, ngày ${day}/${month}/${year}`;
+    return `${dayOfWeek}, ngày ${day}/${month}`;
   })();
+
+  // Lunar date label for death anniversaries (the canonical anniversary date)
+  const lunarDateLabel = isDeathAnniversary
+    ? event.eventDateLabel // already formatted as "DD/MM ÂL"
+    : null;
 
   return (
     <motion.div
@@ -205,11 +210,26 @@ function EventCard({
         </div>
 
         <div className="flex flex-col gap-0.5 mt-1">
+          {/* Solar date row */}
           <p className="text-[13px] sm:text-sm text-stone-500 flex items-center gap-1.5 leading-snug">
             <CalendarDays className="size-3.5 shrink-0" />
-            <span className="font-medium text-stone-600">{dateLabel}</span>
-            {yearsInfo && <span className="text-stone-400">· {yearsInfo}</span>}
+            <span className="font-medium text-stone-600">{solarDateLabel}</span>
+            {yearsInfo && !isDeathAnniversary && (
+              <span className="text-stone-400">· {yearsInfo}</span>
+            )}
           </p>
+
+          {/* Lunar date row — only for death anniversaries */}
+          {lunarDateLabel && (
+            <p className="text-[13px] sm:text-sm flex items-center gap-1.5 leading-snug">
+              <Moon className="size-3.5 shrink-0 text-rose-400" />
+              <span className="font-semibold text-rose-600">{lunarDateLabel}</span>
+              {yearsInfo && (
+                <span className="text-stone-400">· {yearsInfo}</span>
+              )}
+            </p>
+          )}
+
           {event.location && (
             <p className="text-[13px] sm:text-sm text-stone-500 flex items-center gap-1.5 leading-snug">
               <MapPin className="size-3.5 shrink-0" />
