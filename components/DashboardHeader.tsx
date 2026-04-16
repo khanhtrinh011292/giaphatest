@@ -3,7 +3,14 @@ import HeaderMenu from "@/components/HeaderMenu";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function DashboardHeader({ familyId }: { familyId?: string }) {
+// #1: Nhận familyName qua prop thay vì query lại Supabase
+export default function DashboardHeader({
+  familyId,
+  familyName,
+}: {
+  familyId?: string;
+  familyName?: string;
+}) {
   return (
     <header className="sticky top-0 z-30 bg-white/80 border-b border-stone-200 shadow-sm transition-all duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -27,39 +34,24 @@ export default function DashboardHeader({ familyId }: { familyId?: string }) {
             </h1>
           </Link>
 
-          {familyId && (
+          {familyId && familyName && (
             <>
               <span className="text-stone-300 font-light hidden sm:block">/</span>
               <Link
                 href={`/dashboard/${familyId}/board`}
                 className="text-sm font-medium text-stone-600 hover:text-amber-700 transition-colors truncate max-w-[140px] sm:max-w-xs"
               >
-                <FamilyName familyId={familyId} />
+                {familyName}
               </Link>
             </>
           )}
         </div>
 
-        {/* Right: Menu only */}
+        {/* Right: Menu */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <HeaderMenu familyId={familyId} />
         </div>
       </div>
     </header>
   );
-}
-
-async function FamilyName({ familyId }: { familyId: string }) {
-  try {
-    const { getSupabase } = await import("@/utils/supabase/queries");
-    const supabase = await getSupabase();
-    const { data } = await supabase
-      .from("families")
-      .select("name")
-      .eq("id", familyId)
-      .single();
-    return <>{data?.name ?? "Gia phả"}</>;
-  } catch {
-    return <>Gia phả</>;
-  }
 }

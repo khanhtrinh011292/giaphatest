@@ -1,7 +1,7 @@
 "use client";
 
 import { createFamily } from "@/app/actions/family";
-import { Loader2, PlusIcon, TreePine } from "lucide-react";
+import { Loader2, PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -35,11 +35,16 @@ export default function CreateFamilyForm() {
       className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden"
     >
       <div className="p-5 sm:p-6 space-y-4">
+        {/* #6: htmlFor liên kết label-input đúng chuẩn accessibility */}
         <div>
-          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">
+          <label
+            htmlFor="family-name"
+            className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2"
+          >
             Tên gia phả <span className="text-red-400">*</span>
           </label>
           <input
+            id="family-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -47,14 +52,19 @@ export default function CreateFamilyForm() {
             className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition bg-stone-50/50"
             disabled={isPending}
             maxLength={100}
+            autoComplete="off"
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">
+          <label
+            htmlFor="family-description"
+            className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2"
+          >
             Mô tả{" "}
             <span className="text-stone-300 font-normal normal-case">(tuỳ chọn)</span>
           </label>
           <input
+            id="family-description"
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -62,10 +72,11 @@ export default function CreateFamilyForm() {
             className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition bg-stone-50/50"
             disabled={isPending}
             maxLength={200}
+            autoComplete="off"
           />
         </div>
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          <p role="alert" className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
             {error}
           </p>
         )}

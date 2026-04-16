@@ -23,7 +23,6 @@ export default async function FamilyLayout({
 
   const profile = await getProfile(user.id);
 
-  // Tài khoản chờ duyệt
   if (!profile?.is_active) {
     return (
       <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
@@ -46,9 +45,9 @@ export default async function FamilyLayout({
     );
   }
 
+  // #5: Dùng lại supabase client từ getSupabase() — được cache() nên chỉ tạo 1 lần/request
   const supabase = await getSupabase();
 
-  // Lấy thông tin family
   const { data: family, error: familyError } = await supabase
     .from("families")
     .select("*")
@@ -68,7 +67,7 @@ export default async function FamilyLayout({
       .eq("shared_with", user.id)
       .single();
 
-    if (!share) redirect("/dashboard"); // Không có quyền
+    if (!share) redirect("/dashboard");
     shareRole = share.role;
   }
 
@@ -88,7 +87,8 @@ export default async function FamilyLayout({
     <UserProvider user={user} profile={profile}>
       <FamilyContextProvider context={context}>
         <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
-          <DashboardHeader familyId={familyId} />
+          {/* #1: Truyền familyName xuống thay vì query lại trong DashboardHeader */}
+          <DashboardHeader familyId={familyId} familyName={family.name} />
           {children}
           <Footer className="mt-auto bg-white border-t border-stone-200" showDisclaimer={true} />
         </div>

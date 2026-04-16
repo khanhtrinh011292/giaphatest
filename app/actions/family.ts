@@ -4,7 +4,7 @@ import { Family, FamilyShare, ShareRole } from "@/types";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { revalidatePath } from "next/cache";
 
-// ── Lấy danh sách gia phả (sở hữu + được share) ─────────────────────────────
+// ── Lấy danh sách gia phả (sở hữu + được share) ────────────────────────────────────────────
 export async function getFamilies(): Promise<
   { owned: Family[]; shared: (FamilyShare & { family: Family })[] } | { error: string }
 > {
@@ -25,13 +25,17 @@ export async function getFamilies(): Promise<
       .order("created_at", { ascending: true }),
   ]);
 
+  // #4: Kiểm tra lỗi Supabase thay vì silent fail
+  if (ownedRes.error) return { error: ownedRes.error.message };
+  if (sharedRes.error) return { error: sharedRes.error.message };
+
   return {
     owned: (ownedRes.data ?? []) as Family[],
     shared: (sharedRes.data ?? []) as (FamilyShare & { family: Family })[],
   };
 }
 
-// ── Tạo gia phả mới ──────────────────────────────────────────────────────────
+// ── Tạo gia phả mới ──────────────────────────────────────────────────────────────────
 export async function createFamily(name: string, description?: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -49,7 +53,7 @@ export async function createFamily(name: string, description?: string) {
   return { data: data as Family };
 }
 
-// ── Cập nhật tên/mô tả gia phả ───────────────────────────────────────────────
+// ── Cập nhật tên/mô tả gia phả ───────────────────────────────────────────────────────
 export async function updateFamily(
   familyId: string,
   updates: { name?: string; description?: string }
@@ -70,7 +74,7 @@ export async function updateFamily(
   return { success: true };
 }
 
-// ── Xóa gia phả (cascade xóa hết persons, relationships, ...) ────────────────
+// ── Xóa gia phả (cascade xóa hết persons, relationships, ...) ───────────────────────
 export async function deleteFamily(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -83,11 +87,13 @@ export async function deleteFamily(familyId: string) {
     .eq("owner_id", user.id);
 
   if (error) return { error: error.message };
+  // #2: revalidate cả sub-routes của gia phả vừa xóa
   revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/${familyId}`, "layout");
   return { success: true };
 }
 
-// ── Lấy danh sách người được share trong 1 family ───────────────────────────
+// ── Lấy danh sách người được share trong 1 family ────────────────────────────────
 export async function getFamilyShares(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -153,7 +159,7 @@ export async function shareFamily(
   return { success: true };
 }
 
-// ── Cập nhật quyền share ─────────────────────────────────────────────────────
+// ── Cập nhật quyền share ─────────────────────────────────────────────────────────────
 export async function updateShareRole(shareId: string, newRole: ShareRole) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -170,7 +176,7 @@ export async function updateShareRole(shareId: string, newRole: ShareRole) {
   return { success: true };
 }
 
-// ── Thu hồi quyền chia sẻ ────────────────────────────────────────────────────
+// ── Thu hồi quyền chia sẻ ───────────────────────────────────────────────────────────────
 export async function revokeShare(shareId: string, familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -187,7 +193,7 @@ export async function revokeShare(shareId: string, familyId: string) {
   return { success: true };
 }
 
-// ── Rời khỏi gia phả được share (tự xóa bản thân) ───────────────────────────
+// ── Rời khỏi gia phả được share (tự xóa bản thân) ─────────────────────────────────
 export async function leaveFamily(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -204,7 +210,7 @@ export async function leaveFamily(familyId: string) {
   return { success: true };
 }
 
-// ── Tạo share link mới ───────────────────────────────────────────────────────
+// ── Tạo share link mới ──────────────────────────────────────────────────────────────────
 export async function createShareLink(
   familyId: string,
   role: "viewer" | "editor" = "viewer"
@@ -213,7 +219,6 @@ export async function createShareLink(
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
-  // Chỉ owner mới được tạo link
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -222,7 +227,6 @@ export async function createShareLink(
   if (!family || family.owner_id !== user.id)
     return { error: "Bạn không có quyền tạo link chia sẻ." };
 
-  // Tạo token ngẫu nhiên 32 ký tự
   const array = new Uint8Array(24);
   crypto.getRandomValues(array);
   const token = Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
@@ -248,7 +252,7 @@ export async function createShareLink(
   return { data };
 }
 
-// ── Lấy danh sách share links của một gia phả ────────────────────────────────
+// ── Lấy danh sách share links của một gia phả ──────────────────────────────────────────
 export async function getShareLinks(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -265,7 +269,7 @@ export async function getShareLinks(familyId: string) {
   return { data: data ?? [] };
 }
 
-// ── Thu hồi share link ────────────────────────────────────────────────────────
+// ── Thu hồi share link ───────────────────────────────────────────────────────────────────
 export async function revokeShareLink(linkId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -282,7 +286,7 @@ export async function revokeShareLink(linkId: string) {
   return { success: true };
 }
 
-// ── Tham gia gia phả bằng token ───────────────────────────────────────────────
+// ── Tham gia gia phả bằng token ───────────────────────────────────────────────────────────
 export async function joinByShareLink(token: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -298,7 +302,6 @@ export async function joinByShareLink(token: string) {
 
   if (linkError || !link) return { error: "Link không hợp lệ hoặc đã hết hạn." };
 
-  // Kiểm tra đã là thành viên chưa
   const { data: existing } = await supabase
     .from("family_shares")
     .select("id")
@@ -308,7 +311,6 @@ export async function joinByShareLink(token: string) {
 
   if (existing) return { error: "Bạn đã là thành viên của gia phả này." };
 
-  // Không được tham gia gia phả của chính mình
   const { data: ownFamily } = await supabase
     .from("families")
     .select("id")
