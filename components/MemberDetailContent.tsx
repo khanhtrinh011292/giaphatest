@@ -46,7 +46,6 @@ interface MemberDetailContentProps {
   privateData: Record<string, unknown> | null;
   isAdmin: boolean;
   canEdit?: boolean;
-  familyId?: string;
 }
 
 export default function MemberDetailContent({
@@ -54,10 +53,7 @@ export default function MemberDetailContent({
   privateData,
   isAdmin,
   canEdit = false,
-  familyId,
 }: MemberDetailContentProps) {
-  void familyId;
-
   const [isNoteExpanded, setIsNoteExpanded] = useState(false);
   const [relStats, setRelStats] = useState<{
     biologicalChildren: number;

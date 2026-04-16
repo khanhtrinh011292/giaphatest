@@ -10,16 +10,11 @@ export default function DashboardMemberList({
   initialPersons,
   relationships = [],
   canEdit = false,
-  familyId,
 }: {
   initialPersons: Person[];
   relationships?: Relationship[];
   canEdit?: boolean;
-  familyId?: string;
 }) {
-  // suppress unused warning — available for future use
-  void familyId;
-
   const { setShowCreateMember } = useDashboard();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("generation_asc");
