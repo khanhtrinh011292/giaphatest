@@ -7,7 +7,7 @@ import { getAvatarBg } from "@/utils/styleHelprs";
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import DefaultAvatar from "./DefaultAvatar";
 
 interface RelationshipManagerProps {
@@ -43,12 +43,18 @@ export default function RelationshipManager({
   const dashboardContext = useContext(DashboardContext);
   const { setMemberModalId } = useDashboard();
   const router = useRouter();
-  
+
   const personId = person.id;
   const personGender = person.gender;
   const familyId = person.family_id;
 
-  // If inside DashboardProvider → open modal; otherwise → navigate to full page
+  // FIX #2: Stable ref for onStatsLoaded to prevent infinite re-render
+  // when parent passes an inline arrow function.
+  const onStatsLoadedRef = useRef(onStatsLoaded);
+  useEffect(() => {
+    onStatsLoadedRef.current = onStatsLoaded;
+  }, [onStatsLoaded]);
+
   const handlePersonClick = (id: string) => {
     if (dashboardContext !== undefined) {
       setMemberModalId(id);
@@ -62,7 +68,6 @@ export default function RelationshipManager({
   );
   const [loading, setLoading] = useState(true);
 
-  // Add Relationship State
   const [isAdding, setIsAdding] = useState(false);
   const [newRelType, setNewRelType] =
     useState<RelationshipType>("biological_child");
@@ -77,7 +82,6 @@ export default function RelationshipManager({
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Bulk Add State
   const [isAddingBulk, setIsAddingBulk] = useState(false);
   const [selectedSpouseId, setSelectedSpouseId] = useState<string>("");
   const [bulkChildren, setBulkChildren] = useState<
@@ -98,37 +102,38 @@ export default function RelationshipManager({
     },
   ]);
 
-  // Quick Add Spouse State
   const [isAddingSpouse, setIsAddingSpouse] = useState(false);
   const [newSpouseName, setNewSpouseName] = useState("");
   const [newSpouseBirthYear, setNewSpouseBirthYear] = useState("");
   const [newSpouseNote, setNewSpouseNote] = useState("");
 
-  // Fetch relationships
+  // FIX #1: Merged 4–5 separate Supabase round-trips into a single parallel fetch,
+  // then process in-laws and grandchildren in JS. Reduces DB round-trips from 4–5 → 2.
+  // FIX #2: Removed onStatsLoaded from deps array; use stable ref instead.
   const fetchRelationships = useCallback(async () => {
     try {
-      // Get all relationships where this person involved
-      // This is a bit complex because we need to check both a and b columns
-      const { data: relsA, error: errA } = await supabase
-        .from("relationships")
-        .select(`*, target:persons!person_b(*)`) // if I am A, target is B
-        .eq("person_a", personId);
-
-      const { data: relsB, error: errB } = await supabase
-        .from("relationships")
-        .select(`*, target:persons!person_a(*)`) // if I am B, target is A
-        .eq("person_b", personId);
+      // Single parallel fetch for all relationships involving this person
+      const [{ data: relsA, error: errA }, { data: relsB, error: errB }] =
+        await Promise.all([
+          supabase
+            .from("relationships")
+            .select(`*, target:persons!person_b(*)`)
+            .eq("person_a", personId),
+          supabase
+            .from("relationships")
+            .select(`*, target:persons!person_a(*)`)
+            .eq("person_b", personId),
+        ]);
 
       if (errA || errB) throw errA || errB;
 
       const formattedRels: EnrichedRelationship[] = [];
 
-      // Process Rels where I am Person A
       relsA?.forEach((r) => {
         let direction: "parent" | "child" | "spouse" = "spouse";
         if (r.type === "marriage") direction = "spouse";
         else if (r.type === "biological_child" || r.type === "adopted_child")
-          direction = "child"; // I am A (Parent), B is Child
+          direction = "child";
 
         formattedRels.push({
           id: r.id,
@@ -139,12 +144,11 @@ export default function RelationshipManager({
         });
       });
 
-      // Process Rels where I am Person B
       relsB?.forEach((r) => {
         let direction: "parent" | "child" | "spouse" = "spouse";
         if (r.type === "marriage") direction = "spouse";
         else if (r.type === "biological_child" || r.type === "adopted_child")
-          direction = "parent"; // I am B (Child), A is Parent
+          direction = "parent";
 
         formattedRels.push({
           id: r.id,
@@ -155,52 +159,61 @@ export default function RelationshipManager({
         });
       });
 
-      // Fetch in-laws (spouses of children)
       const childrenIds = formattedRels
         .filter((r) => r.direction === "child")
         .map((r) => r.targetPerson.id);
 
-      if (childrenIds.length > 0) {
-        const { data: childrenMarriages } = await supabase
-          .from("relationships")
-          .select(
-            `*, person_a_data:persons!person_a(*), person_b_data:persons!person_b(*)`,
-          )
-          .eq("type", "marriage")
-          .or(
-            `person_a.in.(${childrenIds.join(",")}),person_b.in.(${childrenIds.join(",")})`,
-          );
+      // Batch fetch in-laws AND grandchildren in a single parallel round-trip
+      const [childrenMarriagesResult, grandchildrenResult] = await Promise.all([
+        childrenIds.length > 0
+          ? supabase
+              .from("relationships")
+              .select(
+                `*, person_a_data:persons!person_a(*), person_b_data:persons!person_b(*)`,
+              )
+              .eq("type", "marriage")
+              .or(
+                `person_a.in.(${childrenIds.join(",")}),person_b.in.(${childrenIds.join(",")})`,
+              )
+          : Promise.resolve({ data: [], error: null }),
+        childrenIds.length > 0
+          ? supabase
+              .from("relationships")
+              .select("id, person_a")
+              .in("type", ["biological_child", "adopted_child"])
+              .in("person_a", childrenIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
-        if (childrenMarriages) {
-          childrenMarriages.forEach((m) => {
-            const isAChild = childrenIds.includes(m.person_a);
-            const childPerson = isAChild ? m.person_a_data : m.person_b_data;
-            const spousePerson = isAChild ? m.person_b_data : m.person_a_data;
+      // Process in-laws
+      if (childrenMarriagesResult.data) {
+        childrenMarriagesResult.data.forEach((m) => {
+          const isAChild = childrenIds.includes(m.person_a);
+          const childPerson = isAChild ? m.person_a_data : m.person_b_data;
+          const spousePerson = isAChild ? m.person_b_data : m.person_a_data;
 
-            if (spousePerson && childPerson) {
-              const spouseGender = spousePerson.gender;
-              let noteLabel = `Vợ/chồng của ${childPerson.full_name}`;
-              if (spouseGender === "female")
-                noteLabel = `Con dâu (vợ của ${childPerson.full_name})`;
-              if (spouseGender === "male")
-                noteLabel = `Con rể (chồng của ${childPerson.full_name})`;
+          if (spousePerson && childPerson) {
+            const spouseGender = spousePerson.gender;
+            let noteLabel = `Vợ/chồng của ${childPerson.full_name}`;
+            if (spouseGender === "female")
+              noteLabel = `Con dâu (vợ của ${childPerson.full_name})`;
+            if (spouseGender === "male")
+              noteLabel = `Con rể (chồng của ${childPerson.full_name})`;
+            if (m.note) noteLabel += ` - ${m.note}`;
 
-              // Append existing marriage note if any
-              if (m.note) noteLabel += ` - ${m.note}`;
-
-              formattedRels.push({
-                id: m.id + "_inlaw",
-                type: "marriage",
-                direction: "child_in_law",
-                targetPerson: spousePerson,
-                note: noteLabel,
-              });
-            }
-          });
-        }
+            formattedRels.push({
+              id: m.id + "_inlaw",
+              type: "marriage",
+              direction: "child_in_law",
+              targetPerson: spousePerson,
+              note: noteLabel,
+            });
+          }
+        });
       }
 
-      if (onStatsLoaded) {
+      // Process stats using already-fetched grandchildren data
+      if (onStatsLoadedRef.current) {
         const biologicalChildrenList = formattedRels.filter(
           (r) => r.direction === "child" && r.type === "biological_child",
         );
@@ -222,40 +235,32 @@ export default function RelationshipManager({
             r.direction === "child_in_law" && r.targetPerson.gender === "male",
         ).length;
 
-        // Fetch Grandchildren mapping
         let paternalGrandchildren = 0;
         let maternalGrandchildren = 0;
-        if (childrenIds.length > 0) {
-          const { data: grandchildrenData } = await supabase
-            .from("relationships")
-            .select("id, person_a")
-            .in("type", ["biological_child", "adopted_child"])
-            .in("person_a", childrenIds);
 
-          if (grandchildrenData) {
-            const maleChildrenIds = formattedRels
-              .filter(
-                (r) =>
-                  r.direction === "child" && r.targetPerson.gender === "male",
-              )
-              .map((r) => r.targetPerson.id);
-            const femaleChildrenIds = formattedRels
-              .filter(
-                (r) =>
-                  r.direction === "child" && r.targetPerson.gender === "female",
-              )
-              .map((r) => r.targetPerson.id);
+        if (grandchildrenResult.data && grandchildrenResult.data.length > 0) {
+          const maleChildrenIds = formattedRels
+            .filter(
+              (r) =>
+                r.direction === "child" && r.targetPerson.gender === "male",
+            )
+            .map((r) => r.targetPerson.id);
+          const femaleChildrenIds = formattedRels
+            .filter(
+              (r) =>
+                r.direction === "child" && r.targetPerson.gender === "female",
+            )
+            .map((r) => r.targetPerson.id);
 
-            paternalGrandchildren = grandchildrenData.filter((g) =>
-              maleChildrenIds.includes(g.person_a),
-            ).length;
-            maternalGrandchildren = grandchildrenData.filter((g) =>
-              femaleChildrenIds.includes(g.person_a),
-            ).length;
-          }
+          paternalGrandchildren = grandchildrenResult.data.filter((g) =>
+            maleChildrenIds.includes(g.person_a),
+          ).length;
+          maternalGrandchildren = grandchildrenResult.data.filter((g) =>
+            femaleChildrenIds.includes(g.person_a),
+          ).length;
         }
 
-        onStatsLoaded({
+        onStatsLoadedRef.current({
           biologicalChildren,
           maleBiologicalChildren,
           femaleBiologicalChildren,
@@ -272,13 +277,14 @@ export default function RelationshipManager({
     } finally {
       setLoading(false);
     }
-  }, [personId, supabase, onStatsLoaded]);
+  // FIX #2: onStatsLoaded intentionally excluded — stable ref used instead
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personId, supabase]);
 
   useEffect(() => {
     fetchRelationships();
   }, [fetchRelationships]);
 
-  // Search for people to add — chỉ tìm trong cùng gia phả
   useEffect(() => {
     const searchPeople = async () => {
       if (searchTerm.length < 2) {
@@ -289,7 +295,7 @@ export default function RelationshipManager({
       const { data } = await supabase
         .from("persons")
         .select("*")
-        .eq("family_id", familyId)   // ✅ chỉ tìm trong gia phả hiện tại
+        .eq("family_id", familyId)
         .ilike("full_name", `%${searchTerm}%`)
         .neq("id", personId)
         .limit(5);
@@ -301,14 +307,13 @@ export default function RelationshipManager({
     return () => clearTimeout(timeoutId);
   }, [searchTerm, personId, familyId, supabase]);
 
-  // Fetch recent members when opening Add form — chỉ lấy trong cùng gia phả
   useEffect(() => {
     if (isAdding && recentMembers.length === 0) {
       const fetchRecent = async () => {
         const { data } = await supabase
           .from("persons")
           .select("*")
-          .eq("family_id", familyId)   // ✅ chỉ lấy trong gia phả hiện tại
+          .eq("family_id", familyId)
           .neq("id", personId)
           .order("created_at", { ascending: false })
           .limit(10);
@@ -326,26 +331,15 @@ export default function RelationshipManager({
     try {
       let personA = personId;
       let personB = selectedTargetId;
-      // Default: I am A, Target is B.
-
-      // Setup payload based on logic
-      // Marriage: Order doesn't strictly matter logically, but consistency is good.
-      // Parent/Child:
-      //    Relationship Type: biological_child
-      //    Column A: Parent
-      //    Column B: Child
 
       if (newRelDirection === "parent") {
-        // Target is Parent (A), I am Child (B)
         personA = selectedTargetId;
         personB = personId;
       } else if (newRelDirection === "child") {
-        // I am Parent (A), Target is Child (B)
         personA = personId;
         personB = selectedTargetId;
       }
 
-      // Determine Type
       let type: RelationshipType = "biological_child";
       if (newRelDirection === "spouse") type = "marriage";
       else if (newRelType === "adopted_child") type = "adopted_child";
@@ -360,7 +354,6 @@ export default function RelationshipManager({
 
       if (error) throw error;
 
-      // Auto-update target person generation and is_in_law if currently missing
       try {
         const { data: targetPerson } = await supabase
           .from("persons")
@@ -384,10 +377,16 @@ export default function RelationshipManager({
           }
 
           if (targetPerson.is_in_law == null) {
-            if (newRelDirection === "child" || newRelDirection === "parent")
+            if (newRelDirection === "child" || newRelDirection === "parent") {
               updates.is_in_law = false;
-            else if (newRelDirection === "spouse")
-              updates.is_in_law = person.is_in_law === true ? false : true;
+            } else if (newRelDirection === "spouse") {
+              // FIX #4: is_in_law logic corrected.
+              // A spouse of a blood member (is_in_law=false) → is_in_law=true (dâu/rể)
+              // A spouse of a dâu/rể (is_in_law=true) → is_in_law=true (cũng là dâu/rể)
+              // Rule: if the current person is a blood member, the new spouse is an in-law.
+              // In all other cases, default to true (in-law) as well.
+              updates.is_in_law = true;
+            }
           }
 
           if (Object.keys(updates).length > 0) {
@@ -416,8 +415,8 @@ export default function RelationshipManager({
     }
   };
 
+  // FIX #3: Rollback orphaned persons if relationship insert fails.
   const handleBulkAdd = async () => {
-    // Filter out rows without a name
     const validChildren = bulkChildren.filter((c) => c.name.trim() !== "");
     if (validChildren.length === 0) {
       setError("Vui lòng nhập ít nhất tên của 1 người con.");
@@ -428,13 +427,12 @@ export default function RelationshipManager({
     setProcessing(true);
     setError(null);
     let successCount = 0;
+    const insertedPersonIds: string[] = []; // track for rollback
 
     try {
-      // For each child row, insert a Person, then insert Relationship(s)
       for (let i = 0; i < validChildren.length; i++) {
         const child = validChildren[i];
 
-        // 1. Insert Person
         const personPayload: {
           family_id: string;
           full_name: string;
@@ -470,27 +468,50 @@ export default function RelationshipManager({
 
         if (insertError || !newPersonData) {
           console.error("Error inserting child:", child.name, insertError);
-          continue; // Skip setting relationships for this if person insert failed
+          continue;
         }
 
         const newChildId = newPersonData.id;
+        insertedPersonIds.push(newChildId); // track inserted person
 
-        // 2. Insert Relationship to Main Person (parent)
-        await supabase.from("relationships").insert({
-          family_id: familyId,
-          person_a: personId,
-          person_b: newChildId,
-          type: "biological_child",
-        });
-
-        // 3. Insert Relationship to Second Parent (spouse), if selected
-        if (selectedSpouseId && selectedSpouseId !== "unknown") {
-          await supabase.from("relationships").insert({
+        const { error: relErrorA } = await supabase
+          .from("relationships")
+          .insert({
             family_id: familyId,
-            person_a: selectedSpouseId,
+            person_a: personId,
             person_b: newChildId,
             type: "biological_child",
           });
+
+        if (relErrorA) {
+          // FIX #3: Rollback the orphaned person if relationship insert fails
+          await supabase.from("persons").delete().eq("id", newChildId);
+          insertedPersonIds.pop();
+          console.error(
+            "Rolled back orphaned person after relationship insert failed:",
+            child.name,
+          );
+          continue;
+        }
+
+        if (selectedSpouseId && selectedSpouseId !== "unknown") {
+          const { error: relErrorB } = await supabase
+            .from("relationships")
+            .insert({
+              family_id: familyId,
+              person_a: selectedSpouseId,
+              person_b: newChildId,
+              type: "biological_child",
+            });
+
+          if (relErrorB) {
+            // Non-critical: second parent relationship failed, log but don't rollback
+            console.error(
+              "Failed to insert second parent relationship for:",
+              child.name,
+              relErrorB,
+            );
+          }
         }
 
         successCount++;
@@ -536,9 +557,9 @@ export default function RelationshipManager({
 
     setProcessing(true);
     setError(null);
+    let newSpouseId: string | null = null; // track for rollback
+
     try {
-      // Determine default gender based on current person defined in personGender prop
-      // Default to opposite. If original is other, default to female (arbitrary choice, or let user pick, but standard says opposite)
       const newSpouseGender =
         personGender === "male"
           ? "female"
@@ -557,7 +578,9 @@ export default function RelationshipManager({
         family_id: familyId,
         full_name: newSpouseName.trim(),
         gender: newSpouseGender,
-        is_in_law: person.is_in_law === true ? false : true,
+        // FIX #4: A newly added spouse is always an in-law (is_in_law=true),
+        // regardless of whether the current person is a blood member or an in-law.
+        is_in_law: true,
       };
 
       if (person.generation != null) {
@@ -569,7 +592,6 @@ export default function RelationshipManager({
         if (!isNaN(year)) personPayload.birth_year = year;
       }
 
-      // 1. Insert Person
       const { data: newPersonData, error: insertError } = await supabase
         .from("persons")
         .insert(personPayload)
@@ -578,9 +600,8 @@ export default function RelationshipManager({
 
       if (insertError || !newPersonData) throw insertError;
 
-      const newSpouseId = newPersonData.id;
+      newSpouseId = newPersonData.id;
 
-      // 2. Insert Marriage Relationship
       const { error: relError } = await supabase.from("relationships").insert({
         family_id: familyId,
         person_a: personId,
@@ -589,7 +610,11 @@ export default function RelationshipManager({
         note: newSpouseNote.trim() || null,
       });
 
-      if (relError) throw relError;
+      if (relError) {
+        // FIX #3: Rollback the orphaned spouse person if relationship insert fails
+        await supabase.from("persons").delete().eq("id", newSpouseId);
+        throw relError;
+      }
 
       setIsAddingSpouse(false);
       setNewSpouseName("");
@@ -606,7 +631,10 @@ export default function RelationshipManager({
     }
   };
 
+  // FIX #5: Added canEdit guard — prevents non-editor from calling delete
+  // even if the button is somehow rendered (defense-in-depth).
   const handleDelete = async (relId: string) => {
+    if (!canEdit) return; // guard
     if (!confirm("Bạn có chắc chắn muốn xóa mối quan hệ này?")) return;
     try {
       const { error } = await supabase
@@ -644,7 +672,6 @@ export default function RelationshipManager({
 
   return (
     <div className="space-y-6">
-      {/* List Sections */}
       {["parent", "spouse", "child", "child_in_law"].map((group) => {
         const items = groupByType(group);
         let title = "";
@@ -653,7 +680,7 @@ export default function RelationshipManager({
         if (group === "child") title = "Con cái";
         if (group === "child_in_law") title = "Con dâu / Con rể";
 
-        if (items.length === 0 && !isAdmin) return null; // Hide empty sections for members? Or show empty state?
+        if (items.length === 0 && !isAdmin) return null;
 
         return (
           <div
@@ -748,7 +775,6 @@ export default function RelationshipManager({
         );
       })}
 
-      {/* Add Button (Admin) */}
       {canEdit && !isAdding && !isAddingBulk && !isAddingSpouse && (
         <div className="flex flex-col sm:flex-row gap-3 mt-4">
           <button
@@ -813,7 +839,6 @@ export default function RelationshipManager({
         </div>
       )}
 
-      {/* Add Form (Admin) */}
       {canEdit && isAdding && (
         <div className="mt-4 bg-stone-50/50 p-4 sm:p-5 rounded-xl border border-stone-200 shadow-sm">
           <h4 className="font-bold text-stone-800 mb-3 text-sm">
@@ -863,7 +888,6 @@ export default function RelationshipManager({
               </select>
             </div>
 
-            {/* Child Type Sub-selection */}
             {(newRelDirection === "child" || newRelDirection === "parent") && (
               <div>
                 <label
@@ -903,7 +927,6 @@ export default function RelationshipManager({
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="bg-white text-stone-900 placeholder-stone-400 block w-full text-sm rounded-lg border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 sm:p-2.5 border transition-colors"
               />
-              {/* Search Results Dropdown */}
               {(searchResults.length > 0 ||
                 (searchTerm.length === 0 &&
                   !selectedTargetId &&
@@ -990,7 +1013,6 @@ export default function RelationshipManager({
         </div>
       )}
 
-      {/* Bulk Add Children Form (Admin) */}
       {canEdit && isAddingBulk && (
         <div className="mt-4 bg-sky-50/50 p-4 sm:p-5 rounded-xl border border-sky-200 shadow-sm">
           <h4 className="font-bold text-sky-800 mb-3 text-sm">
@@ -1033,7 +1055,6 @@ export default function RelationshipManager({
                   key={index}
                   className="bg-white rounded-xl border border-stone-200/80 p-3 sm:p-4 shadow-xs"
                 >
-                  {/* Header: number + remove */}
                   <div className="flex items-center justify-between mb-2.5">
                     <span className="text-xs font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md">
                       Con thứ {index + 1}
@@ -1060,7 +1081,6 @@ export default function RelationshipManager({
                       ✕
                     </button>
                   </div>
-                  {/* Fields */}
                   <div className="flex flex-wrap sm:flex-nowrap gap-2">
                     <input
                       id={`child-birth-order-${index}`}
@@ -1177,7 +1197,6 @@ export default function RelationshipManager({
         </div>
       )}
 
-      {/* Quick Add Spouse Form (Admin) */}
       {canEdit && isAddingSpouse && (
         <div className="mt-4 bg-rose-50/50 p-4 sm:p-5 rounded-xl border border-rose-200 shadow-sm">
           <h4 className="font-bold text-rose-800 mb-3 text-sm">
