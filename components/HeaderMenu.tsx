@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { BarChart2, CalendarDays, ChevronDown, ClipboardList, Database, GitMerge, Globe, Home, Info, Network, Share2, Sparkles, UserCircle } from "lucide-react";
+import { Baby, BarChart2, CalendarDays, ChevronDown, ClipboardList, Database, GitMerge, Globe, Home, Info, Network, Share2, Sparkles, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import LogoutButton from "./LogoutButton";
@@ -38,6 +38,12 @@ function FamilyMenuItems({ familyId, isAdmin, isOwner, onClose }: { familyId: st
         className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors">
         <CalendarDays className="size-4" />
         Lịch sự kiện
+      </Link>
+
+      <Link href={`/dashboard/${familyId}/baby-names`} onClick={onClose}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-pink-700 hover:bg-pink-50 transition-colors">
+        <Baby className="size-4" />
+        Gợi ý tên cho con
       </Link>
 
       <Link href={`/dashboard/${familyId}/audit`} onClick={onClose}
