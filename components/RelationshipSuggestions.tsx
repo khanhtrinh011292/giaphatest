@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, ChevronDown, ChevronUp, Loader2, UserPlus, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Lightbulb } from "lucide-react";

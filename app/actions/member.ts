@@ -72,7 +72,7 @@ export async function deleteMemberProfile(memberId: string, familyId: string) {
   redirect(`/dashboard/${familyId}`);
 }
 
-// ── Xác nhận gợi ý quan hệ: thêm quan hệ cha/mẹ → con vào DB ───────────────────
+// ── Xác nhận gợi ý quan hệ: thêm quan hệ cha/mẹ → con vào DB ──────────────
 export async function confirmSuggestedRelationship(
   familyId: string,
   parentId: string,
@@ -83,7 +83,6 @@ export async function confirmSuggestedRelationship(
 
   const supabase = await getSupabase();
 
-  // Kiểm tra quyền edit
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -102,7 +101,6 @@ export async function confirmSuggestedRelationship(
     if (!canEdit) return { error: "Bạn không có quyền chỉnh sửa gia phả này." };
   }
 
-  // Kiểm tra 2 person thuộc đúng family này
   const { data: persons } = await supabase
     .from("persons")
     .select("id")
@@ -112,7 +110,6 @@ export async function confirmSuggestedRelationship(
   if (!persons || persons.length < 2)
     return { error: "Không tìm thấy thành viên trong gia phả." };
 
-  // Kiểm tra quan hệ chưa tồn tại
   const { data: existing } = await supabase
     .from("relationships")
     .select("id")

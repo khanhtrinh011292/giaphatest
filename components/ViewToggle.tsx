@@ -46,7 +46,7 @@ export default function ViewToggle() {
         })}
       </div>
 
-      {/* Suggestions toggle — own row */}
+      {/* Suggestions toggle — hàng riêng bên dưới */}
       <button
         onClick={() => setShowSuggestions(!showSuggestions)}
         className={`relative flex items-center gap-2 px-5 py-2 rounded-full border text-sm font-semibold transition-all duration-200 z-10 ${

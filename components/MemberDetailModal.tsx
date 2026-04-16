@@ -24,7 +24,6 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
     const familyCtx = useFamilyContext();
     canEdit = familyCtx.canWrite;
   } catch {
-    // Không có FamilyContext — fallback về isAdmin
     canEdit = isAdmin;
   }
 
@@ -43,7 +42,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
     setError(null);
     try {
       const { data: personData, error: personError } = await supabase.from("persons").select("*").eq("id", id).single();
-      if (personError || !personData) throw new Error("Kh\u00f4ng th\u1ec3 t\u1ea3i th\u00f4ng tin th\u00e0nh vi\u00ean.");
+      if (personError || !personData) throw new Error("Không thể tải thông tin thành viên.");
       setPerson(personData);
       if (isAdmin) {
         const { data: privData } = await supabase.from("person_details_private").select("*").eq("person_id", id).single();
@@ -53,7 +52,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
       }
     } catch (err) {
       // @ts-expect-error
-      setError(err?.message || "\u0110\u00e3 x\u1ea3y ra l\u1ed7i h\u1ec7 th\u1ed1ng.");
+      setError(err?.message || "Đã xảy ra lỗi hệ thống.");
     } finally {
       setLoading(false);
     }
@@ -108,21 +107,21 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
               {isEditing ? (
                 <button onClick={() => setIsEditing(false)}
                   className="flex items-center gap-1.5 px-4 py-2 bg-stone-100/80 text-stone-700 rounded-full hover:bg-stone-200 font-semibold text-sm shadow-sm border border-stone-200/50 transition-colors">
-                  <ArrowLeft className="size-4" /><span className="hidden sm:inline">Quay l\u1ea1i</span>
+                  <ArrowLeft className="size-4" /><span className="hidden sm:inline">Quay lại</span>
                 </button>
               ) : (
                 person && (
                   <>
-                    {/* N\u00fat Xem: hi\u1ec7n v\u1edbi t\u1ea5t c\u1ea3 */}
+                    {/* Nút Xem: hiện với tất cả role */}
                     <Link href={memberHref}
                       className="flex items-center gap-1.5 px-4 py-2 bg-stone-100/80 text-stone-700 rounded-full hover:bg-stone-200 font-semibold text-sm shadow-sm border border-stone-200/50 transition-colors">
                       <ExternalLink className="size-4" /><span className="hidden sm:inline">Xem</span>
                     </Link>
-                    {/* N\u00fat Ch\u1ec9nh s\u1eeda: ch\u1ec9 hi\u1ec7n khi c\u00f3 quy\u1ec1n canWrite trong family n\u00e0y */}
+                    {/* Nút Chỉnh sửa: chỉ hiện khi có quyền canWrite trong family này */}
                     {canEdit && (
                       <button onClick={() => setIsEditing(true)}
                         className="flex items-center gap-1.5 px-4 py-2 bg-amber-100/80 text-amber-800 rounded-full hover:bg-amber-200 font-semibold text-sm shadow-sm border border-amber-200/50 transition-colors">
-                        <Edit2 className="size-4" /><span className="hidden sm:inline">Ch\u1ec9nh s\u1eeda</span>
+                        <Edit2 className="size-4" /><span className="hidden sm:inline">Chỉnh sửa</span>
                       </button>
                     )}
                   </>
@@ -139,7 +138,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
                 <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="flex-1 min-h-[500px] flex items-center justify-center flex-col gap-4">
                   <div className="size-10 border-4 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-stone-500 font-medium">\u0110ang t\u1ea3i...</p>
+                  <p className="text-stone-500 font-medium">Đang tải...</p>
                 </motion.div>
               ) : error ? (
                 <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -148,12 +147,12 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
                     <AlertCircle className="size-8" />
                   </div>
                   <p className="text-red-600 font-medium text-lg">{error}</p>
-                  <button onClick={closeModal} className="mt-2 px-6 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-full transition-colors">\u0110\u00f3ng</button>
+                  <button onClick={closeModal} className="mt-2 px-6 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-full transition-colors">Đóng</button>
                 </motion.div>
               ) : isEditing && formInitialData && resolvedFamilyId ? (
                 <motion.div key="editing" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 pt-16 pb-8">
-                  <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Ch\u1ec9nh s\u1eeda th\u00e0nh vi\u00ean</h2>
+                  <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Chỉnh sửa thành viên</h2>
                   <MemberForm
                     initialData={formInitialData as Parameters<typeof MemberForm>[0]["initialData"]}
                     isEditing={true} isAdmin={isAdmin} familyId={resolvedFamilyId}
@@ -163,7 +162,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
               ) : showCreateMember && resolvedFamilyId ? (
                 <motion.div key="creating" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 pt-16 pb-8">
-                  <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Th\u00eam th\u00e0nh vi\u00ean m\u1edbi</h2>
+                  <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Thêm thành viên mới</h2>
                   <MemberForm isAdmin={isAdmin} familyId={resolvedFamilyId} onSuccess={handleCreateSuccess} onCancel={closeModal} />
                 </motion.div>
               ) : person ? (
