@@ -5,7 +5,7 @@ import ReloadButton from "@/components/ReloadButton";
 import { UserProvider } from "@/components/UserProvider";
 import { getProfile, getUser } from "@/utils/supabase/queries";
 import Link from "next/link";
-import { redirect } from "@/navigation";
+import { redirect } from "next/navigation";
 import React from "react";
 
 export default async function DashboardLayout({
