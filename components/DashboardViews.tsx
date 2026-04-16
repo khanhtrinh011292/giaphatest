@@ -68,7 +68,7 @@ export default function DashboardViews({
 
   return (
     <>
-      <main className="flex-1 overflow-auto bg-stone-50/50 flex flex-col">
+      <main className="flex-1 overflow-hidden bg-stone-50/50 flex flex-col">
         {currentView !== "list" && persons.length > 0 && activeRootId && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 w-full flex flex-col sm:flex-row flex-wrap items-center sm:justify-between gap-4 relative z-20">
             <RootSelector persons={persons} currentRootId={activeRootId} />
@@ -76,7 +76,7 @@ export default function DashboardViews({
           </div>
         )}
         {currentView === "list" && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full relative z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full relative z-10 overflow-auto flex-1">
             <DashboardMemberList
               initialPersons={persons}
               relationships={relationships}
@@ -84,7 +84,7 @@ export default function DashboardViews({
             />
           </div>
         )}
-        <div className="flex-1 w-full relative z-10">
+        <div className="flex-1 w-full relative z-10 overflow-hidden">
           {currentView === "tree" && <FamilyTree personsMap={personsMap} relationships={relationships} roots={roots} canEdit={canEdit} familyId={familyId} />}
           {currentView === "mindmap" && <MindmapTree personsMap={personsMap} relationships={relationships} roots={roots} canEdit={canEdit} familyId={familyId} />}
           {currentView === "bubble" && <BubbleMapTree personsMap={personsMap} relationships={relationships} roots={roots} canEdit={canEdit} familyId={familyId} />}
