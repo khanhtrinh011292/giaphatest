@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import ImportPageClient from "./ImportPageClient";
 
@@ -8,14 +9,14 @@ export default async function ImportPage({
   params: Promise<{ familyId: string }>;
 }) {
   const { familyId } = await params;
-  const supabase = await createClient();
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Check permission: must be editor, admin or owner
   const { data: share } = await supabase
     .from("family_shares")
     .select("role")
