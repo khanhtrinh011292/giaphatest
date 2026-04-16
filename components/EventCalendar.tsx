@@ -2,7 +2,7 @@
 
 import { FamilyEvent } from "@/utils/eventHelpers";
 import { AnimatePresence, motion } from "framer-motion";
-import { Cake, ChevronLeft, ChevronRight, Flower, Star, X } from "lucide-react";
+import { Cake, ChevronLeft, ChevronRight, Flower, Moon, Star, X } from "lucide-react";
 import { Solar } from "lunar-javascript";
 import { useMemo, useState } from "react";
 import { useDashboard } from "./DashboardContext";
@@ -25,23 +25,19 @@ function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
-/** Chuyển ngày dương sang âm lịch, trả về { lunarDay, lunarMonth, isLeap } */
 function solarToLunar(year: number, month: number, day: number): { lunarDay: number; lunarMonth: number; isLeap: boolean } | null {
   try {
     const solar = Solar.fromYmd(year, month, day);
     const lunar = solar.getLunar();
     const rawMonth = lunar.getMonth();
-    return {
-      lunarDay: lunar.getDay(),
-      lunarMonth: Math.abs(rawMonth),
-      isLeap: rawMonth < 0,
-    };
+    return { lunarDay: lunar.getDay(), lunarMonth: Math.abs(rawMonth), isLeap: rawMonth < 0 };
   } catch {
     return null;
   }
 }
 
-type DayEvent = FamilyEvent & { dot: "birthday" | "death" | "custom" };
+type DotKind = "birthday" | "death" | "custom" | "mung1" | "ram";
+type DayEvent = FamilyEvent & { dot: DotKind };
 
 export default function EventCalendar({ events }: EventCalendarProps) {
   const today = new Date();
@@ -66,14 +62,11 @@ export default function EventCalendar({ events }: EventCalendarProps) {
     setSelectedDay(today.getDate());
   };
 
-  // Tính âm lịch cho tất cả ngày trong tháng hiện tại
   const lunarDays = useMemo(() => {
     const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-    const result: Array<{ lunarDay: number; lunarMonth: number; isLeap: boolean } | null> = [];
-    for (let d = 1; d <= daysInMonth; d++) {
-      result.push(solarToLunar(viewYear, viewMonth + 1, d));
-    }
-    return result;
+    return Array.from({ length: daysInMonth }, (_, i) =>
+      solarToLunar(viewYear, viewMonth + 1, i + 1)
+    );
   }, [viewYear, viewMonth]);
 
   const eventsByDay = useMemo(() => {
@@ -83,10 +76,17 @@ export default function EventCalendar({ events }: EventCalendarProps) {
       if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
         const day = d.getDate();
         if (!map.has(day)) map.set(day, []);
-        map.get(day)!.push({
-          ...ev,
-          dot: ev.type === "birthday" ? "birthday" : ev.type === "custom_event" ? "custom" : "death",
-        });
+        let dot: DotKind;
+        if (ev.type === "lunar_festival") {
+          dot = ev.festivalKind === "mung1" ? "mung1" : "ram";
+        } else if (ev.type === "birthday") {
+          dot = "birthday";
+        } else if (ev.type === "custom_event") {
+          dot = "custom";
+        } else {
+          dot = "death";
+        }
+        map.get(day)!.push({ ...ev, dot });
       }
     }
     return map;
@@ -94,7 +94,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDow = getFirstDayOfWeek(viewYear, viewMonth);
-
   const isToday = (day: number) =>
     day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
 
@@ -142,6 +141,8 @@ export default function EventCalendar({ events }: EventCalendarProps) {
           const hasBirthday = dayEvents.some(e => e.dot === "birthday");
           const hasDeath = dayEvents.some(e => e.dot === "death");
           const hasCustom = dayEvents.some(e => e.dot === "custom");
+          const hasMung1 = dayEvents.some(e => e.dot === "mung1");
+          const hasRam = dayEvents.some(e => e.dot === "ram");
           const isSelected = selectedDay === day;
           const today_ = isToday(day);
           const lunar = lunarDays[idx];
@@ -149,10 +150,9 @@ export default function EventCalendar({ events }: EventCalendarProps) {
           const isRam = lunar?.lunarDay === 15;
           const isLunarSpecial = isMung1 || isRam;
 
-          // Label ngày âm ngắn
           const lunarLabel = (() => {
             if (!lunar) return null;
-            if (isMung1) return `M.${lunar.lunarMonth}${lunar.isLeap ? " n" : ""}`; // Mồng 1 kèm số tháng
+            if (isMung1) return `M.${lunar.lunarMonth}${lunar.isLeap ? "n" : ""}`;
             if (isRam) return "Rằm";
             return lunar.lunarDay.toString();
           })();
@@ -164,10 +164,9 @@ export default function EventCalendar({ events }: EventCalendarProps) {
               className={`relative bg-white min-h-[60px] sm:min-h-[72px] flex flex-col items-center pt-1.5 pb-1 gap-0.5 transition-all hover:bg-amber-50/60 group ${
                 isSelected ? "ring-2 ring-inset ring-amber-400 bg-amber-50/80" : ""
               } ${
-                isLunarSpecial && !today_ ? "bg-amber-50/30" : ""
+                isLunarSpecial && !today_ && !isSelected ? "bg-amber-50/30" : ""
               }`}
             >
-              {/* Số ngày dương */}
               <span className={`size-7 flex items-center justify-center rounded-full text-sm font-semibold transition-colors ${
                 today_ ? "bg-amber-500 text-white shadow-sm" :
                 isSelected ? "text-amber-700" :
@@ -176,26 +175,19 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 {day}
               </span>
 
-              {/* Ngày âm lịch */}
               {lunarLabel && (
-                <span className={`text-[9px] sm:text-[10px] leading-none font-medium px-1 rounded ${
-                  isMung1
-                    ? "text-amber-700 font-bold"
-                    : isRam
-                    ? "text-amber-600 font-bold"
-                    : "text-stone-400"
+                <span className={`text-[9px] sm:text-[10px] leading-none font-medium px-0.5 ${
+                  isMung1 ? "text-amber-700 font-bold" :
+                  isRam ? "text-amber-600 font-bold" :
+                  "text-stone-400"
                 }`}>
                   {lunarLabel}
                 </span>
               )}
 
-              {/* Dots sự kiện + chấm mùng1/rằm */}
               <div className="flex items-center gap-[3px] flex-wrap justify-center px-0.5 mt-auto pb-0.5">
-                {isLunarSpecial && (
-                  <span className={`size-1.5 rounded-full ${
-                    isMung1 ? "bg-amber-400" : "bg-yellow-400"
-                  }`} />
-                )}
+                {hasMung1 && <span className="size-1.5 rounded-full bg-amber-400" />}
+                {hasRam && <span className="size-1.5 rounded-full bg-yellow-400" />}
                 {hasBirthday && <span className="size-1.5 rounded-full bg-blue-400" />}
                 {hasDeath && <span className="size-1.5 rounded-full bg-rose-400" />}
                 {hasCustom && <span className="size-1.5 rounded-full bg-purple-400" />}
@@ -247,13 +239,12 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 {selectedLunar && (
                   <p className={`text-xs mt-0.5 font-semibold ${
                     selectedLunar.lunarDay === 1 || selectedLunar.lunarDay === 15
-                      ? "text-amber-600"
-                      : "text-stone-400"
+                      ? "text-amber-600" : "text-stone-400"
                   }`}>
-                    🌙 {selectedLunar.lunarDay === 1
-                      ? `Mùng 1 tháng ${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""}  Âm lịch`
+                    {selectedLunar.lunarDay === 1
+                      ? `Mùng 1 tháng ${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""} Âm lịch`
                       : selectedLunar.lunarDay === 15
-                      ? `Rằm tháng ${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""}  Âm lịch`
+                      ? `Rằm tháng ${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""} Âm lịch`
                       : `${selectedLunar.lunarDay}/${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""} Âm lịch`
                     }
                   </p>
@@ -270,35 +261,45 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 {selectedEvents.map((ev, i) => {
                   const d = ev.nextOccurrence;
                   const solarLabel = `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+                  const isFestival = ev.type === "lunar_festival";
+                  const isMung1Ev = ev.festivalKind === "mung1";
+
                   return (
                     <button
                       key={i}
-                      onClick={() => { if (ev.personId && ev.type !== "custom_event") setMemberModalId(ev.personId); }}
+                      onClick={() => { if (ev.personId && ev.type !== "custom_event" && ev.type !== "lunar_festival") setMemberModalId(ev.personId); }}
                       className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
-                        ev.dot === "birthday"
+                        isFestival
+                          ? "bg-amber-50 border-amber-100 hover:border-amber-300 cursor-default"
+                          : ev.dot === "birthday"
                           ? "bg-blue-50 border-blue-100 hover:border-blue-300"
                           : ev.dot === "custom"
-                            ? "bg-purple-50 border-purple-100 hover:border-purple-300"
-                            : "bg-rose-50 border-rose-100 hover:border-rose-300"
+                          ? "bg-purple-50 border-purple-100 hover:border-purple-300"
+                          : "bg-rose-50 border-rose-100 hover:border-rose-300"
                       }`}
                     >
                       <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        isFestival ? "bg-amber-100 text-amber-600" :
                         ev.dot === "birthday" ? "bg-blue-100 text-blue-500" :
                         ev.dot === "custom" ? "bg-purple-100 text-purple-500" :
                         "bg-rose-100 text-rose-500"
                       }`}>
-                        {ev.dot === "birthday" ? <Cake className="size-4" /> :
+                        {isFestival ? <Moon className="size-4" /> :
+                         ev.dot === "birthday" ? <Cake className="size-4" /> :
                          ev.dot === "custom" ? <Star className="size-4" /> :
                          <Flower className="size-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-stone-800 truncate">{ev.personName}</p>
                         <div className="flex flex-col gap-0.5 mt-0.5">
-                          {ev.dot === "death" ? (
+                          {isFestival ? (
+                            <p className="text-xs font-semibold text-amber-700">
+                              {isMung1Ev ? "Mùng 1" : "Rằm"} · {ev.eventDateLabel}
+                            </p>
+                          ) : ev.dot === "death" ? (
                             <>
                               <p className="text-xs text-stone-500">Ngày giỗ · {solarLabel}</p>
                               <p className="text-xs font-semibold text-rose-600 flex items-center gap-1">
-                                <span>🌙</span>
                                 <span>{ev.eventDateLabel}</span>
                                 {ev.originYear && (
                                   <span className="font-normal text-stone-400 ml-1">· {new Date().getFullYear() - ev.originYear} năm</span>
@@ -320,7 +321,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 })}
               </div>
             ) : (
-              /* Ngày không có sự kiện — vẫn hiện âm lịch */
               <p className="text-xs text-stone-400 text-center py-2">Không có sự kiện nào trong ngày này</p>
             )}
           </motion.div>

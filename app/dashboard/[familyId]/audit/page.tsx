@@ -1,4 +1,5 @@
 import AuditLogList from "@/components/AuditLogList";
+import BackToBoardButton from "@/components/BackToBoardButton";
 import { getSupabase } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
 
@@ -24,6 +25,7 @@ export default async function AuditPage({
   return (
     <div className="flex-1 w-full flex flex-col pb-12">
       <div className="w-full py-6 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+        <BackToBoardButton familyId={familyId} />
         <h1 className="title">Nhật ký thay đổi</h1>
         <p className="text-stone-500 mt-1 text-sm">Lịch sử mọi thay đổi thành viên và quan hệ trong gia phả</p>
       </div>

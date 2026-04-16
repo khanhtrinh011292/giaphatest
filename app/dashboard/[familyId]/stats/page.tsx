@@ -1,3 +1,4 @@
+import BackToBoardButton from "@/components/BackToBoardButton";
 import FamilyStats from "@/components/FamilyStats";
 import { getPersons, getRelationships } from "@/utils/supabase/queries";
 
@@ -18,6 +19,7 @@ export default async function StatsPage({ params }: PageProps) {
   return (
     <div className="flex-1 w-full flex flex-col pb-12">
       <div className="w-full py-6 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+        <BackToBoardButton familyId={familyId} />
         <h1 className="title">Thống kê gia phả</h1>
         <p className="text-stone-500 mt-1 text-sm">
           Tổng quan số liệu về các thành viên trong dòng họ

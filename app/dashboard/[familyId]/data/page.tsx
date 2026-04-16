@@ -1,3 +1,4 @@
+import BackToBoardButton from "@/components/BackToBoardButton";
 import DataImportExport from "@/components/DataImportExport";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
@@ -13,8 +14,6 @@ export default async function DataManagementPage({ params }: PageProps) {
 
   const supabase = await getSupabase();
 
-  // Kiểm tra quyền: owner hoặc shared-admin mới có thể vào trang Data
-  // Logic nhất quán với getFamilyAccess() trong data.ts và FamilyLayout
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -32,16 +31,13 @@ export default async function DataManagementPage({ params }: PageProps) {
       .eq("family_id", familyId)
       .eq("shared_with", user!.id)
       .single();
-
-    // Chỉ admin mới có canImport = true
-    if (share?.role !== "admin") {
-      redirect(`/dashboard/${familyId}`);
-    }
+    if (share?.role !== "admin") redirect(`/dashboard/${familyId}`);
   }
 
   return (
     <main className="flex-1 bg-stone-50/50 flex flex-col pt-8 w-full">
       <div className="max-w-7xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 w-full">
+        <BackToBoardButton familyId={familyId} />
         <div className="mb-8">
           <h1 className="title">Sao lưu &amp; Phục hồi</h1>
           <p className="text-stone-500 mt-2 text-sm sm:text-base max-w-2xl">
