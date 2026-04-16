@@ -5,18 +5,24 @@ import {
   tinhHopTuoi,
   suggestDaysInMonth,
   getGioHoangDao,
-  rateDayForWedding,
   getCanChi,
   type DayRating,
   type CompatResult,
+  type GioHoangDao,
 } from "@/utils/thongThu";
-import { Heart, Calendar, Clock, Star, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { Heart, Calendar, Clock, Star, ChevronDown, ChevronUp, Info, AlertTriangle } from "lucide-react";
 
-const MONTH_NAMES = ["Tháng 1","Tháng 2","Tháng 3","Tháng 4","Tháng 5","Tháng 6",
-  "Tháng 7","Tháng 8","Tháng 9","Tháng 10","Tháng 11","Tháng 12"];
+const MONTH_NAMES = [
+  "Tháng 1","Tháng 2","Tháng 3","Tháng 4","Tháng 5","Tháng 6",
+  "Tháng 7","Tháng 8","Tháng 9","Tháng 10","Tháng 11","Tháng 12",
+];
 
 function ScoreBar({ score }: { score: number }) {
-  const color = score >= 80 ? "bg-emerald-500" : score >= 65 ? "bg-amber-400" : score >= 45 ? "bg-yellow-300" : "bg-red-400";
+  const color =
+    score >= 80 ? "bg-emerald-500"
+    : score >= 65 ? "bg-amber-400"
+    : score >= 45 ? "bg-yellow-300"
+    : "bg-red-400";
   return (
     <div className="w-full bg-stone-100 rounded-full h-2">
       <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${score}%` }} />
@@ -24,32 +30,113 @@ function ScoreBar({ score }: { score: number }) {
   );
 }
 
-function DayCard({ day, onSelect, selected }: { day: DayRating; onSelect: (d: DayRating) => void; selected: boolean }) {
-  const labelColor = day.label === "Đại Cát" ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+function DayCard({
+  day,
+  onSelect,
+  selected,
+  hasAge,
+}: {
+  day: DayRating;
+  onSelect: (d: DayRating) => void;
+  selected: boolean;
+  hasAge: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const labelColor =
+    day.label === "Đại Cát" ? "bg-emerald-100 text-emerald-700 border-emerald-200"
     : day.label === "Tốt" ? "bg-amber-100 text-amber-700 border-amber-200"
     : "bg-stone-100 text-stone-600 border-stone-200";
+
+  const hasWarning = day.tuoiCheck && day.tuoiCheck.penalty > 0;
+
   return (
-    <button
-      onClick={() => onSelect(day)}
-      className={`w-full text-left rounded-2xl border p-4 transition-all ${
+    <div
+      className={`rounded-2xl border transition-all ${
         selected ? "border-amber-400 bg-amber-50 shadow-md" : "border-stone-200 bg-white hover:border-amber-300 hover:shadow-sm"
       }`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <p className="font-bold text-stone-900">
-            {new Date(day.solarDate + "T00:00:00").toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "numeric", year: "numeric" })}
-          </p>
-          <p className="text-xs text-stone-500 mt-0.5">
-            {day.isLeapMonth ? "Nhuận " : ""}Ngày {day.lunarDay}/{day.lunarMonth} âm — {day.thapNhiTruc}
-            {day.isHoangDao ? " · Hoàng Đạo" : " · Hắc Đạo"}
-          </p>
+      <button
+        onClick={() => onSelect(day)}
+        className="w-full text-left p-4"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-stone-900">
+                {new Date(day.solarDate + "T00:00:00").toLocaleDateString("vi-VN", {
+                  weekday: "long", day: "numeric", month: "numeric", year: "numeric",
+                })}
+              </p>
+              {hasWarning && (
+                <AlertTriangle className="size-3.5 text-orange-500 shrink-0" />
+              )}
+            </div>
+            <p className="text-xs text-stone-500 mt-0.5">
+              {day.isLeapMonth ? "Nhuận " : ""}Ngày {day.lunarDay}/{day.lunarMonth} âm
+              {" · "}{day.thapNhiTruc}
+              {" · "}{day.isHoangDao ? "Hoàng Đạo" : "Hắc Đạo"}
+              {" · "}Chi ngày: {day.chiNgay}
+            </p>
+          </div>
+          <span className={`ml-3 text-xs font-bold border px-2.5 py-1 rounded-full shrink-0 ${labelColor}`}>
+            {day.label}
+          </span>
         </div>
-        <span className={`text-xs font-bold border px-2.5 py-1 rounded-full shrink-0 ${labelColor}`}>{day.label}</span>
+        <ScoreBar score={day.score} />
+        <p className="text-xs text-stone-400 mt-1">{day.score}/100 điểm</p>
+      </button>
+
+      {/* Chi tiết lý do */}
+      <div className="px-4 pb-3">
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="text-xs text-stone-400 flex items-center gap-1 hover:text-amber-600 transition-colors"
+        >
+          {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+          {expanded ? "Ẩn phân tích" : "Xem phân tích"}
+          {!hasAge && <span className="text-orange-400 ml-1">(nhập tuổi để có kết quả chính xác hơn)</span>}
+        </button>
+        {expanded && (
+          <ul className="mt-2 space-y-1">
+            {day.reasons.map((r, i) => (
+              <li key={i} className="text-xs text-stone-700 bg-stone-50 rounded-lg px-2.5 py-1.5">{r}</li>
+            ))}
+          </ul>
+        )}
       </div>
-      <ScoreBar score={day.score} />
-      <p className="text-xs text-stone-400 mt-1">{day.score}/100 điểm</p>
-    </button>
+    </div>
+  );
+}
+
+function GioCard({ g }: { g: GioHoangDao }) {
+  const xungHai = g.isXungGroom || g.isXungBride || g.isHaiGroom || g.isHaiBride;
+  const bgClass = !g.isHoangDao
+    ? "border-stone-200 bg-stone-50 opacity-40"
+    : xungHai
+    ? "border-orange-300 bg-orange-50"
+    : "border-amber-300 bg-amber-50";
+
+  return (
+    <div className={`rounded-xl border p-3 text-center ${bgClass}`}>
+      <p className={`font-bold text-sm ${
+        !g.isHoangDao ? "text-stone-400"
+        : xungHai ? "text-orange-700"
+        : "text-amber-700"
+      }`}>
+        Giờ {g.chi}
+      </p>
+      <p className="text-xs text-stone-500 mt-0.5">{g.time}</p>
+      {g.isHoangDao && !xungHai && (
+        <span className="inline-block mt-1 text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">
+          Hoàng Đạo ✔
+        </span>
+      )}
+      {g.isHoangDao && xungHai && (
+        <span className="inline-block mt-1 text-[10px] font-bold bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded-full">
+          {g.isXungGroom || g.isXungBride ? "Xung tuổi" : "Hại tuổi"}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -57,36 +144,44 @@ export default function WeddingChooser() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  // Phối Mệnh inputs
+  // Tuổi — chia sẻ giữa cả 3 phần
   const [groomYear, setGroomYear] = useState("");
   const [brideYear, setBrideYear] = useState("");
   const [compatResult, setCompatResult] = useState<CompatResult | null>(null);
   const [showCompatDetail, setShowCompatDetail] = useState(false);
 
-  // Trạch Nhật inputs
+  // Trạch Nhật
   const [selYear, setSelYear] = useState(currentYear);
   const [selMonth, setSelMonth] = useState(currentMonth);
   const [selectedDay, setSelectedDay] = useState<DayRating | null>(null);
 
+  const groomY = groomYear ? parseInt(groomYear) : undefined;
+  const brideY = brideYear ? parseInt(brideYear) : undefined;
+  const hasAge = !!(groomY && brideY && groomY >= 1900 && brideY >= 1900);
+
+  // Danh sách ngày — auto re-filter khi có tuổi
   const suggestedDays = useMemo(
-    () => suggestDaysInMonth(selYear, selMonth, 65),
-    [selYear, selMonth]
+    () => suggestDaysInMonth(selYear, selMonth, 65, groomY, brideY),
+    [selYear, selMonth, groomY, brideY]
   );
 
-  const gioHD = useMemo(
-    () => selectedDay ? getGioHoangDao(selectedDay.lunarDay) : [],
-    [selectedDay]
-  );
+  // Giờ Hoàng Đạo — dùng can chi ngày thực + tuổi
+  const gioHD = useMemo((): GioHoangDao[] => {
+    if (!selectedDay) return [];
+    const [yStr, mStr, dStr] = selectedDay.solarDate.split("-");
+    return getGioHoangDao(
+      parseInt(dStr), parseInt(mStr), parseInt(yStr),
+      groomY, brideY
+    );
+  }, [selectedDay, groomY, brideY]);
 
   function handleCalcCompat() {
-    const gy = parseInt(groomYear);
-    const by = parseInt(brideYear);
-    if (!gy || !by || gy < 1900 || gy > 2100 || by < 1900 || by > 2100) return;
-    setCompatResult(tinhHopTuoi(gy, by));
+    if (!hasAge) return;
+    setCompatResult(tinhHopTuoi(groomY!, brideY!));
   }
 
-  const groomCC = groomYear && parseInt(groomYear) >= 1900 ? getCanChi(parseInt(groomYear)) : null;
-  const brideCC = brideYear && parseInt(brideYear) >= 1900 ? getCanChi(parseInt(brideYear)) : null;
+  const groomCC = groomY && groomY >= 1900 ? getCanChi(groomY) : null;
+  const brideCC = brideY && brideY >= 1900 ? getCanChi(brideY) : null;
 
   return (
     <main className="flex-1 w-full">
@@ -99,7 +194,7 @@ export default function WeddingChooser() {
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight text-stone-900">Coi Ngày Cưới</h1>
-              <p className="text-stone-500 text-sm mt-0.5">Theo Thông Thư (Thúng Sing) — Trạch Nhật · Phối Mệnh · Giờ Hoàng Đạo</p>
+              <p className="text-stone-500 text-sm mt-0.5">Theo Thông Thư — Trạch Nhật · Phối Mệnh · Giờ Hoàng Đạo</p>
             </div>
           </div>
         </div>
@@ -107,50 +202,58 @@ export default function WeddingChooser() {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-10">
 
-        {/* ── PHẦN 1: Phối Mệnh ── */}
+        {/* ── PHẦN 1: Nhập tuổi ── */}
         <section>
           <div className="flex items-center gap-2 mb-5">
             <Star className="size-4 text-amber-500" />
-            <h2 className="text-base font-bold text-stone-800">1. Hợp Tuổi (Phối Mệnh)</h2>
+            <h2 className="text-base font-bold text-stone-800">1. Nhập tuổi cô dâu & chú rể</h2>
           </div>
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 space-y-4">
+
+            {/* Năm sinh */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-stone-500 mb-1.5">Năm sinh Chú rể</label>
                 <input
-                  type="number"
-                  min={1900} max={2100}
+                  type="number" min={1900} max={2100}
                   value={groomYear}
-                  onChange={e => setGroomYear(e.target.value)}
+                  onChange={e => { setGroomYear(e.target.value); setSelectedDay(null); setCompatResult(null); }}
                   placeholder="VD: 1995"
                   className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
                 />
                 {groomCC && (
-                  <p className="text-xs text-amber-700 mt-1 font-medium">{groomCC.can} {groomCC.chi}</p>
+                  <p className="text-xs text-amber-700 mt-1 font-medium">{groomCC.can} {groomCC.chi} — Ngũ Hành: {"Mộc,Mộc,Hỏa,Hỏa,Thổ,Thổ,Kim,Kim,Thủy,Thủy".split(",")[groomCC.canIdx]}</p>
                 )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-stone-500 mb-1.5">Năm sinh Cô dâu</label>
                 <input
-                  type="number"
-                  min={1900} max={2100}
+                  type="number" min={1900} max={2100}
                   value={brideYear}
-                  onChange={e => setBrideYear(e.target.value)}
+                  onChange={e => { setBrideYear(e.target.value); setSelectedDay(null); setCompatResult(null); }}
                   placeholder="VD: 1997"
                   className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
                 />
                 {brideCC && (
-                  <p className="text-xs text-rose-600 mt-1 font-medium">{brideCC.can} {brideCC.chi}</p>
+                  <p className="text-xs text-rose-600 mt-1 font-medium">{brideCC.can} {brideCC.chi} — Ngũ Hành: {"Mộc,Mộc,Hỏa,Hỏa,Thổ,Thổ,Kim,Kim,Thủy,Thủy".split(",")[brideCC.canIdx]}</p>
                 )}
               </div>
             </div>
+
+            {/* Hợp tuổi */}
             <button
               onClick={handleCalcCompat}
-              disabled={!groomYear || !brideYear}
+              disabled={!hasAge}
               className="w-full btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Tính hợp tuổi
+              Tính hợp tuổi (Phối Mệnh)
             </button>
+
+            {!hasAge && (
+              <p className="text-xs text-stone-400 text-center">
+                ℹ️ Nhập năm sinh để kết quả chọn ngày & giờ tự động lọc theo tuổi
+              </p>
+            )}
 
             {compatResult && (
               <div className="pt-3 border-t border-stone-100">
@@ -195,7 +298,6 @@ export default function WeddingChooser() {
             <h2 className="text-base font-bold text-stone-800">2. Chọn Ngày Tốt (Trạch Nhật)</h2>
           </div>
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
-            {/* Chọn tháng/năm */}
             <div className="flex items-center gap-3 mb-5">
               <select
                 value={selMonth}
@@ -215,17 +317,24 @@ export default function WeddingChooser() {
                   <option key={y} value={y}>{y}</option>
                 ))}
               </select>
+              {hasAge && (
+                <span className="text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                  ✅ Đã lọc theo tuổi
+                </span>
+              )}
             </div>
 
             {suggestedDays.length === 0 ? (
               <div className="text-center py-8 text-stone-400">
-                <p className="text-sm">Tháng này không có ngày tốt đủ điểm (≥65).</p>
+                <p className="text-sm">Không có ngày đủ điểm (≥65) trong tháng này.</p>
                 <p className="text-xs mt-1">Thử chọn tháng khác.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 <p className="text-xs text-stone-400 mb-3">
-                  Tìm thấy <span className="font-semibold text-amber-600">{suggestedDays.length}</span> ngày tốt trong tháng — click để xem giờ Hoàng Đạo
+                  Tìm thấy{" "}
+                  <span className="font-semibold text-amber-600">{suggestedDays.length}</span>{" "}
+                  ngày tốt — click để xem giờ Hoàng Đạo
                 </p>
                 {suggestedDays.map(day => (
                   <DayCard
@@ -233,6 +342,7 @@ export default function WeddingChooser() {
                     day={day}
                     selected={selectedDay?.solarDate === day.solarDate}
                     onSelect={setSelectedDay}
+                    hasAge={hasAge}
                   />
                 ))}
               </div>
@@ -249,36 +359,44 @@ export default function WeddingChooser() {
             </div>
             <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
               <p className="text-sm text-stone-600 mb-4">
-                Ngày <span className="font-semibold text-stone-900">
-                  {new Date(selectedDay.solarDate + "T00:00:00").toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "numeric", year: "numeric" })}
-                </span> — Ngày {selectedDay.lunarDay}/{selectedDay.lunarMonth} âm
+                Ngày{" "}
+                <span className="font-semibold text-stone-900">
+                  {new Date(selectedDay.solarDate + "T00:00:00").toLocaleDateString("vi-VN", {
+                    weekday: "long", day: "numeric", month: "numeric", year: "numeric",
+                  })}
+                </span>
+                {" "}— Ngày {selectedDay.lunarDay}/{selectedDay.lunarMonth} âm
+                {" · Chi ngày: "}<span className="font-semibold">{selectedDay.chiNgay}</span>
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {gioHD.map(g => (
-                  <div
-                    key={g.chi}
-                    className={`rounded-xl border p-3 text-center ${
-                      g.isHoangDao
-                        ? "border-amber-300 bg-amber-50"
-                        : "border-stone-200 bg-stone-50 opacity-50"
-                    }`}
-                  >
-                    <p className={`font-bold text-sm ${ g.isHoangDao ? "text-amber-700" : "text-stone-400" }`}>
-                      Giờ {g.chi}
-                    </p>
-                    <p className="text-xs text-stone-500 mt-0.5">{g.time}</p>
-                    {g.isHoangDao && (
-                      <span className="inline-block mt-1 text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">Hoàng Đạo</span>
-                    )}
-                  </div>
-                ))}
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                {gioHD.map(g => <GioCard key={g.chi} g={g} />)}
               </div>
-              <div className="mt-4 bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3">
+
+              {/* Chú giải màu */}
+              <div className="flex flex-wrap gap-3 mb-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="size-3 rounded-full bg-amber-400" />
+                  <span className="text-stone-500">Hoàng Đạo</span>
+                </div>
+                {hasAge && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="size-3 rounded-full bg-orange-400" />
+                    <span className="text-stone-500">Hoàng Đạo nhưng xung/hại tuổi</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <div className="size-3 rounded-full bg-stone-300" />
+                  <span className="text-stone-500">Hắc Đạo — tránh</span>
+                </div>
+              </div>
+
+              <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3">
                 <Info className="size-4 text-rose-500 shrink-0 mt-0.5" />
                 <div className="text-xs text-rose-700 space-y-1">
-                  <p><strong>Ngày cúng ông bà / rước dâu:</strong> Chọn giờ Hoàng Đạo buổi sáng (Dần, Mão, Thìn) để làm lễ rước dâu.</p>
-                  <p><strong>Đãi tiệc:</strong> Có thể chọn ngày hôm sau hoặc cùng ngày — ưu tiên giờ Hoàng Đạo buổi chiều (Ngọ, Mùi).</p>
-                  <p><strong>Lưu ý:</strong> Kết quả mang tính tham khảo theo phong tục truyền thống. Nên hỏi thêm thầy coi số để được tư vấn chi tiết theo bát tự.</p>
+                  <p><strong>Rước dâu / Làm lễ:</strong> Chọn giờ Hoàng Đạo buổi sáng (Dần 03–05h, Mão 05–07h, Thìn 07–09h) không bị xung tuổi.</p>
+                  <p><strong>Đãi tiệc:</strong> Ưu tiên giờ Hoàng Đạo buổi trưa – chiều (Ngọ, Mùi, Thân).</p>
+                  <p><strong>Lưu ý:</strong> Kết quả mang tính tham khảo theo phong tục truyền thống. Nên tư vấn thêm thầy coi số để xét bát tự.</p>
                 </div>
               </div>
             </div>
