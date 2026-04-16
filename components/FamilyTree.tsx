@@ -234,7 +234,7 @@ export default function FamilyTree({
                     isRingVisible={idx === 0}
                     isPlusVisible={idx > 0}
                     person={spouseData.person}
-                    role={spouseData.person.gender === "male" ? "Ch\u1ed3ng" : "V\u1ee3"}
+                    role={spouseData.person.gender === "male" ? "Chồng" : "Vợ"}
                     note={spouseData.note}
                     level={level}
                   />
@@ -258,7 +258,7 @@ export default function FamilyTree({
                   }
                 }}
                 className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white border border-stone-200/80 rounded-full size-6 flex items-center justify-center shadow-md z-100 text-stone-500 hover:text-amber-600 hover:border-amber-300 transition-colors cursor-pointer"
-                title={isCollapsed ? "M\u1edf r\u1ed9ng" : "Thu g\u1ecdn"}
+                title={isCollapsed ? "Mở rộng" : "Thu gọn"}
               >
                 {isCollapsed ? (
                   <Plus className="w-3.5 h-3.5" />
@@ -434,7 +434,8 @@ export default function FamilyTree({
           id="export-container"
           className={`w-max min-w-full mx-auto p-4 css-tree transition-all duration-200 ${isDragging ? "opacity-90" : ""}`}
           style={{
-            zoom: scale,
+            transform: `scale(${scale})`,
+            transformOrigin: "top center",
           }}
         >
           <ul>
