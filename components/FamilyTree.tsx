@@ -434,8 +434,7 @@ export default function FamilyTree({
           id="export-container"
           className={`w-max min-w-full mx-auto p-4 css-tree transition-all duration-200 ${isDragging ? "opacity-90" : ""}`}
           style={{
-            transform: `scale(${scale})`,
-            transformOrigin: "top center",
+            zoom: scale,
           }}
         >
           <ul>
