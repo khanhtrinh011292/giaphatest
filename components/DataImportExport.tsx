@@ -44,7 +44,7 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
     fetchPersons();
   }, [familyId]);
 
-  const handleExport = async (format: "json" | "gedcom" | "csv") => {
+  const handleExport = async (format: "json" | "gedcom" | "csv" | "excel") => {
     try {
       setIsExporting(true);
       const rootParam = exportRootId || undefined;
@@ -64,6 +64,21 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
         const a = document.createElement("a");
         a.href = url;
         a.download = `giapha-export-${new Date().toISOString().split("T")[0]}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      if (format === "excel") {
+        const { exportToExcel } = await import("@/utils/excel");
+        // @ts-expect-error: BackupPayload relationships type mismatch with Partial<Relationship>
+        const xlsxBlob = await exportToExcel(data);
+        const url = URL.createObjectURL(xlsxBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `giapha-export-${new Date().toISOString().split("T")[0]}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -121,11 +136,12 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
       if (
         !fileName.endsWith(".json") &&
         !fileName.endsWith(".ged") &&
-        !fileName.endsWith(".zip")
+        !fileName.endsWith(".zip") &&
+        !fileName.endsWith(".xlsx")
       ) {
         setImportStatus({
           type: "error",
-          message: "Vui lòng chọn file .json, .ged, hoặc .zip hợp lệ.",
+          message: "Vui lòng chọn file .json, .ged, .zip hoặc .xlsx hợp lệ.",
         });
         return;
       }
@@ -142,17 +158,22 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
       setIsImporting(true);
       setImportStatus(null);
 
-      const fileText = await selectedFile.text();
       let payload;
 
-      if (selectedFile.name.toLowerCase().endsWith(".ged")) {
-        const { parseGedcom } = await import("@/utils/gedcom");
-        payload = parseGedcom(fileText);
-      } else if (selectedFile.name.toLowerCase().endsWith(".zip")) {
-        const { parseCsvZip } = await import("@/utils/csv");
-        payload = await parseCsvZip(selectedFile);
+      if (selectedFile.name.toLowerCase().endsWith(".xlsx")) {
+        const { parseExcel } = await import("@/utils/excel");
+        payload = await parseExcel(selectedFile);
       } else {
-        payload = JSON.parse(fileText);
+        const fileText = await selectedFile.text();
+        if (selectedFile.name.toLowerCase().endsWith(".ged")) {
+          const { parseGedcom } = await import("@/utils/gedcom");
+          payload = parseGedcom(fileText);
+        } else if (selectedFile.name.toLowerCase().endsWith(".zip")) {
+          const { parseCsvZip } = await import("@/utils/csv");
+          payload = await parseCsvZip(selectedFile);
+        } else {
+          payload = JSON.parse(fileText);
+        }
       }
 
       if (!payload.persons || !payload.relationships) {
@@ -233,7 +254,7 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
                 Sao lưu dữ liệu
               </h3>
               <p className="text-sm text-stone-500 mt-1">
-                Tải xuống định dạng file JSON, GEDCOM hoặc CSV (Zip). Chọn một
+                Tải xuống định dạng file JSON, GEDCOM, CSV (Zip) hoặc Excel (.xlsx). Chọn một
                 điểm gốc bên dưới để chỉ sao lưu nhánh gia đình đó, hoặc chọn
                 &quot;Toàn bộ&quot; để xuất toàn bộ cây.
               </p>
@@ -252,7 +273,7 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => handleExport("json")}
               disabled={isExporting}
@@ -270,9 +291,16 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
             <button
               onClick={() => handleExport("csv")}
               disabled={isExporting}
-              className="btn w-full bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium sm:col-span-2 lg:col-span-1"
+              className="btn w-full bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium"
             >
               {isExporting ? "Đang xử lý..." : "Xuất CSV (Zip)"}
+            </button>
+            <button
+              onClick={() => handleExport("excel")}
+              disabled={isExporting}
+              className="btn w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium border border-emerald-200"
+            >
+              {isExporting ? "Đang xử lý..." : "Xuất Excel (.xlsx)"}
             </button>
           </div>
 
@@ -308,8 +336,8 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
                 Phục hồi dữ liệu
               </h3>
               <p className="text-sm text-stone-500 mt-1">
-                Khôi phục cây gia phả từ file đã sao lưu (.json, .ged, hoặc
-                .zip).
+                Khôi phục cây gia phả từ file đã sao lưu (.json, .ged, .zip hoặc
+                .xlsx).
                 <span className="font-semibold text-rose-600 ml-1">
                   Cảnh báo: Tác vụ này sẽ xoá toàn bộ dữ liệu hiện tại!
                 </span>
@@ -319,7 +347,7 @@ export default function DataImportExport({ familyId }: DataImportExportProps) {
 
           <input
             type="file"
-            accept=".json,.ged,.zip,.csv"
+            accept=".json,.ged,.zip,.csv,.xlsx"
             className="hidden"
             ref={fileInputRef}
             onChange={handleFileChange}
