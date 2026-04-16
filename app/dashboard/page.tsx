@@ -5,12 +5,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import CreateFamilyForm from "@/components/CreateFamilyForm";
 import DeleteFamilyButton from "@/components/DeleteFamilyButton";
+import Image from "next/image";
 import {
   BookOpen,
   ChevronRight,
   PlusCircle,
   Share2,
-  TreePine,
   Users,
 } from "lucide-react";
 
@@ -50,18 +50,28 @@ export default async function FamiliesPage() {
       {/* Hero Header */}
       <div className="bg-gradient-to-br from-amber-50 via-stone-50 to-white border-b border-stone-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-          <div className="flex items-start gap-4">
-            <div className="hidden sm:flex size-14 rounded-2xl bg-amber-100 text-amber-600 items-center justify-center shrink-0 shadow-sm">
-              <TreePine className="size-7" />
+          <div className="flex items-center gap-4">
+            {/* Logo icon.png */}
+            <div className="size-14 rounded-2xl overflow-hidden shrink-0 shadow-sm border border-stone-100 bg-white">
+              <Image
+                src="/icon.png"
+                alt={config.siteName}
+                width={56}
+                height={56}
+                className="w-full h-full object-cover"
+                priority
+              />
             </div>
+
             <div>
-              <p className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-1">{config.siteName}</p>
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
-                Chào, <span className="text-amber-700">{displayName}</span> 🌿
-              </h1>
-              <p className="text-stone-500 mt-1.5 text-sm sm:text-base">
+              <p className="text-xl sm:text-2xl font-black tracking-tight text-stone-900 uppercase">
+                {config.siteName}
+              </p>
+              <p className="text-stone-500 mt-0.5 text-sm sm:text-base">
+                Chào, <span className="font-semibold text-stone-700">{displayName}</span>.
+                {" "}
                 {totalFamilies === 0
-                  ? "Bắt đầu bằng cách tạo gia phả đầu tiên của bạn."
+                  ? "Bắt đầu bằng cách tạo gia phả đầu tiên."
                   : `Bạn đang quản lý ${totalFamilies} gia phả.`}
               </p>
             </div>
@@ -104,12 +114,9 @@ export default async function FamiliesPage() {
                     href={`/dashboard/${family.id}/board`}
                     className="flex items-center gap-4 px-5 py-4"
                   >
-                    {/* Icon */}
                     <div className="size-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700 flex items-center justify-center shrink-0 font-bold text-lg font-serif shadow-xs">
                       {family.name.charAt(0).toUpperCase()}
                     </div>
-
-                    {/* Text */}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-stone-900 truncate group-hover:text-amber-700 transition-colors">
                         {family.name}
@@ -120,16 +127,11 @@ export default async function FamiliesPage() {
                         <p className="text-xs text-stone-300 mt-0.5 italic">Chưa có mô tả</p>
                       )}
                     </div>
-
-                    {/* Role badge */}
                     <span className="text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full shrink-0 hidden sm:inline-flex items-center gap-1">
                       👑 Chủ sở hữu
                     </span>
-
                     <ChevronRight className="size-4 text-stone-300 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                   </Link>
-
-                  {/* Delete button */}
                   <div className="absolute right-14 top-1/2 -translate-y-1/2 sm:right-24">
                     <DeleteFamilyButton familyId={family.id} familyName={family.name} />
                   </div>
@@ -149,7 +151,6 @@ export default async function FamiliesPage() {
                 {shared.length}
               </span>
             </div>
-
             <div className="grid gap-3">
               {shared.map((s) => (
                 <Link
@@ -160,7 +161,6 @@ export default async function FamiliesPage() {
                   <div className="size-10 rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 text-sky-700 flex items-center justify-center shrink-0 font-bold text-lg font-serif shadow-xs">
                     {s.family.name.charAt(0).toUpperCase()}
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-stone-900 truncate group-hover:text-sky-700 transition-colors">
                       {s.family.name}
@@ -171,13 +171,11 @@ export default async function FamiliesPage() {
                       <p className="text-xs text-stone-300 mt-0.5 italic">Chưa có mô tả</p>
                     )}
                   </div>
-
                   <span className={`text-[11px] font-bold border px-2.5 py-1 rounded-full shrink-0 hidden sm:inline-flex items-center ${
                     ROLE_COLOR[s.role] ?? "bg-stone-100 text-stone-600 border-stone-200"
                   }`}>
                     {ROLE_LABEL[s.role] ?? s.role}
                   </span>
-
                   <ChevronRight className="size-4 text-stone-300 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                 </Link>
               ))}
