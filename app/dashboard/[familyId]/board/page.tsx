@@ -16,6 +16,7 @@ export default async function BoardPage({
 
   const supabase = await getSupabase();
 
+  // Chỉ select các field cần thiết, không query lại family vì layout đã kiểm tra quyền
   const { data: family } = await supabase
     .from("families")
     .select("id, name, owner_id")
@@ -24,6 +25,18 @@ export default async function BoardPage({
   if (!family) redirect("/dashboard");
 
   const isOwner = family.owner_id === user.id;
+
+  // Nếu không phải owner, kiểm tra share role có quyền post không (admin)
+  let canPost = isOwner;
+  if (!isOwner) {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    canPost = share?.role === "admin";
+  }
 
   const { data: announcements } = await supabase
     .from("announcements")
@@ -46,7 +59,7 @@ export default async function BoardPage({
         <div className="flex-1 min-w-0">
           <AnnouncementBoard
             familyId={familyId}
-            isOwner={isOwner}
+            isOwner={canPost}
             userId={user.id}
             initialAnnouncements={announcements ?? []}
           />
