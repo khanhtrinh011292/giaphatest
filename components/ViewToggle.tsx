@@ -1,13 +1,20 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Circle, Lightbulb, List, ListTree, Network } from "lucide-react";
+import { ArrowLeft, Circle, Lightbulb, List, ListTree, Network } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useDashboard } from "./DashboardContext";
 
 export type ViewMode = "list" | "tree" | "mindmap" | "bubble";
 
 export default function ViewToggle() {
   const { view: currentView, setView, showSuggestions, setShowSuggestions } = useDashboard();
+  const pathname = usePathname();
+
+  // Extract familyId from /dashboard/[familyId] or /dashboard/[familyId]/...
+  const familyId = pathname?.split("/")[2] ?? null;
+  const boardHref = familyId ? `/dashboard/${familyId}/board` : "/dashboard";
 
   const tabs = [
     { id: "list", label: "Danh sách", icon: <List className="size-6 sm:size-4" /> },
@@ -18,6 +25,15 @@ export default function ViewToggle() {
 
   return (
     <div className="flex flex-col items-center gap-2 mt-4 mb-2">
+      {/* Nút trở về bảng tin */}
+      <Link
+        href={boardHref}
+        className="flex items-center gap-1.5 text-xs font-semibold text-stone-400 hover:text-amber-600 transition-colors mb-1"
+      >
+        <ArrowLeft className="size-3.5" />
+        Bảng tin
+      </Link>
+
       {/* View tabs */}
       <div className="flex bg-stone-200/50 p-1.5 rounded-full shadow-inner w-fit relative border border-stone-200/60 backdrop-blur-sm z-10">
         {tabs.map((tab) => {

@@ -48,7 +48,7 @@ function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
     {
       href: `/dashboard/${familyId}/events`,
       label: "Lịch sự kiện",
-      sub: "Giỗ, sinh nhật, đám giỗ...",
+      sub: "Giỗ, sinh nhật, rằm, mùng 1,...",
       icon: <CalendarDays className="w-5 h-5" />,
       color: "text-rose-600",
       bg: "hover:bg-rose-50",
@@ -84,7 +84,7 @@ function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
     {
       href: `/dashboard/${familyId}/lineage`,
       label: "Thứ tự gia phả",
-      sub: "Xếp thứ bẬ, đời gia phả",
+      sub: "Xếp thứ bậc, đời gia phả",
       icon: <Sparkles className="w-5 h-5" />,
       color: "text-indigo-600",
       bg: "hover:bg-indigo-50",

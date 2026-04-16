@@ -144,7 +144,7 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
       {/* Feed bài đăng */}
       {announcements.length === 0 ? (
         <div className="bg-white rounded-2xl border border-stone-100 py-10 text-center">
-          <p className="text-2xl mb-2">\uD83D\uDCEC</p>
+          <p className="text-2xl mb-2">📭</p>
           <p className="text-sm text-stone-400">Chưa có thông báo nào</p>
         </div>
       ) : (

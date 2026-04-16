@@ -27,12 +27,12 @@ export default function DashboardHeader({ familyId }: { familyId?: string }) {
             </h1>
           </Link>
 
-          {/* Family breadcrumb */}
+          {/* Family breadcrumb — click vào tên gia phả → về bảng tin */}
           {familyId && (
             <>
               <span className="text-stone-300 font-light hidden sm:block">/</span>
               <Link
-                href={`/dashboard/${familyId}`}
+                href={`/dashboard/${familyId}/board`}
                 className="text-sm font-medium text-stone-600 hover:text-amber-700 transition-colors truncate max-w-[140px] sm:max-w-xs"
               >
                 <FamilyName familyId={familyId} />
