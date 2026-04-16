@@ -2,14 +2,24 @@ import { redirect } from "next/navigation";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import AnnouncementBoard from "@/components/AnnouncementBoard";
 import FamilyQuickLinks from "@/components/FamilyQuickLinks";
+import type { Metadata } from "next";
 
-export const metadata = { title: "Bảng tin" };
-
-export default async function BoardPage({
-  params,
-}: {
+interface PageProps {
   params: Promise<{ familyId: string }>;
-}) {
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { familyId } = await params;
+  const supabase = await getSupabase();
+  const { data: family } = await supabase
+    .from("families")
+    .select("name")
+    .eq("id", familyId)
+    .single();
+  return { title: family?.name ? `${family.name} — Bảng tin` : "Bảng tin" };
+}
+
+export default async function BoardPage({ params }: PageProps) {
   const { familyId } = await params;
   const user = await getUser();
   if (!user) redirect("/login");
