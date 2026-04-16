@@ -94,7 +94,6 @@ export default async function MemberDetailPage({ params }: PageProps) {
             privateData={privateData}
             isAdmin={isAdmin}
             canEdit={canEdit}
-            familyId={familyId}
           />
         </div>
       </main>
