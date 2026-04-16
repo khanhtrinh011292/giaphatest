@@ -30,8 +30,8 @@ interface RelEdge {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /**
- * So sánh thứ bậc giữa hai người (cùng bố mẹ hoặc cùng thế hệ)
- * Ưu tiên: Thứ tự sinh (birth_order) -> Năm sinh (birth_year)
+ * So sánh thứ bậc giữa hai người
+ * Ưu tiên: birth_order → birth_year → generation
  */
 function compareSeniority(
   a: PersonNode,
@@ -47,6 +47,11 @@ function compareSeniority(
   if (a.birth_year != null && b.birth_year != null) {
     if (a.birth_year < b.birth_year) return "senior";
     if (a.birth_year > b.birth_year) return "junior";
+  }
+
+  if (a.generation != null && b.generation != null) {
+    if (a.generation < b.generation) return "senior";
+    if (a.generation > b.generation) return "junior";
   }
 
   return "equal";
@@ -66,6 +71,7 @@ const ANCESTORS = [
   "Di",
   "Diễn",
 ];
+
 const DESCENDANTS = [
   "",
   "Con",
@@ -79,7 +85,7 @@ const DESCENDANTS = [
 ];
 
 /**
- * Lấy danh xưng trực hệ vế trên
+ * Lấy danh xưng trực hệ vế trên (Bố/Mẹ, Ông/Bà, Cụ...)
  */
 function getDirectAncestorTerm(
   depth: number,
@@ -91,26 +97,46 @@ function getDirectAncestorTerm(
     const base = gender === "female" ? "Bà" : "Ông";
     return `${base} ${isPaternal ? "nội" : "ngoại"}`;
   }
-  const title = ANCESTORS[depth] || `Tổ đời ${depth}`;
   if (depth === 3) {
-    const base = gender === "female" ? "Cụ bà (bà cố)" : "Cụ ông (ông cố)";
+    const base = gender === "female" ? "Cụ bà" : "Cụ ông";
     return `${base} ${isPaternal ? "nội" : "ngoại"}`;
   }
-  return title;
+  if (depth === 4) {
+    const base = gender === "female" ? "Kỵ bà" : "Kỵ ông";
+    return `${base} ${isPaternal ? "nội" : "ngoại"}`;
+  }
+  return (ANCESTORS[depth] || `Tổ đời ${depth}`) + (isPaternal ? " nội" : " ngoại");
 }
 
 /**
- * Lấy danh xưng trực hệ vế dưới
+ * Lấy danh xưng trực hệ vế dưới (Con, Cháu, Chắt...)
  */
 function getDirectDescendantTerm(depth: number): string {
-  const base = DESCENDANTS[depth] || `Cháu đời ${depth}`;
-  return base;
+  return DESCENDANTS[depth] || `Cháu đời ${depth}`;
 }
 
-// ── Core Algorithm ──────────────────────────────────────────────────────────
+/**
+ * Prefix cho quan hệ nhiều đời (Bác/Chú/Cô của Ông/Cụ...)
+ * depthA = chiều sâu của A lên LCA (tức là B cách LCA 1 bước, A cách LCA depthA bước)
+ * depth 2 = anh/em của bố/mẹ → Bác/Chú/Cô/Cậu/Dì
+ * depth 3 = anh/em của ông/bà → Ông Bác / Bà Cô...
+ * depth 4 = anh/em của cụ → Cụ Bác / Cụ Cô...
+ */
+function getDistantUnclePrefix(
+  depthA: number,
+  genderB: "male" | "female" | "other",
+): string {
+  if (depthA <= 2) return ""; // Không cần prefix
+  if (depthA === 3) return genderB === "female" ? "Bà " : "Ông ";
+  if (depthA === 4) return genderB === "female" ? "Cụ bà " : "Cụ ông ";
+  const ancestorTitle = ANCESTORS[depthA - 1] || `Tổ đời ${depthA - 1}`;
+  return ancestorTitle + " ";
+}
+
+// ── Core Blood Relationship Algorithm ──────────────────────────────────────────
 
 /**
- * Giải quyết danh xưng huyết thống giữa A và B
+ * Giải quyết danh xưng huyết thống giữa A và B dựa vào LCA
  */
 function resolveBloodTerms(
   depthA: number,
@@ -123,97 +149,95 @@ function resolveBloodTerms(
   const genderA = personA.gender;
   const genderB = personB.gender;
 
-  // 1. QUAN HỆ TRỰC HỆ (A là con cháu B hoặc ngược lại)
+  // ── 1. QUAN HỆ TRỰC HỆ: B là con cháu của A (A = LCA) ──
   if (depthA === 0) {
-    // A chính là LCA. B là con cháu của A.
-    // Xác định vế Nội/Ngoại của B đối với A: Dựa vào người con đầu tiên của A trên đường tới B
     const firstChildOfA = pathB[pathB.length - 1];
     if (!firstChildOfA) return ["Hậu duệ", "Tiền bối", "Quan hệ Trực hệ"];
-
     const isPaternal = firstChildOfA.gender === "male";
-
     const bCallsA = getDirectAncestorTerm(depthB, genderA, isPaternal);
     const aCallsB = getDirectDescendantTerm(depthB);
     return [aCallsB, bCallsA, "Quan hệ Trực hệ"];
   }
 
+  // ── 2. QUAN HỆ TRỰC HỆ: A là con cháu của B (B = LCA) ──
   if (depthB === 0) {
-    // B chính là LCA. A là con cháu của B.
     const firstChildOfB = pathA[pathA.length - 1];
     if (!firstChildOfB) return ["Tiền bối", "Hậu duệ", "Quan hệ Trực hệ"];
-
     const isPaternal = firstChildOfB.gender === "male";
-
     const aCallsB = getDirectAncestorTerm(depthA, genderB, isPaternal);
     const bCallsA = getDirectDescendantTerm(depthA);
     return [aCallsB, bCallsA, "Quan hệ Trực hệ"];
   }
 
-  // 2. QUAN HỆ NGANG HÀNG (Anh chị em ruột hoặc họ hàng)
-  const branchA = pathA[pathA.length - 1]; // Con của LCA phía A
-  const branchB = pathB[pathB.length - 1]; // Con của LCA phía B
+  // ── 3. QUAN HỆ NGANG / CHÉO ──
+  const branchA = pathA[pathA.length - 1]; // Con trực tiếp của LCA phía A
+  const branchB = pathB[pathB.length - 1]; // Con trực tiếp của LCA phía B
 
   if (!branchA || !branchB) return ["Họ hàng", "Họ hàng", "Quan hệ họ hàng"];
 
-  const seniority = compareSeniority(branchA, branchB);
+  // Thứ bậc so sánh giữa nhánh (để tính Bác/Chú)
+  const branchSeniority = compareSeniority(branchA, branchB);
+  // Thứ bậc của chính 2 người (để tính Anh/Em)
+  const personSeniority = compareSeniority(personA, personB);
 
-  // Xác định vế Nội/Ngoại: Dựa vào giới tính của người ở nhánh A (người đang gọi)
-  const isPaternalA = branchA.gender === "male";
+  // Vế Nội/Ngoại tính từ góc nhìn của A:
+  // nếu nhánh A đi qua người nam (branchA là nam) → Bên Nội của A
+  const isPaternalForA = branchA.gender === "male";
+  const side = isPaternalForA ? "Nội" : "Ngoại";
 
-  // Anh chị em ruột (Cùng bố mẹ)
+  // ── 3a. ANH CHỊ EM RUỘT (cùng 1 bậc từ LCA) ──
   if (depthA === 1 && depthB === 1) {
-    const aSenior = compareSeniority(personA, personB);
-    if (aSenior === "senior") {
+    // FIX: dùng personSeniority (so sánh A vs B trực tiếp)
+    if (personSeniority === "senior") {
       return [
         genderB === "female" ? "Em gái" : "Em trai",
         genderA === "female" ? "Chị gái" : "Anh trai",
         "Anh chị em ruột",
       ];
-    } else {
+    } else if (personSeniority === "junior") {
       return [
         genderB === "female" ? "Chị gái" : "Anh trai",
         genderA === "female" ? "Em gái" : "Em trai",
         "Anh chị em ruột",
       ];
+    } else {
+      // Bằng tuổi / không rõ → trả chung chung
+      return [
+        genderB === "female" ? "Chị/Em gái" : "Anh/Em trai",
+        genderA === "female" ? "Chị/Em gái" : "Anh/Em trai",
+        "Anh chị em ruột",
+      ];
     }
   }
 
-  // Chú/Bác/Cô/Cậu/Dì (Vế trên - Vế dưới)
+  // ── 3b. CHÚ/BÁC/CÔ/CẬU/DÌ (A lệch vế dưới, B là anh/em của tổ tiên A) ──
+  // depthA > 1: A cách LCA nhiều bậc; depthB = 1: B chỉ cách LCA 1 bậc
   if (depthA > 1 && depthB === 1) {
-    // B là anh/chị/em của tổ tiên A
     let termForB = "";
-    const isPaternalSide = branchA.gender === "male";
+    const prefix = getDistantUnclePrefix(depthA, genderB);
 
-    if (isPaternalSide) {
-      // Bên Nội (Anh em của bố)
+    if (isPaternalForA) {
+      // Bên Nội: anh/em của bố (depthA=2), hoặc của ông (depthA=3)...
       if (genderB === "female") {
-        termForB = seniority === "junior" ? "Bác" : "Cô";
+        // branchSeniority: branchB so với branchA
+        // branchB "senior" nghĩa là B (hoặc tổ tiên B) lớn hơn nhánh A → B là Bác gái
+        termForB = branchSeniority === "senior" ? "Bác" : "Cô";
       } else {
-        termForB = seniority === "junior" ? "Bác" : "Chú";
+        termForB = branchSeniority === "senior" ? "Bác" : "Chú";
       }
     } else {
-      // Bên Ngoại (Anh em của mẹ)
-      if (genderB === "female") {
-        termForB = "Dì";
-      } else {
-        termForB = "Cậu";
-      }
+      // Bên Ngoại: anh/em của mẹ
+      termForB = genderB === "female" ? "Dì" : "Cậu";
     }
-
-    // Nếu cách nhiều đời (ví dụ B là anh của ông nội)
-    let prefix = "";
-    if (depthA === 3) prefix = genderB === "female" ? "Bà " : "Ông ";
-    else if (depthA === 4) prefix = genderB === "female" ? "Cụ bà " : "Cụ ông ";
-    else if (depthA > 4) prefix = ANCESTORS[depthA - 1] + " ";
 
     return [
       (prefix + termForB).trim(),
       getDirectDescendantTerm(depthA),
-      isPaternalSide ? "Bên Nội (Vế trên)" : "Bên Ngoại (Vế trên)",
+      `Bên ${side} (vế trên, cách ${depthA} đời)`,
     ];
   }
 
-  // Ngược lại của trường hợp trên
+  // ── 3c. Ngược lại 3b: A là anh/em của tổ tiên B ──
   if (depthA === 1 && depthB > 1) {
     const [bCallsA, aCallsB, desc] = resolveBloodTerms(
       depthB,
@@ -226,67 +250,72 @@ function resolveBloodTerms(
     return [aCallsB, bCallsA, desc];
   }
 
-  // Anh em họ (Cùng thế hệ hoặc lệch thế hệ nhưng không trực hệ)
+  // ── 3d. ANH EM HỌ (cả 2 đều cách LCA > 1 bậc) ──
   if (depthA > 1 && depthB > 1) {
-    const side = isPaternalA ? "Nội" : "Ngoại";
-
     if (depthA === depthB) {
-      // Cùng thế hệ
-      if (seniority === "senior") {
+      // Cùng thế hệ → Anh em họ / Chị em họ
+      // FIX: dùng personSeniority cho anh em họ cùng thế hệ
+      if (personSeniority === "senior") {
         return [
           "Em họ",
           genderA === "female" ? "Chị họ" : "Anh họ",
-          `Anh em họ ${side}`,
+          `Anh em họ Bên ${side} (cùng thế hệ)`,
         ];
-      } else {
+      } else if (personSeniority === "junior") {
         return [
           genderB === "female" ? "Chị họ" : "Anh họ",
           "Em họ",
-          `Anh em họ ${side}`,
+          `Anh em họ Bên ${side} (cùng thế hệ)`,
+        ];
+      } else {
+        return [
+          genderB === "female" ? "Chị/Em họ" : "Anh/Em họ",
+          genderA === "female" ? "Chị/Em họ" : "Anh/Em họ",
+          `Anh em họ Bên ${side} (cùng thế hệ)`,
         ];
       }
-    } else {
-      // Lệch thế hệ
-      const genDiff = depthA - depthB;
-      if (genDiff > 0) {
-        // B ở vế trên
-        let termForB = "Họ hàng";
-        if (genDiff === 1) {
-          const isPaternalSide = branchA.gender === "male";
-          if (isPaternalSide) {
-            termForB =
-              genderB === "female"
-                ? seniority === "junior"
-                  ? "Bác họ"
-                  : "Cô họ"
-                : seniority === "junior"
-                  ? "Bác họ"
-                  : "Chú họ";
+    }
+
+    // Lệch thế hệ
+    const genDiff = depthA - depthB;
+    if (genDiff > 0) {
+      // B ở vế trên so với A
+      let termForB = "Họ hàng";
+      const prefix = getDistantUnclePrefix(depthA, genderB);
+
+      if (genDiff === 1) {
+        if (isPaternalForA) {
+          if (genderB === "female") {
+            termForB = branchSeniority === "senior" ? "Bác họ" : "Cô họ";
           } else {
-            termForB = genderB === "female" ? "Dì họ" : "Cậu họ";
+            termForB = branchSeniority === "senior" ? "Bác họ" : "Chú họ";
           }
         } else {
-          termForB = genderB === "female" ? "Bà họ" : "Ông họ";
+          termForB = genderB === "female" ? "Dì họ" : "Cậu họ";
         }
-        return [termForB, "Cháu họ", `Họ hàng ${side}`];
+        return [termForB, "Cháu họ", `Họ hàng Bên ${side} (lệch 1 thế hệ)`];
       } else {
-        const [bCallsA, aCallsB, desc] = resolveBloodTerms(
-          depthB,
-          depthA,
-          personB,
-          personA,
-          pathB,
-          pathA,
-        );
-        return [aCallsB, bCallsA, desc];
+        termForB = (prefix + (genderB === "female" ? "Bà họ" : "Ông họ")).trim();
+        return [termForB, "Cháu họ", `Họ hàng Bên ${side} (lệch ${genDiff} thế hệ)`];
       }
+    } else {
+      // A ở vế trên
+      const [bCallsA, aCallsB, desc] = resolveBloodTerms(
+        depthB,
+        depthA,
+        personB,
+        personA,
+        pathB,
+        pathA,
+      );
+      return [aCallsB, bCallsA, desc];
     }
   }
 
   return ["Người trong họ", "Người trong họ", "Quan hệ họ hàng"];
 }
 
-// ── Data Processing ──────────────────────────────────────────────────────────
+// ── BFS Ancestry ──────────────────────────────────────────────────────────────
 
 function getAncestryData(
   id: string,
@@ -309,8 +338,7 @@ function getAncestryData(
       const parents = parentMap.get(currentId) ?? [];
       for (const pId of parents) {
         const pNode = personsMap.get(pId);
-        if (pNode) {
-          // Lưu con đường: từ người gốc lên, path chứa các nút trung gian
+        if (pNode && !depths.has(pId)) {
           queue.push({
             id: pId,
             depth: depth + 1,
@@ -332,6 +360,7 @@ function findBloodKinship(
   const ancA = getAncestryData(personA.id, parentMap, personsMap);
   const ancB = getAncestryData(personB.id, parentMap, personsMap);
 
+  // Tìm LCA tốt nhất: ưu tiên khoảng cách nhỏ nhất
   let lcaId: string | null = null;
   let minDistance = Infinity;
 
@@ -362,19 +391,118 @@ function findBloodKinship(
   const lcaName = personsMap.get(lcaId)?.full_name ?? "Tổ tiên chung";
   const pathParts: string[] = [];
   if (personA.id !== lcaId) {
-    pathParts.push(`${personA.full_name} cách ${lcaName} ${dataA.depth} đời.`);
+    pathParts.push(
+      `${personA.full_name} cách ${lcaName} ${dataA.depth} đời.`,
+    );
   }
   if (personB.id !== lcaId) {
-    pathParts.push(`${personB.full_name} cách ${lcaName} ${dataB.depth} đời.`);
+    pathParts.push(
+      `${personB.full_name} cách ${lcaName} ${dataB.depth} đời.`,
+    );
   }
 
   return {
     aCallsB,
     bCallsA,
-    description: `${description} (Tổ tiên chung: ${lcaName})`,
+    description: `${description} — Tổ tiên chung: ${lcaName}`,
     distance: minDistance,
     pathLabels: pathParts,
   };
+}
+
+// ── In-law (thông qua hôn nhân) helper ──────────────────────────────────────
+
+/**
+ * Chuyển đổi danh xưng từ góc nhìn huyết thống sang in-law
+ * personRef: người trung gian (vợ/chồng)
+ * direction: "A_calls_B" | "B_calls_A"
+ */
+function toInLawTerm(
+  bloodTerm: string,
+  spouseGender: "male" | "female" | "other",
+  callerGender: "male" | "female" | "other",
+): string {
+  const suffix = spouseGender === "male" ? " chồng" : " vợ";
+
+  // Tiền bối trực hệ → thêm suffix
+  if (
+    bloodTerm === "Bố" ||
+    bloodTerm === "Mẹ" ||
+    bloodTerm.startsWith("Ông") ||
+    bloodTerm.startsWith("Bà") ||
+    bloodTerm.startsWith("Cụ") ||
+    bloodTerm.startsWith("Kỵ")
+  ) {
+    return bloodTerm + suffix;
+  }
+
+  // Dâu/Rể
+  if (bloodTerm === "Con") {
+    return callerGender === "male" ? "Con dâu" : "Con rể";
+  }
+  if (bloodTerm === "Cháu") {
+    return callerGender === "male" ? "Cháu dâu" : "Cháu rể";
+  }
+  if (bloodTerm === "Chắt") {
+    return callerGender === "male" ? "Chắt dâu" : "Chắt rể";
+  }
+
+  // Anh/Chị/Em ruột
+  if (bloodTerm === "Anh trai") return callerGender === "male" ? "Anh rể" : "Chị dâu";
+  if (bloodTerm === "Chị gái") return callerGender === "male" ? "Chị dâu" : "Anh rể"; // hiếm
+  if (bloodTerm === "Em trai") return callerGender === "male" ? "Em rể" : "Em dâu";
+  if (bloodTerm === "Em gái") return callerGender === "male" ? "Em dâu" : "Em rể"; // hiếm
+  if (bloodTerm === "Anh/Em trai") return "Anh/Em rể";
+  if (bloodTerm === "Chị/Em gái") return "Chị/Em dâu";
+
+  // Anh/Chị/Em họ
+  if (bloodTerm === "Anh họ") return callerGender === "male" ? "Anh rể (họ)" : "Chị dâu (họ)";
+  if (bloodTerm === "Chị họ") return callerGender === "male" ? "Chị dâu (họ)" : "Anh rể (họ)";
+  if (bloodTerm === "Em họ") return callerGender === "male" ? "Em dâu (họ)" : "Em rể (họ)";
+
+  // Chú/Bác/Cô → Thím/Bác dâu/Chú rể
+  if (bloodTerm === "Chú") return callerGender === "male" ? "Thím" : "Chú rể";
+  if (bloodTerm === "Bác") return callerGender === "male" ? "Bác dâu" : "Bác rể";
+  if (bloodTerm === "Cô") return callerGender === "male" ? "Dượng" : "Cô";
+  if (bloodTerm === "Cậu") return callerGender === "male" ? "Mợ" : "Cậu";
+  if (bloodTerm === "Dì") return callerGender === "male" ? "Dượng" : "Dì";
+
+  // Chú họ / Cô họ...
+  if (bloodTerm === "Chú họ") return "Thím họ";
+  if (bloodTerm === "Bác họ") return "Bác dâu/rể (họ)";
+  if (bloodTerm === "Cô họ") return "Dượng họ";
+  if (bloodTerm === "Cậu họ") return "Mợ họ";
+  if (bloodTerm === "Dì họ") return "Dượng họ";
+
+  // Mặc định
+  return (spouseGender === "male" ? "Chồng" : "Vợ") + " của " + bloodTerm;
+}
+
+/**
+ * Chuyển đổi danh xưng người thân (họ hàng) gọi người đến (in-law)
+ * tức là: bloodTerm là cách người thân gọi spouseRef → cần đổi thành cách gọi người in-law
+ */
+function relativeCallsInLaw(
+  bloodTerm: string,
+  inLawGender: "male" | "female" | "other",
+): string {
+  // Người thân gọi vợ/chồng của người thân khác
+  if (bloodTerm === "Con") return inLawGender === "male" ? "Con rể" : "Con dâu";
+  if (bloodTerm === "Cháu") return inLawGender === "male" ? "Cháu rể" : "Cháu dâu";
+  if (bloodTerm === "Chắt") return inLawGender === "male" ? "Chắt rể" : "Chắt dâu";
+  if (bloodTerm === "Anh trai" || bloodTerm === "Anh họ") return inLawGender === "female" ? "Chị dâu" : "Anh rể";
+  if (bloodTerm === "Chị gái" || bloodTerm === "Chị họ") return inLawGender === "male" ? "Anh rể" : "Chị dâu";
+  if (bloodTerm === "Em trai" || bloodTerm === "Em họ") return inLawGender === "female" ? "Em dâu" : "Em rể";
+  if (bloodTerm === "Em gái") return inLawGender === "male" ? "Em rể" : "Em dâu";
+  if (bloodTerm === "Chú") return "Thím";
+  if (bloodTerm === "Bác" && inLawGender === "female") return "Bác";
+  if (bloodTerm === "Bác" && inLawGender === "male") return "Bác";
+  if (bloodTerm === "Cô") return inLawGender === "male" ? "Chú" : "Cô";
+  if (bloodTerm === "Cậu") return inLawGender === "female" ? "Dì" : "Cậu";
+  if (bloodTerm === "Dì") return inLawGender === "male" ? "Cậu" : "Dì";
+  if (bloodTerm === "Ông Chú" || bloodTerm === "Ông Bác") return inLawGender === "female" ? "Bà Thím" : bloodTerm;
+  if (bloodTerm === "Bà Cô") return inLawGender === "male" ? "Ông Dượng" : bloodTerm;
+  return (inLawGender === "male" ? "Chồng" : "Vợ") + " của " + bloodTerm;
 }
 
 // ── Main Entry Point ──────────────────────────────────────────────────────────
@@ -388,25 +516,32 @@ export function computeKinship(
   if (personA.id === personB.id) return null;
 
   const personsMap = new Map(persons.map((p) => [p.id, p]));
-  const parentMap = new Map<string, string[]>();
+  const parentMap = new Map<string, string[]>(); // child → parents[]
+  const childrenMap = new Map<string, string[]>(); // parent → children[]
   const spouseMap = new Map<string, string[]>();
 
   for (const r of relationships) {
     if (r.type === "biological_child" || r.type === "adopted_child") {
-      const p = parentMap.get(r.person_b) ?? [];
-      p.push(r.person_a);
-      parentMap.set(r.person_b, p);
+      // person_a là cha/mẹ, person_b là con
+      const parents = parentMap.get(r.person_b) ?? [];
+      parents.push(r.person_a);
+      parentMap.set(r.person_b, parents);
+
+      const children = childrenMap.get(r.person_a) ?? [];
+      children.push(r.person_b);
+      childrenMap.set(r.person_a, children);
     } else if (r.type === "marriage") {
       const sA = spouseMap.get(r.person_a) ?? [];
-      sA.push(r.person_b);
+      if (!sA.includes(r.person_b)) sA.push(r.person_b);
       spouseMap.set(r.person_a, sA);
+
       const sB = spouseMap.get(r.person_b) ?? [];
-      sB.push(r.person_a);
+      if (!sB.includes(r.person_a)) sB.push(r.person_a);
       spouseMap.set(r.person_b, sB);
     }
   }
 
-  // 0. Kiểm tra quan hệ hôn nhân trực tiếp
+  // ── 0. Quan hệ hôn nhân trực tiếp ──
   const spousesA = spouseMap.get(personA.id) ?? [];
   if (spousesA.includes(personB.id)) {
     return {
@@ -414,204 +549,69 @@ export function computeKinship(
       bCallsA: personA.gender === "female" ? "Vợ" : "Chồng",
       description: "Quan hệ Hôn nhân",
       distance: 0,
-      pathLabels: [`${personA.full_name} và ${personB.full_name} là vợ chồng.`],
+      pathLabels: [
+        `${personA.full_name} và ${personB.full_name} là vợ chồng.`,
+      ],
     };
   }
 
-  // 1. Kiểm tra quan hệ huyết thống
+  // ── 1. Huyết thống trực tiếp ──
   const blood = findBloodKinship(personA, personB, personsMap, parentMap);
   if (blood) return blood;
 
-  // 2. Kiểm tra quan hệ thông qua hôn nhân của A
-  for (const sId of spousesA) {
-    if (sId === personB.id) continue; // Đã xử lý ở bước 0
-    const spouseA = personsMap.get(sId);
+  // ── 2. Thông qua hôn nhân của A (A gọi người thân của vợ/chồng mình) ──
+  for (const sIdA of spousesA) {
+    if (sIdA === personB.id) continue;
+    const spouseA = personsMap.get(sIdA);
     if (!spouseA) continue;
+
     const res = findBloodKinship(spouseA, personB, personsMap, parentMap);
-
     if (res) {
-      let aCallsB = res.aCallsB;
-      let bCallsA = res.bCallsA;
-
-      // --- A gọi B thông qua spouseA ---
-      // A gọi người trong họ của vợ/chồng mình
-      const suffix = personA.gender === "male" ? " vợ" : " chồng";
-
-      if (
-        res.aCallsB === "Bố" ||
-        res.aCallsB === "Mẹ" ||
-        res.aCallsB.startsWith("Ông") ||
-        res.aCallsB.startsWith("Bà") ||
-        res.aCallsB.startsWith("Cụ")
-      ) {
-        aCallsB = res.aCallsB + suffix;
-      } else if (res.aCallsB.includes("Anh trai")) {
-        aCallsB = "Anh" + suffix;
-      } else if (res.aCallsB.includes("Chị gái")) {
-        aCallsB = "Chị" + suffix;
-      } else if (res.aCallsB === "Em họ") {
-        aCallsB = "Em " + suffix + " (họ)";
-      } else if (res.aCallsB === "Chị họ") {
-        aCallsB = "Chị " + suffix + " (họ)";
-      } else if (res.aCallsB === "Anh họ") {
-        aCallsB = "Anh " + suffix + " (họ)";
-      } else if (res.aCallsB.includes("Em")) {
-        aCallsB = "Em" + suffix;
-      } else if (
-        ["Bác", "Chú", "Cô", "Cậu", "Dì"].includes(res.aCallsB) ||
-        res.aCallsB.endsWith(" họ")
-      ) {
-        aCallsB = res.aCallsB.replace(" họ", "") + suffix;
-      }
-
-      // --- B gọi A thông qua spouseA ---
-      // Người trong họ của spouseA gọi A (là dâu/rể)
-      if (res.bCallsA === "Con") {
-        bCallsA = personA.gender === "male" ? "Con rể" : "Con dâu";
-      } else if (res.bCallsA === "Cháu") {
-        bCallsA = personA.gender === "male" ? "Cháu rể" : "Cháu dâu";
-      } else if (
-        res.bCallsA.includes("Anh trai") ||
-        res.bCallsA.includes("Chị gái")
-      ) {
-        bCallsA = personA.gender === "male" ? "Anh rể" : "Chị dâu";
-      } else if (res.bCallsA.includes("Em")) {
-        bCallsA = personA.gender === "male" ? "Em rể" : "Em dâu";
-        if (res.bCallsA.includes("họ")) {
-          bCallsA += " (họ)";
-        }
-      } else if (res.bCallsA === "Chị họ") {
-        bCallsA = "Anh rể (họ)";
-      } else if (res.bCallsA === "Anh họ") {
-        bCallsA = "Chị dâu (họ)";
-      } else if (res.bCallsA === "Chú") {
-        bCallsA = "Cô";
-      } else if (res.bCallsA === "Chú họ") {
-        bCallsA = "Thím họ";
-      } else if (res.bCallsA === "Bác họ") {
-        bCallsA = "Bác họ";
-      } else if (res.bCallsA === "Cô") {
-        bCallsA = "Chú";
-      } else if (res.bCallsA === "Cậu") {
-        bCallsA = "Dì";
-      } else if (res.bCallsA === "Dì") {
-        bCallsA = "Cậu";
-      } else if (res.bCallsA === "Bà Cô") {
-        bCallsA = "Ông Dượng";
-      } else if (res.bCallsA === "Ông Chú") {
-        bCallsA = "Bà Thím";
-      } else if (res.bCallsA === "Ông Bác") {
-        bCallsA = "Bà Bác";
-      } else {
-        bCallsA =
-          (personA.gender === "male" ? "Chồng" : "Vợ") + " của " + res.bCallsA;
-      }
+      // res.aCallsB: cách spouseA gọi personB → chuyển sang cách A (dâu/rể) gọi
+      // res.bCallsA: cách personB gọi spouseA → chuyển sang cách personB gọi A (in-law)
+      const aCallsB = toInLawTerm(res.aCallsB, spouseA.gender, personA.gender);
+      const bCallsA = relativeCallsInLaw(res.bCallsA, personA.gender);
 
       return {
         ...res,
         aCallsB,
         bCallsA,
-        description: `Thông qua hôn nhân của ${spouseA.full_name}`,
+        description: `Thông qua hôn nhân với ${spouseA.full_name}`,
         pathLabels: [
-          `${personA.full_name} là ${personA.gender === "male" ? "Chồng" : "Vợ"} của ${spouseA.full_name}`,
+          `${personA.full_name} là ${personA.gender === "male" ? "chồng" : "vợ"} của ${spouseA.full_name}`,
           ...res.pathLabels,
         ],
       };
     }
   }
 
-  // 3. Kiểm tra quan hệ thông qua hôn nhân của B
+  // ── 3. Thông qua hôn nhân của B (B gọi người thân của vợ/chồng mình) ──
   const spousesB = spouseMap.get(personB.id) ?? [];
-  for (const sId of spousesB) {
-    const spouseB = personsMap.get(sId);
+  for (const sIdB of spousesB) {
+    const spouseB = personsMap.get(sIdB);
     if (!spouseB) continue;
+
     const res = findBloodKinship(personA, spouseB, personsMap, parentMap);
     if (res) {
-      let aCallsB = res.aCallsB;
-      let bCallsA = res.bCallsA;
-
-      // --- A gọi B thông qua spouseB ---
-      // A gọi spouse của người thân mình (S)
-      if (res.aCallsB === "Con") {
-        aCallsB = personB.gender === "male" ? "Con rể" : "Con dâu";
-      } else if (res.aCallsB === "Cháu") {
-        aCallsB = personB.gender === "male" ? "Cháu rể" : "Cháu dâu";
-      } else if (res.aCallsB.includes("Anh trai")) {
-        aCallsB = personB.gender === "female" ? "Chị dâu" : "Anh rể";
-      } else if (res.aCallsB.includes("Chị gái")) {
-        aCallsB = personB.gender === "male" ? "Anh rể" : "Chị dâu";
-      } else if (res.aCallsB.includes("Chị họ")) {
-        aCallsB = "Anh rể (họ)";
-      } else if (res.aCallsB.includes("Anh họ")) {
-        aCallsB = "Chị dâu (họ)";
-      } else if (res.aCallsB.includes("Em")) {
-        aCallsB = personB.gender === "male" ? "Em rể (họ)" : "Em dâu (họ)";
-      } else if (res.aCallsB === "Chú") {
-        aCallsB = "Cô";
-      } else if (res.aCallsB === "Chú họ") {
-        aCallsB = "Thím họ";
-      } else if (res.aCallsB === "Cô") {
-        aCallsB = "Chú";
-      } else if (res.aCallsB === "Cậu") {
-        aCallsB = "Dì";
-      } else if (res.aCallsB === "Dì") {
-        aCallsB = "Cậu";
-      } else if (res.aCallsB === "Bà Cô") {
-        aCallsB = "Ông Dượng";
-      } else if (res.aCallsB === "Ông Chú") {
-        aCallsB = "Bà Thím";
-      } else if (res.aCallsB === "Ông Bác") {
-        aCallsB = "Bà Bác";
-      } else {
-        aCallsB =
-          (personB.gender === "male" ? "Chồng" : "Vợ") + " của " + res.aCallsB;
-      }
-
-      // --- B gọi A thông qua spouseB ---
-      // B gọi người thân của vợ/chồng mình (spouseB)
-      const suffix = personB.gender === "male" ? " vợ" : " chồng";
-
-      if (
-        res.bCallsA === "Bố" ||
-        res.bCallsA === "Mẹ" ||
-        res.bCallsA.startsWith("Ông") ||
-        res.bCallsA.startsWith("Bà") ||
-        res.bCallsA.startsWith("Cụ")
-      ) {
-        bCallsA = res.bCallsA + suffix;
-      } else if (res.bCallsA.includes("Anh trai")) {
-        bCallsA = "Anh" + suffix;
-      } else if (res.bCallsA.includes("Chị gái")) {
-        bCallsA = "Chị" + suffix;
-      } else if (res.bCallsA === "Em họ") {
-        bCallsA = "Em" + suffix + " (họ)";
-      } else if (res.bCallsA === "Chị họ") {
-        bCallsA = "Chị" + suffix + " (họ)";
-      } else if (res.bCallsA === "Anh họ") {
-        bCallsA = "Anh" + suffix + " (họ)";
-      } else if (res.bCallsA.includes("Em")) {
-        bCallsA = "Em" + suffix;
-      } else if (
-        ["Bác", "Chú", "Cô", "Cậu", "Dì"].includes(res.bCallsA) ||
-        res.bCallsA.endsWith(" họ")
-      ) {
-        bCallsA = res.bCallsA + suffix;
-      }
+      // res.aCallsB: cách A gọi spouseB → chuyển sang cách A gọi B (in-law của spouseB)
+      // res.bCallsA: cách spouseB gọi A → chuyển sang cách B (dâu/rể) gọi A
+      const aCallsB = relativeCallsInLaw(res.aCallsB, personB.gender);
+      const bCallsA = toInLawTerm(res.bCallsA, spouseB.gender, personB.gender);
 
       return {
         ...res,
         aCallsB,
         bCallsA,
-        description: `Thông qua hôn nhân của ${spouseB.full_name}`,
+        description: `Thông qua hôn nhân với ${spouseB.full_name}`,
         pathLabels: [
           ...res.pathLabels,
-          `${personB.full_name} là ${personB.gender === "male" ? "Chồng" : "Vợ"} của ${spouseB.full_name}`,
+          `${personB.full_name} là ${personB.gender === "male" ? "chồng" : "vợ"} của ${spouseB.full_name}`,
         ],
       };
     }
   }
 
-  // 4. Kiểm tra quan hệ thông qua cả hôn nhân của A và B
+  // ── 4. Thông qua hôn nhân của cả A và B (anh em cột chèo / chị em dâu) ──
   for (const sIdA of spousesA) {
     const spouseA = personsMap.get(sIdA);
     if (!spouseA) continue;
@@ -622,46 +622,84 @@ export function computeKinship(
 
       const res = findBloodKinship(spouseA, spouseB, personsMap, parentMap);
       if (res) {
-        // res trả về cách gọi người thân của vợ/chồng mình (spouse) nên đổi ngôi
-        const prefixA = personA.gender === "male" ? "Chồng" : "Vợ";
-        const prefixB = personB.gender === "male" ? "Chồng" : "Vợ";
+        let aCallsB: string;
+        let bCallsA: string;
 
-        let aCallsB = `${prefixB} của ${res.aCallsB}`;
-        let bCallsA = `${prefixA} của ${res.bCallsA}`;
-
-        // Đặc biệt: Anh em cột chèo / Chị em dâu (nếu spouseA và spouseB là anh chị em ruột)
-        if (res.description.includes("Anh chị em ruột")) {
-          if (
-            personA.gender === "male" &&
-            personB.gender === "male" &&
-            spouseA.gender === "female" &&
-            spouseB.gender === "female"
-          ) {
-            aCallsB = "Anh em cột chèo";
-            bCallsA = "Anh em cột chèo";
-          } else if (
-            personA.gender === "female" &&
-            personB.gender === "female" &&
-            spouseA.gender === "male" &&
-            spouseB.gender === "male"
-          ) {
-            aCallsB = "Chị em dâu";
-            bCallsA = "Chị em dâu";
-          }
+        // Anh em cột chèo
+        if (
+          res.description.includes("Anh chị em ruột") &&
+          personA.gender === "male" &&
+          personB.gender === "male"
+        ) {
+          aCallsB = "Anh em cột chèo";
+          bCallsA = "Anh em cột chèo";
+        } else if (
+          res.description.includes("Anh chị em ruột") &&
+          personA.gender === "female" &&
+          personB.gender === "female"
+        ) {
+          aCallsB = "Chị em dâu";
+          bCallsA = "Chị em dâu";
+        } else {
+          const prefixA = personA.gender === "male" ? "Chồng" : "Vợ";
+          const prefixB = personB.gender === "male" ? "Chồng" : "Vợ";
+          aCallsB = `${prefixB} của ${res.aCallsB}`;
+          bCallsA = `${prefixA} của ${res.bCallsA}`;
         }
 
         return {
           ...res,
           aCallsB,
           bCallsA,
-          description: `Thông qua hôn nhân của cả ${spouseA.full_name} và ${spouseB.full_name}`,
+          description: `Thông qua hôn nhân của ${spouseA.full_name} và ${spouseB.full_name}`,
           pathLabels: [
-            `${personA.full_name} là ${prefixA} của ${spouseA.full_name}`,
+            `${personA.full_name} là ${personA.gender === "male" ? "chồng" : "vợ"} của ${spouseA.full_name}`,
             ...res.pathLabels,
-            `${personB.full_name} là ${prefixB} của ${spouseB.full_name}`,
+            `${personB.full_name} là ${personB.gender === "male" ? "chồng" : "vợ"} của ${spouseB.full_name}`,
           ],
         };
       }
+    }
+  }
+
+  // ── 5. Quan hệ con dâu/rể trực tiếp:
+  //    A là bố/mẹ của một người, người đó kết hôn với B
+  const childrenOfA = childrenMap.get(personA.id) ?? [];
+  for (const childId of childrenOfA) {
+    const childSpouses = spouseMap.get(childId) ?? [];
+    if (childSpouses.includes(personB.id)) {
+      const child = personsMap.get(childId)!;
+      return {
+        aCallsB: personB.gender === "male" ? "Con rể" : "Con dâu",
+        bCallsA:
+          personA.gender === "female" ? "Mẹ chồng/vợ" : "Bố chồng/vợ",
+        description: "Quan hệ Cha/Mẹ - Con dâu/Rể",
+        distance: 2,
+        pathLabels: [
+          `${child.full_name} là con của ${personA.full_name}`,
+          `${personB.full_name} là ${personB.gender === "male" ? "chồng" : "vợ"} của ${child.full_name}`,
+        ],
+      };
+    }
+  }
+
+  // ── 6. Ngược lại: B là bố/mẹ của người kết hôn với A ──
+  const childrenOfB = childrenMap.get(personB.id) ?? [];
+  for (const childId of childrenOfB) {
+    const childSpouses = spouseMap.get(childId) ?? [];
+    if (childSpouses.includes(personA.id)) {
+      const child = personsMap.get(childId)!;
+      return {
+        aCallsB:
+          personB.gender === "female" ? "Mẹ chồng/vợ" : "Bố chồng/vợ",
+        bCallsA: personA.gender === "male" ? "Con rể" : "Con dâu",
+        description: "Quan hệ Cha/Mẹ - Con dâu/Rể",
+        distance: 2,
+        pathLabels: [
+          `${child.full_name} là con của ${personB.full_name}`,
+          `${personA.full_name} là ${personA.gender === "male" ? "chồng" : "vợ"} của ${child.full_name}`,
+        ],
+      };
     }
   }
 
