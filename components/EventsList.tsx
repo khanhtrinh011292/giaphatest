@@ -78,6 +78,8 @@ function EventCard({
   const isBirthday = event.type === "birthday";
   const isCustom = event.type === "custom_event";
   const isDeathAnniversary = event.type === "death_anniversary";
+  const isLunarFestival = event.type === "lunar_festival";
+  const isMung1 = event.festivalKind === "mung1";
   const isToday = event.daysUntil === 0;
   const isPast = event.daysUntil < 0;
   const isSoon = event.daysUntil > 0 && event.daysUntil <= 7;
@@ -85,11 +87,8 @@ function EventCard({
   const { setMemberModalId } = useDashboard();
 
   const handleClick = () => {
-    if (isCustom) {
-      onEditCustomEvent(event);
-    } else if (event.personId) {
-      setMemberModalId(event.personId);
-    }
+    if (isCustom) onEditCustomEvent(event);
+    else if (event.personId) setMemberModalId(event.personId);
   };
 
   const yearsInfo = (() => {
@@ -102,64 +101,58 @@ function EventCard({
     return null;
   })();
 
-  // Solar date of this occurrence (the actual calendar date it falls on)
   const solarDateLabel = (() => {
-    const weekdays = [
-      "Chủ nhật",
-      "Thứ hai",
-      "Thứ ba",
-      "Thứ tư",
-      "Thứ năm",
-      "Thứ sáu",
-      "Thứ bảy",
-    ];
+    const weekdays = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
     const d = event.nextOccurrence;
     const dayOfWeek = weekdays[d.getDay()];
     const day = d.getDate().toString().padStart(2, "0");
     const month = (d.getMonth() + 1).toString().padStart(2, "0");
     const year = d.getFullYear();
-
     if (isCustom) return `${dayOfWeek}, ngày ${day}/${month}/${year}`;
     return `${dayOfWeek}, ngày ${day}/${month}`;
   })();
 
-  // Lunar date label for death anniversaries (the canonical anniversary date)
-  const lunarDateLabel = isDeathAnniversary
-    ? event.eventDateLabel // already formatted as "DD/MM ÂL"
-    : null;
+  const lunarDateLabel = isDeathAnniversary ? event.eventDateLabel : null;
+
+  // Style theo loại
+  const cardStyle = isLunarFestival
+    ? isToday
+      ? "bg-amber-50 border-amber-300 shadow-sm"
+      : isPast
+      ? "bg-stone-50/60 border-stone-200/50"
+      : "bg-white/80 border-amber-200/60 hover:border-amber-400"
+    : isToday
+    ? "bg-amber-50 border-amber-300 shadow-sm"
+    : isPast
+    ? "bg-stone-50/60 border-stone-200/50"
+    : isBirthday
+    ? "bg-white/80 border-stone-200/60 hover:border-blue-200"
+    : isCustom
+    ? "bg-white/80 border-stone-200/60 hover:border-purple-200"
+    : "bg-white/80 border-stone-200/60 hover:border-rose-200";
+
+  const iconStyle = isLunarFestival
+    ? isToday ? "bg-amber-100 text-amber-600" : isPast ? "bg-stone-100 text-stone-400" : "bg-amber-50 text-amber-500"
+    : isToday ? "bg-amber-100 text-amber-600"
+    : isPast ? "bg-stone-100 text-stone-400"
+    : isBirthday ? "bg-blue-50 text-blue-500"
+    : isCustom ? "bg-purple-50 text-purple-500"
+    : "bg-rose-50 text-rose-500";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.04 }}
-      onClick={handleClick}
-      className={`w-full text-left flex items-start gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.98] hover:shadow-md group ${
-        isToday
-          ? "bg-amber-50 border-amber-300 shadow-sm"
-          : isPast
-            ? "bg-stone-50/60 border-stone-200/50"
-            : isBirthday
-              ? "bg-white/80 border-stone-200/60 hover:border-blue-200"
-              : isCustom
-                ? "bg-white/80 border-stone-200/60 hover:border-purple-200"
-                : "bg-white/80 border-stone-200/60 hover:border-rose-200"
-      }`}
+      onClick={isLunarFestival ? undefined : handleClick}
+      className={`w-full text-left flex items-start gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border transition-all ${
+        isLunarFestival ? "" : "cursor-pointer active:scale-[0.98] hover:shadow-md"
+      } group ${cardStyle}`}
     >
-      <div
-        className={`shrink-0 size-10 sm:size-11 flex items-center justify-center rounded-xl ${
-          isToday
-            ? "bg-amber-100 text-amber-600"
-            : isPast
-              ? "bg-stone-100 text-stone-400"
-              : isBirthday
-                ? "bg-blue-50 text-blue-500"
-                : isCustom
-                  ? "bg-purple-50 text-purple-500"
-                  : "bg-rose-50 text-rose-500"
-        }`}
-      >
-        {isBirthday ? (
+      <div className={`shrink-0 size-10 sm:size-11 flex items-center justify-center rounded-xl ${iconStyle}`}>
+        {isLunarFestival ? (
+          <Moon className="size-[18px] sm:size-5" />
+        ) : isBirthday ? (
           <Cake className="size-[18px] sm:size-5" />
         ) : isCustom ? (
           <Star className="size-[18px] sm:size-5" />
@@ -170,34 +163,35 @@ function EventCard({
 
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p
-            className={`font-semibold text-[15px] sm:text-base truncate transition-colors ${
-              isPast
-                ? "text-stone-500"
-                : "text-stone-800 group-hover:text-amber-700"
-            }`}
-          >
+          <p className={`font-semibold text-[15px] sm:text-base truncate transition-colors ${
+            isPast ? "text-stone-500" : isLunarFestival ? "text-amber-800" : "text-stone-800 group-hover:text-amber-700"
+          }`}>
             {event.personName}
           </p>
-          {isBirthday &&
-            event.originDay &&
-            event.originMonth &&
-            getZodiacSign(event.originDay, event.originMonth) && (
-              <span className="shrink-0 text-[10px] font-sans font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 rounded-md px-1.5 py-0.5 whitespace-nowrap shadow-xs tracking-wider">
-                {getZodiacSign(event.originDay, event.originMonth)}
-              </span>
-            )}
-          <span
-            className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold leading-tight whitespace-nowrap ${
-              isToday
-                ? "bg-amber-400 text-white"
-                : isPast
-                  ? "bg-stone-200/80 text-stone-500"
-                  : isSoon
-                    ? "bg-red-100 text-red-600"
-                    : "bg-stone-100 text-stone-500"
-            }`}
-          >
+
+          {/* Badge Mùng 1 / Rằm */}
+          {isLunarFestival && (
+            <span className={`shrink-0 text-[10px] font-bold rounded-md px-1.5 py-0.5 whitespace-nowrap ${
+              isMung1
+                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                : "bg-yellow-100 text-yellow-700 border border-yellow-200"
+            }`}>
+              {isMung1 ? "🌚 Mùng 1" : "🌕 Rằm"}
+            </span>
+          )}
+
+          {isBirthday && event.originDay && event.originMonth && getZodiacSign(event.originDay, event.originMonth) && (
+            <span className="shrink-0 text-[10px] font-sans font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 rounded-md px-1.5 py-0.5 whitespace-nowrap shadow-xs tracking-wider">
+              {getZodiacSign(event.originDay, event.originMonth)}
+            </span>
+          )}
+
+          <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold leading-tight whitespace-nowrap ${
+            isToday ? "bg-amber-400 text-white"
+            : isPast ? "bg-stone-200/80 text-stone-500"
+            : isSoon ? "bg-red-100 text-red-600"
+            : "bg-stone-100 text-stone-500"
+          }`}>
             {isToday && (
               <span className="relative flex size-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-200 opacity-75" />
@@ -210,7 +204,6 @@ function EventCard({
         </div>
 
         <div className="flex flex-col gap-0.5 mt-1">
-          {/* Solar date row */}
           <p className="text-[13px] sm:text-sm text-stone-500 flex items-center gap-1.5 leading-snug">
             <CalendarDays className="size-3.5 shrink-0" />
             <span className="font-medium text-stone-600">{solarDateLabel}</span>
@@ -219,12 +212,12 @@ function EventCard({
             )}
           </p>
 
-          {/* Lunar date row — only for death anniversaries */}
-          {lunarDateLabel && (
+          {/* Âm lịch cho ngày giỗ và lễ âm */}
+          {(lunarDateLabel || isLunarFestival) && (
             <p className="text-[13px] sm:text-sm flex items-center gap-1.5 leading-snug">
-              <Moon className="size-3.5 shrink-0 text-rose-400" />
-              <span className="font-semibold text-rose-600">{lunarDateLabel}</span>
-              {yearsInfo && (
+              <Moon className="size-3.5 shrink-0 text-amber-400" />
+              <span className="font-semibold text-amber-700">{event.eventDateLabel}</span>
+              {yearsInfo && isDeathAnniversary && (
                 <span className="text-stone-400">· {yearsInfo}</span>
               )}
             </p>
@@ -256,38 +249,25 @@ export default function EventsList({
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [filter, setFilter] = useState<
-    "all" | "birthday" | "death_anniversary" | "custom_event" | "past"
+    "all" | "birthday" | "death_anniversary" | "custom_event" | "lunar_festival" | "past"
   >("all");
   const [showCount, setShowCount] = useState(20);
   const [showDeceasedBirthdays, setShowDeceasedBirthdays] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCustomEvent, setEditingCustomEvent] =
-    useState<CustomEventRecord | null>(null);
+  const [editingCustomEvent, setEditingCustomEvent] = useState<CustomEventRecord | null>(null);
 
   const handleOpenEditModal = (event: FamilyEvent) => {
     const rawEvent = customEvents.find((ce) => ce.id === event.personId);
-    if (rawEvent) {
-      setEditingCustomEvent(rawEvent);
-      setIsModalOpen(true);
-    }
+    if (rawEvent) { setEditingCustomEvent(rawEvent); setIsModalOpen(true); }
   };
-
-  const handleOpenCreateModal = () => {
-    setEditingCustomEvent(null);
-    setIsModalOpen(true);
-  };
-
+  const handleOpenCreateModal = () => { setEditingCustomEvent(null); setIsModalOpen(true); };
   const handleModalSuccess = () => { router.refresh(); };
 
   const [todayDate] = useState(() => {
     const today = new Date();
-    const weekdays = [
-      "Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư",
-      "Thứ năm", "Thứ sáu", "Thứ bảy",
-    ];
-    const dayOfWeek = weekdays[today.getDay()];
-    const solarStr = `${dayOfWeek}, ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+    const weekdays = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
+    const solarStr = `${weekdays[today.getDay()]}, ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
     let lunarStr = "";
     try {
       const solar = Solar.fromYmd(today.getFullYear(), today.getMonth() + 1, today.getDate());
@@ -297,24 +277,30 @@ export default function EventsList({
       const lMonth = Math.abs(lMonthRaw).toString().padStart(2, "0");
       const lDay = lunar.getDay().toString().padStart(2, "0");
       lunarStr = `${lDay}/${lMonth}${isLeap ? " nhuận" : ""} ÂL`;
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
     return { solar: solarStr, lunar: lunarStr };
   });
 
-  const allEvents = useMemo(() => computeEvents(persons, customEvents), [persons, customEvents]);
+  // includeLunarFestivals = true → luôn có mùng 1 & rằm trong allEvents
+  const allEvents = useMemo(
+    () => computeEvents(persons, customEvents, true),
+    [persons, customEvents]
+  );
 
   const filtered = useMemo(() => {
     let result = allEvents;
     if (filter === "past") {
       return result
-        .filter((e) => e.daysUntil < 0 && e.daysUntil >= -365)
+        .filter((e) => e.daysUntil < 0 && e.daysUntil >= -365 && e.type !== "lunar_festival")
         .sort((a, b) => b.daysUntil - a.daysUntil);
     }
     if (filter !== "all") result = result.filter((e) => e.type === filter);
+    // ận sinh nhật ngườờờờờ i đã mất nếu không bật
     if (!showDeceasedBirthdays)
       result = result.filter((e) => !(e.type === "birthday" && e.isDeceased));
+    // ận lunar_festival đã qua (khi xem tất cả)
+    if (filter === "all")
+      result = result.filter((e) => !(e.type === "lunar_festival" && e.daysUntil < 0));
     return result.filter((e) => e.daysUntil >= 0 && e.daysUntil <= 365);
   }, [allEvents, filter, showDeceasedBirthdays]);
 
@@ -333,7 +319,6 @@ export default function EventsList({
         className="relative overflow-hidden rounded-3xl bg-white border border-stone-200/60 shadow-sm hover:shadow-stone-100 hover:border-stone-400 transition-all duration-300 mb-8 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6"
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-50" />
-
         <div className="relative flex items-center gap-4 sm:gap-6">
           <div className="size-16 rounded-2xl bg-stone-50 flex items-center justify-center shrink-0 border border-stone-100 shadow-sm text-stone-600">
             <CalendarDays className="size-8" />
@@ -361,7 +346,6 @@ export default function EventsList({
             )}
           </div>
         </div>
-
         <button
           onClick={handleOpenCreateModal}
           className="relative z-10 w-full sm:w-auto px-5 py-3 rounded-xl bg-stone-800 text-white font-semibold hover:bg-stone-900 active:scale-95 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
@@ -374,7 +358,6 @@ export default function EventsList({
       {/* View mode toggle + filters */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* View toggle */}
           <div className="flex items-center bg-stone-100/80 rounded-xl p-1 gap-1 mr-1">
             <button
               onClick={() => setViewMode("list")}
@@ -397,19 +380,22 @@ export default function EventsList({
           {viewMode === "list" && (
             <>
               {([
-                { key: "all", label: "Tất cả" },
-                { key: "birthday", label: "Sinh nhật" },
+                { key: "all",               label: "Tất cả" },
+                { key: "birthday",          label: "Sinh nhật" },
                 { key: "death_anniversary", label: "Ngày giỗ" },
-                { key: "custom_event", label: "Tuỳ chỉnh" },
-                { key: "past", label: "Đã qua" },
+                { key: "lunar_festival",    label: "🌙 Mùng 1 & Rằm" },
+                { key: "custom_event",      label: "Tuỳ chỉnh" },
+                { key: "past",              label: "Đã qua" },
               ] as const).map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => { setFilter(tab.key); setShowCount(20); }}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                     filter === tab.key
-                      ? filter === "past"
+                      ? tab.key === "past"
                         ? "bg-stone-600 text-white shadow-sm"
+                        : tab.key === "lunar_festival"
+                        ? "bg-amber-400 text-white shadow-sm"
                         : "bg-amber-500 text-white shadow-sm"
                       : "bg-white/80 text-stone-600 border border-stone-200/60 hover:border-amber-200 hover:text-amber-700"
                   }`}
@@ -424,7 +410,7 @@ export default function EventsList({
           )}
         </div>
 
-        {viewMode === "list" && filter !== "past" && (
+        {viewMode === "list" && filter !== "past" && filter !== "lunar_festival" && (
           <div className="flex px-1">
             <label className="flex items-center gap-2.5 text-sm font-medium text-stone-600 cursor-pointer hover:text-stone-900 transition-colors select-none">
               <input
@@ -439,12 +425,8 @@ export default function EventsList({
         )}
       </div>
 
-      {/* Calendar view */}
-      {viewMode === "calendar" && (
-        <EventCalendar events={allEvents} />
-      )}
+      {viewMode === "calendar" && <EventCalendar events={allEvents} />}
 
-      {/* List view */}
       {viewMode === "list" && (
         <>
           {visible.length === 0 ? (
@@ -457,7 +439,7 @@ export default function EventsList({
             <div className="space-y-2.5">
               {visible.map((event, i) => (
                 <EventCard
-                  key={`${event.personId}-${event.type}-${event.eventDateLabel}`}
+                  key={`${event.personId}-${event.type}-${event.eventDateLabel}-${i}`}
                   event={event}
                   index={i}
                   onEditCustomEvent={handleOpenEditModal}
@@ -465,7 +447,6 @@ export default function EventsList({
               ))}
             </div>
           )}
-
           {filtered.length > showCount && (
             <button
               onClick={() => setShowCount((n) => n + 20)}
