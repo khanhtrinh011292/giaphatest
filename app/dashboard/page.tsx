@@ -51,7 +51,6 @@ export default async function FamiliesPage() {
       <div className="bg-gradient-to-br from-amber-50 via-stone-50 to-white border-b border-stone-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
           <div className="flex items-center gap-4">
-            {/* Logo icon.png */}
             <div className="size-14 rounded-2xl overflow-hidden shrink-0 shadow-sm border border-stone-100 bg-white">
               <Image
                 src="/icon.png"
@@ -62,7 +61,6 @@ export default async function FamiliesPage() {
                 priority
               />
             </div>
-
             <div>
               <p className="text-xl sm:text-2xl font-black tracking-tight text-stone-900 uppercase">
                 {config.siteName}
@@ -108,11 +106,12 @@ export default async function FamiliesPage() {
               {owned.map((family) => (
                 <div
                   key={family.id}
-                  className="group relative bg-white rounded-2xl border border-stone-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all duration-200"
+                  className="group flex items-center gap-3 bg-white rounded-2xl border border-stone-200 shadow-sm hover:shadow-md hover:border-amber-300 transition-all duration-200 pr-3"
                 >
+                  {/* Link chiếm phần lớn */}
                   <Link
                     href={`/dashboard/${family.id}/board`}
-                    className="flex items-center gap-4 px-5 py-4"
+                    className="flex items-center gap-4 flex-1 min-w-0 px-5 py-4"
                   >
                     <div className="size-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700 flex items-center justify-center shrink-0 font-bold text-lg font-serif shadow-xs">
                       {family.name.charAt(0).toUpperCase()}
@@ -127,12 +126,14 @@ export default async function FamiliesPage() {
                         <p className="text-xs text-stone-300 mt-0.5 italic">Chưa có mô tả</p>
                       )}
                     </div>
-                    <span className="text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full shrink-0 hidden sm:inline-flex items-center gap-1">
-                      👑 Chủ sở hữu
-                    </span>
                     <ChevronRight className="size-4 text-stone-300 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                   </Link>
-                  <div className="absolute right-14 top-1/2 -translate-y-1/2 sm:right-24">
+
+                  {/* Badge + Delete — nằm trong flex row, không absolute */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full hidden sm:inline-flex items-center gap-1">
+                      👑 Chủ sở hữu
+                    </span>
                     <DeleteFamilyButton familyId={family.id} familyName={family.name} />
                   </div>
                 </div>
