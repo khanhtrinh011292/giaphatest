@@ -20,3 +20,8 @@ export function useFamilyContext(): FamilyContext {
   if (!ctx) throw new Error("useFamilyContext phải dùng bên trong FamilyContextProvider");
   return ctx;
 }
+
+/** Hook an toàn: trả về null nếu không có FamilyContextProvider bọc ngoài */
+export function useFamilyContextOptional(): FamilyContext | null {
+  return useContext(FamilyCtx);
+}

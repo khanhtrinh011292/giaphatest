@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useDashboard } from "./DashboardContext";
 import { useUser } from "./UserProvider";
-import { useFamilyContext } from "./FamilyContextProvider";
+import { useFamilyContextOptional } from "./FamilyContextProvider";
 
 export default function MemberDetailModal({ familyId }: { familyId?: string }) {
   const { memberModalId: memberId, setMemberModalId, showCreateMember, setShowCreateMember } = useDashboard();
@@ -18,14 +18,8 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
 
   // Quyền chỉnh sửa lấy từ FamilyContext (owner/editor/admin của gia phả này)
   // Fallback an toàn nếu component được dùng ngoài FamilyContextProvider
-  let canEdit = false;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const familyCtx = useFamilyContext();
-    canEdit = familyCtx.canWrite;
-  } catch {
-    canEdit = isAdmin;
-  }
+  const familyCtx = useFamilyContextOptional();
+  const canEdit = familyCtx ? familyCtx.canWrite : isAdmin;
 
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -159,11 +153,19 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
                     onSuccess={handleEditSuccess} onCancel={() => setIsEditing(false)}
                   />
                 </motion.div>
-              ) : showCreateMember && resolvedFamilyId ? (
+              ) : showCreateMember ? (
                 <motion.div key="creating" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                   className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-8 pt-16 pb-8">
                   <h2 className="text-xl font-serif font-bold text-stone-800 mb-6">Thêm thành viên mới</h2>
-                  <MemberForm isAdmin={isAdmin} familyId={resolvedFamilyId} onSuccess={handleCreateSuccess} onCancel={closeModal} />
+                  {resolvedFamilyId ? (
+                    <MemberForm isAdmin={isAdmin} familyId={resolvedFamilyId} onSuccess={handleCreateSuccess} onCancel={closeModal} />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                      <AlertCircle className="size-10 text-amber-400" />
+                      <p className="text-stone-500 font-medium">Không xác định được gia phả.<br />Vui lòng thử lại từ trang gia phả.</p>
+                      <button onClick={closeModal} className="mt-2 px-6 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-full transition-colors">Đóng</button>
+                    </div>
+                  )}
                 </motion.div>
               ) : person ? (
                 <motion.div key="details" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}

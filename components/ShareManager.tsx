@@ -313,7 +313,7 @@ function ShareLinkTab({
                       : `/join/${link.token}`}
                   </p>
                   <p className="text-xs text-stone-400 mt-0.5">
-                    HH: {new Date(link.expires_at).toLocaleDateString("vi-VN")}
+                    Hết hạn: {new Date(link.expires_at).toLocaleDateString("vi-VN")}
                   </p>
                 </div>
                 <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">

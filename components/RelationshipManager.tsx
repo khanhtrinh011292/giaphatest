@@ -278,7 +278,7 @@ export default function RelationshipManager({
     fetchRelationships();
   }, [fetchRelationships]);
 
-  // Search for people to add
+  // Search for people to add — chỉ tìm trong cùng gia phả
   useEffect(() => {
     const searchPeople = async () => {
       if (searchTerm.length < 2) {
@@ -289,8 +289,9 @@ export default function RelationshipManager({
       const { data } = await supabase
         .from("persons")
         .select("*")
+        .eq("family_id", familyId)   // ✅ chỉ tìm trong gia phả hiện tại
         .ilike("full_name", `%${searchTerm}%`)
-        .neq("id", personId) // Exclude self
+        .neq("id", personId)
         .limit(5);
 
       if (data) setSearchResults(data);
@@ -298,15 +299,16 @@ export default function RelationshipManager({
 
     const timeoutId = setTimeout(searchPeople, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, personId, supabase]);
+  }, [searchTerm, personId, familyId, supabase]);
 
-  // Fetch recent members when opening Add form
+  // Fetch recent members when opening Add form — chỉ lấy trong cùng gia phả
   useEffect(() => {
     if (isAdding && recentMembers.length === 0) {
       const fetchRecent = async () => {
         const { data } = await supabase
           .from("persons")
           .select("*")
+          .eq("family_id", familyId)   // ✅ chỉ lấy trong gia phả hiện tại
           .neq("id", personId)
           .order("created_at", { ascending: false })
           .limit(10);
@@ -314,7 +316,7 @@ export default function RelationshipManager({
       };
       fetchRecent();
     }
-  }, [isAdding, personId, supabase, recentMembers.length]);
+  }, [isAdding, personId, familyId, supabase, recentMembers.length]);
 
   const handleAddRelationship = async () => {
     if (!selectedTargetId) return;
