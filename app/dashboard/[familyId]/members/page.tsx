@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 
-// /dashboard/[familyId]/members → redirect về trang chính của family
+// /dashboard/[familyId]/members → trang cây gia phả chính
 export default async function MembersRedirectPage({
   params,
 }: {
   params: Promise<{ familyId: string }>;
 }) {
   const { familyId } = await params;
-  redirect(`/dashboard/${familyId}`);
+  // Chuyển sang trang cây gia phả (view=tree)
+  redirect(`/dashboard/${familyId}?view=tree`);
 }
