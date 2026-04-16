@@ -10,12 +10,16 @@ import {
   type CompatResult,
   type GioHoangDao,
 } from "@/utils/thongThu";
-import { Heart, Calendar, Clock, Star, ChevronDown, ChevronUp, Info, AlertTriangle } from "lucide-react";
+import {
+  Calendar, Clock, Star, ChevronDown, ChevronUp,
+  Info, AlertTriangle, Heart,
+} from "lucide-react";
 
 const MONTH_NAMES = [
-  "Tháng 1","Tháng 2","Tháng 3","Tháng 4","Tháng 5","Tháng 6",
-  "Tháng 7","Tháng 8","Tháng 9","Tháng 10","Tháng 11","Tháng 12",
+  "Th1","Th2","Th3","Th4","Th5","Th6",
+  "Th7","Th8","Th9","Th10","Th11","Th12",
 ];
+const NH = "Mộc,Mộc,Hỏa,Hỏa,Thổ,Thổ,Kim,Kim,Thủy,Thủy".split(",");
 
 function ScoreBar({ score }: { score: number }) {
   const color =
@@ -24,82 +28,64 @@ function ScoreBar({ score }: { score: number }) {
     : score >= 45 ? "bg-yellow-300"
     : "bg-red-400";
   return (
-    <div className="w-full bg-stone-100 rounded-full h-2">
-      <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${score}%` }} />
+    <div className="w-full bg-stone-100 rounded-full h-1.5">
+      <div className={`${color} h-1.5 rounded-full transition-all`} style={{ width: `${score}%` }} />
     </div>
   );
 }
 
 function DayCard({
-  day,
-  onSelect,
-  selected,
-  hasAge,
+  day, onSelect, selected, hasAge,
 }: {
-  day: DayRating;
-  onSelect: (d: DayRating) => void;
-  selected: boolean;
-  hasAge: boolean;
+  day: DayRating; onSelect: (d: DayRating) => void; selected: boolean; hasAge: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const labelColor =
     day.label === "Đại Cát" ? "bg-emerald-100 text-emerald-700 border-emerald-200"
     : day.label === "Tốt" ? "bg-amber-100 text-amber-700 border-amber-200"
     : "bg-stone-100 text-stone-600 border-stone-200";
-
   const hasWarning = day.tuoiCheck && day.tuoiCheck.penalty > 0;
 
   return (
-    <div
-      className={`rounded-2xl border transition-all ${
-        selected ? "border-amber-400 bg-amber-50 shadow-md" : "border-stone-200 bg-white hover:border-amber-300 hover:shadow-sm"
-      }`}
-    >
-      <button
-        onClick={() => onSelect(day)}
-        className="w-full text-left p-4"
-      >
-        <div className="flex items-center justify-between mb-2">
+    <div className={`rounded-xl border transition-all text-left ${
+      selected ? "border-amber-400 bg-amber-50 shadow" : "border-stone-200 bg-white hover:border-amber-300"
+    }`}>
+      <button onClick={() => onSelect(day)} className="w-full text-left px-3 pt-3 pb-2">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-bold text-stone-900">
+            <div className="flex items-center gap-1.5">
+              <p className="font-semibold text-stone-900 text-sm leading-tight">
                 {new Date(day.solarDate + "T00:00:00").toLocaleDateString("vi-VN", {
-                  weekday: "long", day: "numeric", month: "numeric", year: "numeric",
+                  weekday: "short", day: "numeric", month: "numeric",
                 })}
               </p>
-              {hasWarning && (
-                <AlertTriangle className="size-3.5 text-orange-500 shrink-0" />
-              )}
+              {hasWarning && <AlertTriangle className="size-3 text-orange-500 shrink-0" />}
             </div>
-            <p className="text-xs text-stone-500 mt-0.5">
+            <p className="text-[11px] text-stone-400 mt-0.5">
               {day.isLeapMonth ? "Nhuận " : ""}Ngày {day.lunarDay}/{day.lunarMonth} âm
-              {" · "}{day.thapNhiTruc}
-              {" · "}{day.isHoangDao ? "Hoàng Đạo" : "Hắc Đạo"}
-              {" · "}Chi ngày: {day.chiNgay}
+              {" · "}{day.thapNhiTruc}{" · "}{day.isHoangDao ? "Hoàng Đạo" : "Hắc Đạo"}
             </p>
           </div>
-          <span className={`ml-3 text-xs font-bold border px-2.5 py-1 rounded-full shrink-0 ${labelColor}`}>
-            {day.label}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className={`text-[11px] font-bold border px-2 py-0.5 rounded-full ${labelColor}`}>{day.label}</span>
+            <span className="text-[11px] text-stone-400">{day.score}đ</span>
+          </div>
         </div>
         <ScoreBar score={day.score} />
-        <p className="text-xs text-stone-400 mt-1">{day.score}/100 điểm</p>
       </button>
-
-      {/* Chi tiết lý do */}
-      <div className="px-4 pb-3">
+      <div className="px-3 pb-2">
         <button
           onClick={() => setExpanded(v => !v)}
-          className="text-xs text-stone-400 flex items-center gap-1 hover:text-amber-600 transition-colors"
+          className="text-[11px] text-stone-400 flex items-center gap-0.5 hover:text-amber-600 transition-colors"
         >
           {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-          {expanded ? "Ẩn phân tích" : "Xem phân tích"}
-          {!hasAge && <span className="text-orange-400 ml-1">(nhập tuổi để có kết quả chính xác hơn)</span>}
+          {expanded ? "Ẩn phân tích" : "Phân tích"}
+          {!hasAge && <span className="text-orange-400 ml-1">— nhập tuổi để chính xác hơn</span>}
         </button>
         {expanded && (
-          <ul className="mt-2 space-y-1">
+          <ul className="mt-1.5 space-y-1">
             {day.reasons.map((r, i) => (
-              <li key={i} className="text-xs text-stone-700 bg-stone-50 rounded-lg px-2.5 py-1.5">{r}</li>
+              <li key={i} className="text-[11px] text-stone-600 bg-stone-50 rounded px-2 py-1">{r}</li>
             ))}
           </ul>
         )}
@@ -110,30 +96,21 @@ function DayCard({
 
 function GioCard({ g }: { g: GioHoangDao }) {
   const xungHai = g.isXungGroom || g.isXungBride || g.isHaiGroom || g.isHaiBride;
-  const bgClass = !g.isHoangDao
-    ? "border-stone-200 bg-stone-50 opacity-40"
-    : xungHai
-    ? "border-orange-300 bg-orange-50"
-    : "border-amber-300 bg-amber-50";
-
+  const base = !g.isHoangDao
+    ? "border-stone-100 bg-stone-50/60 opacity-40"
+    : xungHai ? "border-orange-200 bg-orange-50"
+    : "border-amber-200 bg-amber-50";
   return (
-    <div className={`rounded-xl border p-3 text-center ${bgClass}`}>
-      <p className={`font-bold text-sm ${
-        !g.isHoangDao ? "text-stone-400"
-        : xungHai ? "text-orange-700"
-        : "text-amber-700"
-      }`}>
-        Giờ {g.chi}
-      </p>
-      <p className="text-xs text-stone-500 mt-0.5">{g.time}</p>
-      {g.isHoangDao && !xungHai && (
-        <span className="inline-block mt-1 text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">
-          Hoàng Đạo ✔
-        </span>
-      )}
-      {g.isHoangDao && xungHai && (
-        <span className="inline-block mt-1 text-[10px] font-bold bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded-full">
-          {g.isXungGroom || g.isXungBride ? "Xung tuổi" : "Hại tuổi"}
+    <div className={`rounded-lg border p-2 text-center ${base}`}>
+      <p className={`font-bold text-xs ${
+        !g.isHoangDao ? "text-stone-400" : xungHai ? "text-orange-700" : "text-amber-700"
+      }`}>{g.chi}</p>
+      <p className="text-[10px] text-stone-400 leading-tight">{g.time}</p>
+      {g.isHoangDao && (
+        <span className={`inline-block mt-0.5 text-[9px] font-bold px-1 py-0.5 rounded-full ${
+          xungHai ? "bg-orange-200 text-orange-800" : "bg-amber-200 text-amber-800"
+        }`}>
+          {xungHai ? (g.isXungGroom || g.isXungBride ? "Xung" : "Hại") : "✔"}
         </span>
       )}
     </div>
@@ -144,13 +121,12 @@ export default function WeddingChooser() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  // Tuổi — chia sẻ giữa cả 3 phần
   const [groomYear, setGroomYear] = useState("");
   const [brideYear, setBrideYear] = useState("");
   const [compatResult, setCompatResult] = useState<CompatResult | null>(null);
   const [showCompatDetail, setShowCompatDetail] = useState(false);
+  const [showPhoi, setShowPhoi] = useState(false);
 
-  // Trạch Nhật
   const [selYear, setSelYear] = useState(currentYear);
   const [selMonth, setSelMonth] = useState(currentMonth);
   const [selectedDay, setSelectedDay] = useState<DayRating | null>(null);
@@ -159,251 +135,226 @@ export default function WeddingChooser() {
   const brideY = brideYear ? parseInt(brideYear) : undefined;
   const hasAge = !!(groomY && brideY && groomY >= 1900 && brideY >= 1900);
 
-  // Danh sách ngày — auto re-filter khi có tuổi
   const suggestedDays = useMemo(
     () => suggestDaysInMonth(selYear, selMonth, 65, groomY, brideY),
     [selYear, selMonth, groomY, brideY]
   );
 
-  // Giờ Hoàng Đạo — dùng can chi ngày thực + tuổi
   const gioHD = useMemo((): GioHoangDao[] => {
     if (!selectedDay) return [];
     const [yStr, mStr, dStr] = selectedDay.solarDate.split("-");
-    return getGioHoangDao(
-      parseInt(dStr), parseInt(mStr), parseInt(yStr),
-      groomY, brideY
-    );
+    return getGioHoangDao(parseInt(dStr), parseInt(mStr), parseInt(yStr), groomY, brideY);
   }, [selectedDay, groomY, brideY]);
 
   function handleCalcCompat() {
     if (!hasAge) return;
     setCompatResult(tinhHopTuoi(groomY!, brideY!));
+    setShowPhoi(true);
   }
 
   const groomCC = groomY && groomY >= 1900 ? getCanChi(groomY) : null;
   const brideCC = brideY && brideY >= 1900 ? getCanChi(brideY) : null;
 
   return (
-    <main className="flex-1 w-full">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-rose-50 via-amber-50 to-white border-b border-stone-100">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-          <div className="flex items-center gap-3">
-            <div className="size-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-              <Heart className="size-6" />
+    <div className="space-y-5 pb-12">
+
+      {/* ── CARD 1: Tuổi + Phối Mệnh ── */}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm">
+        {/* Header row */}
+        <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-stone-100">
+          <Star className="size-4 text-amber-500 shrink-0" />
+          <span className="text-sm font-bold text-stone-800">Tuổi cô dâu & chú rể</span>
+          {hasAge && (
+            <span className="ml-auto text-[11px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+              ✅ Đã lọc theo tuổi
+            </span>
+          )}
+        </div>
+
+        <div className="px-4 py-3 space-y-3">
+          {/* 2 input năm sinh */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-stone-400 mb-1">Chú rể</label>
+              <input
+                type="number" min={1900} max={2100}
+                value={groomYear}
+                onChange={e => { setGroomYear(e.target.value); setSelectedDay(null); setCompatResult(null); }}
+                placeholder="1995"
+                className="w-full rounded-lg border border-stone-200 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+              />
+              {groomCC && (
+                <p className="text-[11px] text-amber-700 mt-0.5 font-medium">{groomCC.can} {groomCC.chi} — {NH[groomCC.canIdx]}</p>
+              )}
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-stone-900">Coi Ngày Cưới</h1>
-              <p className="text-stone-500 text-sm mt-0.5">Theo Thông Thư — Trạch Nhật · Phối Mệnh · Giờ Hoàng Đạo</p>
+              <label className="block text-[11px] font-semibold text-stone-400 mb-1">Cô dâu</label>
+              <input
+                type="number" min={1900} max={2100}
+                value={brideYear}
+                onChange={e => { setBrideYear(e.target.value); setSelectedDay(null); setCompatResult(null); }}
+                placeholder="1997"
+                className="w-full rounded-lg border border-stone-200 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+              />
+              {brideCC && (
+                <p className="text-[11px] text-rose-600 mt-0.5 font-medium">{brideCC.can} {brideCC.chi} — {NH[brideCC.canIdx]}</p>
+              )}
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-10">
+          {/* Nút Phối Mệnh */}
+          <button
+            onClick={handleCalcCompat}
+            disabled={!hasAge}
+            className="w-full btn-primary text-sm py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Heart className="size-3.5 inline mr-1.5" />
+            Tính hợp tuổi (Phối Mệnh)
+          </button>
 
-        {/* ── PHẦN 1: Nhập tuổi ── */}
-        <section>
-          <div className="flex items-center gap-2 mb-5">
-            <Star className="size-4 text-amber-500" />
-            <h2 className="text-base font-bold text-stone-800">1. Nhập tuổi cô dâu & chú rể</h2>
-          </div>
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5 space-y-4">
-
-            {/* Năm sinh */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-stone-500 mb-1.5">Năm sinh Chú rể</label>
-                <input
-                  type="number" min={1900} max={2100}
-                  value={groomYear}
-                  onChange={e => { setGroomYear(e.target.value); setSelectedDay(null); setCompatResult(null); }}
-                  placeholder="VD: 1995"
-                  className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-                />
-                {groomCC && (
-                  <p className="text-xs text-amber-700 mt-1 font-medium">{groomCC.can} {groomCC.chi} — Ngũ Hành: {"Mộc,Mộc,Hỏa,Hỏa,Thổ,Thổ,Kim,Kim,Thủy,Thủy".split(",")[groomCC.canIdx]}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-stone-500 mb-1.5">Năm sinh Cô dâu</label>
-                <input
-                  type="number" min={1900} max={2100}
-                  value={brideYear}
-                  onChange={e => { setBrideYear(e.target.value); setSelectedDay(null); setCompatResult(null); }}
-                  placeholder="VD: 1997"
-                  className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-                />
-                {brideCC && (
-                  <p className="text-xs text-rose-600 mt-1 font-medium">{brideCC.can} {brideCC.chi} — Ngũ Hành: {"Mộc,Mộc,Hỏa,Hỏa,Thổ,Thổ,Kim,Kim,Thủy,Thủy".split(",")[brideCC.canIdx]}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Hợp tuổi */}
-            <button
-              onClick={handleCalcCompat}
-              disabled={!hasAge}
-              className="w-full btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Tính hợp tuổi (Phối Mệnh)
-            </button>
-
-            {!hasAge && (
-              <p className="text-xs text-stone-400 text-center">
-                ℹ️ Nhập năm sinh để kết quả chọn ngày & giờ tự động lọc theo tuổi
-              </p>
-            )}
-
-            {compatResult && (
-              <div className="pt-3 border-t border-stone-100">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="font-bold text-stone-900 text-lg">{compatResult.summary}</p>
-                    <p className="text-xs text-stone-400">{compatResult.score}/100 điểm tương hợp</p>
-                  </div>
-                  <div className={`size-14 rounded-2xl flex items-center justify-center font-black text-xl ${
+          {/* Kết quả Phối Mệnh — accordion */}
+          {compatResult && (
+            <div className="border border-stone-100 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setShowPhoi(v => !v)}
+                className="w-full flex items-center justify-between px-3 py-2.5 bg-stone-50 hover:bg-stone-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`size-7 rounded-lg flex items-center justify-center font-black text-sm ${
                     compatResult.score >= 80 ? "bg-emerald-100 text-emerald-700"
                     : compatResult.score >= 65 ? "bg-amber-100 text-amber-700"
                     : compatResult.score >= 50 ? "bg-yellow-100 text-yellow-700"
                     : "bg-red-100 text-red-600"
-                  }`}>
-                    {compatResult.score}
-                  </div>
+                  }`}>{compatResult.score}</span>
+                  <span className="text-sm font-semibold text-stone-800">{compatResult.summary}</span>
                 </div>
-                <ScoreBar score={compatResult.score} />
-                <button
-                  onClick={() => setShowCompatDetail(v => !v)}
-                  className="mt-3 text-xs text-stone-500 flex items-center gap-1 hover:text-amber-600 transition-colors"
-                >
-                  {showCompatDetail ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-                  {showCompatDetail ? "Ẩn chi tiết" : "Xem chi tiết phân tích"}
-                </button>
-                {showCompatDetail && (
-                  <ul className="mt-3 space-y-1.5">
-                    {compatResult.detail.map((d, i) => (
-                      <li key={i} className="text-sm text-stone-700 bg-stone-50 rounded-xl px-3 py-2">{d}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* ── PHẦN 2: Trạch Nhật ── */}
-        <section>
-          <div className="flex items-center gap-2 mb-5">
-            <Calendar className="size-4 text-amber-500" />
-            <h2 className="text-base font-bold text-stone-800">2. Chọn Ngày Tốt (Trạch Nhật)</h2>
-          </div>
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
-            <div className="flex items-center gap-3 mb-5">
-              <select
-                value={selMonth}
-                onChange={e => { setSelMonth(parseInt(e.target.value)); setSelectedDay(null); }}
-                className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-              >
-                {MONTH_NAMES.map((m, i) => (
-                  <option key={i} value={i+1}>{m}</option>
-                ))}
-              </select>
-              <select
-                value={selYear}
-                onChange={e => { setSelYear(parseInt(e.target.value)); setSelectedDay(null); }}
-                className="rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-              >
-                {Array.from({ length: 5 }, (_, i) => currentYear + i).map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              {hasAge && (
-                <span className="text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-                  ✅ Đã lọc theo tuổi
-                </span>
+                {showPhoi ? <ChevronUp className="size-4 text-stone-400" /> : <ChevronDown className="size-4 text-stone-400" />}
+              </button>
+              {showPhoi && (
+                <div className="px-3 py-3 space-y-2">
+                  <ScoreBar score={compatResult.score} />
+                  <button
+                    onClick={() => setShowCompatDetail(v => !v)}
+                    className="text-[11px] text-stone-400 flex items-center gap-0.5 hover:text-amber-600"
+                  >
+                    {showCompatDetail ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                    {showCompatDetail ? "Ẩn chi tiết" : "Xem phân tích"}
+                  </button>
+                  {showCompatDetail && (
+                    <ul className="space-y-1">
+                      {compatResult.detail.map((d, i) => (
+                        <li key={i} className="text-[11px] text-stone-700 bg-stone-50 rounded px-2 py-1">{d}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
             </div>
-
-            {suggestedDays.length === 0 ? (
-              <div className="text-center py-8 text-stone-400">
-                <p className="text-sm">Không có ngày đủ điểm (≥65) trong tháng này.</p>
-                <p className="text-xs mt-1">Thử chọn tháng khác.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-stone-400 mb-3">
-                  Tìm thấy{" "}
-                  <span className="font-semibold text-amber-600">{suggestedDays.length}</span>{" "}
-                  ngày tốt — click để xem giờ Hoàng Đạo
-                </p>
-                {suggestedDays.map(day => (
-                  <DayCard
-                    key={day.solarDate}
-                    day={day}
-                    selected={selectedDay?.solarDate === day.solarDate}
-                    onSelect={setSelectedDay}
-                    hasAge={hasAge}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* ── PHẦN 3: Giờ Hoàng Đạo ── */}
-        {selectedDay && (
-          <section>
-            <div className="flex items-center gap-2 mb-5">
-              <Clock className="size-4 text-amber-500" />
-              <h2 className="text-base font-bold text-stone-800">3. Giờ Hoàng Đạo</h2>
-            </div>
-            <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-5">
-              <p className="text-sm text-stone-600 mb-4">
-                Ngày{" "}
-                <span className="font-semibold text-stone-900">
-                  {new Date(selectedDay.solarDate + "T00:00:00").toLocaleDateString("vi-VN", {
-                    weekday: "long", day: "numeric", month: "numeric", year: "numeric",
-                  })}
-                </span>
-                {" "}— Ngày {selectedDay.lunarDay}/{selectedDay.lunarMonth} âm
-                {" · Chi ngày: "}<span className="font-semibold">{selectedDay.chiNgay}</span>
-              </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                {gioHD.map(g => <GioCard key={g.chi} g={g} />)}
-              </div>
-
-              {/* Chú giải màu */}
-              <div className="flex flex-wrap gap-3 mb-4 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <div className="size-3 rounded-full bg-amber-400" />
-                  <span className="text-stone-500">Hoàng Đạo</span>
-                </div>
-                {hasAge && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="size-3 rounded-full bg-orange-400" />
-                    <span className="text-stone-500">Hoàng Đạo nhưng xung/hại tuổi</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5">
-                  <div className="size-3 rounded-full bg-stone-300" />
-                  <span className="text-stone-500">Hắc Đạo — tránh</span>
-                </div>
-              </div>
-
-              <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3">
-                <Info className="size-4 text-rose-500 shrink-0 mt-0.5" />
-                <div className="text-xs text-rose-700 space-y-1">
-                  <p><strong>Rước dâu / Làm lễ:</strong> Chọn giờ Hoàng Đạo buổi sáng (Dần 03–05h, Mão 05–07h, Thìn 07–09h) không bị xung tuổi.</p>
-                  <p><strong>Đãi tiệc:</strong> Ưu tiên giờ Hoàng Đạo buổi trưa – chiều (Ngọ, Mùi, Thân).</p>
-                  <p><strong>Lưu ý:</strong> Kết quả mang tính tham khảo theo phong tục truyền thống. Nên tư vấn thêm thầy coi số để xét bát tự.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
+          )}
+        </div>
       </div>
-    </main>
+
+      {/* ── CARD 2: Trạch Nhật ── */}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm">
+        <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-stone-100">
+          <Calendar className="size-4 text-amber-500 shrink-0" />
+          <span className="text-sm font-bold text-stone-800">Trạch Nhật — Chọn ngày</span>
+        </div>
+        <div className="px-4 py-3">
+          {/* Bộ chọn tháng/năm */}
+          <div className="flex items-center gap-2 mb-3">
+            <select
+              value={selMonth}
+              onChange={e => { setSelMonth(parseInt(e.target.value)); setSelectedDay(null); }}
+              className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+            >
+              {MONTH_NAMES.map((m, i) => (
+                <option key={i} value={i+1}>{m}</option>
+              ))}
+            </select>
+            <select
+              value={selYear}
+              onChange={e => { setSelYear(parseInt(e.target.value)); setSelectedDay(null); }}
+              className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+            >
+              {Array.from({ length: 5 }, (_, i) => currentYear + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          {suggestedDays.length === 0 ? (
+            <p className="text-sm text-stone-400 text-center py-6">Không có ngày đủ điểm (≥65) — thử tháng khác.</p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-[11px] text-stone-400">
+                <span className="font-semibold text-amber-600">{suggestedDays.length}</span> ngày tốt — click để xem giờ Hoàng Đạo
+              </p>
+              {suggestedDays.map(day => (
+                <DayCard
+                  key={day.solarDate}
+                  day={day}
+                  selected={selectedDay?.solarDate === day.solarDate}
+                  onSelect={setSelectedDay}
+                  hasAge={hasAge}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── CARD 3: Giờ Hoàng Đạo ── */}
+      {selectedDay && (
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm">
+          <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-stone-100">
+            <Clock className="size-4 text-amber-500 shrink-0" />
+            <span className="text-sm font-bold text-stone-800">Giờ Hoàng Đạo</span>
+            <span className="ml-auto text-[11px] text-stone-500">
+              Chi ngày: <span className="font-semibold">{selectedDay.chiNgay}</span>
+            </span>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-[11px] text-stone-500 mb-3">
+              {new Date(selectedDay.solarDate + "T00:00:00").toLocaleDateString("vi-VN", {
+                weekday: "long", day: "numeric", month: "numeric", year: "numeric",
+              })}
+              {" — Ngày "}{selectedDay.lunarDay}/{selectedDay.lunarMonth} âm
+            </p>
+
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-3">
+              {gioHD.map(g => <GioCard key={g.chi} g={g} />)}
+            </div>
+
+            {/* Chú giải */}
+            <div className="flex flex-wrap gap-3 mb-3 text-[11px]">
+              <div className="flex items-center gap-1">
+                <div className="size-2.5 rounded-full bg-amber-400" />
+                <span className="text-stone-500">Hoàng Đạo</span>
+              </div>
+              {hasAge && (
+                <div className="flex items-center gap-1">
+                  <div className="size-2.5 rounded-full bg-orange-400" />
+                  <span className="text-stone-500">Hoàng Đạo bị xung/hại tuổi</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <div className="size-2.5 rounded-full bg-stone-300" />
+                <span className="text-stone-500">Hắc Đạo</span>
+              </div>
+            </div>
+
+            <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 flex gap-2.5">
+              <Info className="size-3.5 text-rose-400 shrink-0 mt-0.5" />
+              <div className="text-[11px] text-rose-600 space-y-0.5">
+                <p><strong>Rước dâu / Làm lễ:</strong> Giờ Hoàng Đạo buổi sáng (Dần, Mão, Thìn) không xung tuổi.</p>
+                <p><strong>Đãi tiệc:</strong> Ngọ, Mùi, Thân.</p>
+                <p><strong>Lưu ý:</strong> Mang tính tham khảo — nên xem thêm bát tự.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
