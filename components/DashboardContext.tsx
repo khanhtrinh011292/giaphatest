@@ -145,21 +145,9 @@ export function DashboardProvider({
 
 export function useDashboard(): DashboardState {
   const context = useContext(DashboardContext);
+  // Fix: throw thay vì silent fallback — phát hiện lỗi dùng hook ngoài Provider sớm hơn
   if (context === undefined) {
-    return {
-      memberModalId: null,
-      setMemberModalId: () => {},
-      showCreateMember: false,
-      setShowCreateMember: () => {},
-      showAvatar: true,
-      setShowAvatar: () => {},
-      view: "list",
-      setView: () => {},
-      rootId: null,
-      setRootId: () => {},
-      showSuggestions: false,
-      setShowSuggestions: () => {},
-    };
+    throw new Error("useDashboard phải được dùng bên trong <DashboardProvider>.");
   }
   return context;
 }

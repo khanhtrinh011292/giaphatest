@@ -69,6 +69,8 @@ export async function deleteMemberProfile(memberId: string, familyId: string) {
 
   revalidatePath(`/dashboard/${familyId}`);
   revalidatePath(`/dashboard/${familyId}/members`);
+  // Fix: revalidate layout để sidebar/header cập nhật ngay sau khi xoá thành viên
+  revalidatePath(`/dashboard/${familyId}`, "layout");
   redirect(`/dashboard/${familyId}`);
 }
 

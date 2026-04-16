@@ -6,8 +6,26 @@ import LogoutButton from "@/components/LogoutButton";
 import { FamilyContext } from "@/types";
 import { getProfile, getSupabase, getUser } from "@/utils/supabase/queries";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import React from "react";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ familyId: string }>;
+}): Promise<Metadata> {
+  const { familyId } = await params;
+  const supabase = await getSupabase();
+  const { data: family } = await supabase
+    .from("families")
+    .select("name")
+    .eq("id", familyId)
+    .single();
+  return {
+    title: family?.name ? `${family.name} | ${config.siteName}` : config.siteName,
+  };
+}
 
 export default async function FamilyLayout({
   children,
@@ -83,7 +101,6 @@ export default async function FamilyLayout({
   };
 
   return (
-    // Fix #1: Bỏ UserProvider thừa — dashboard/layout.tsx đã wrap rồi
     <FamilyContextProvider context={context}>
       <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col font-sans">
         <DashboardHeader familyId={familyId} familyName={family.name} />
