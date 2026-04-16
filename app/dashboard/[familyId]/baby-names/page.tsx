@@ -15,9 +15,9 @@ export default async function BabyNamesPage({
     <main className="flex-1 py-10 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-serif font-bold text-stone-800">👶 Gợi ý tên cho con</h1>
+          <h1 className="text-2xl font-serif font-bold text-stone-800">Gợi ý tên cho con</h1>
           <p className="text-stone-500 text-sm mt-1">
-            Nhập tên bố và mẹ để nhận 20 gợi ý tên đẹp, tự động kiểm tra trùng với tên trong dòng họ.
+            Nhập tên bố và mẹ để nhận 20 gợi ý tên đẹp (3–4 từ), tự động kiểm tra trùng với tên trong dòng họ.
           </p>
         </div>
         <BabyNameSuggester familyId={familyId} />

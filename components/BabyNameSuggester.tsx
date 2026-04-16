@@ -73,7 +73,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
       {/* Inputs */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">👨 Tên bố</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tên bố</label>
           <input
             type="text"
             value={fatherName}
@@ -83,7 +83,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">👩 Tên mẹ</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tên mẹ</label>
           <input
             type="text"
             value={motherName}
@@ -104,7 +104,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
               : "bg-gray-100 text-gray-500 hover:bg-blue-50"
           }`}
         >
-          👦 Con trai
+          Con trai
         </button>
         <button
           onClick={() => setGender("female")}
@@ -114,7 +114,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
               : "bg-gray-100 text-gray-500 hover:bg-pink-50"
           }`}
         >
-          👧 Con gái
+          Con gái
         </button>
       </div>
 
@@ -125,7 +125,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
         className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 transition flex items-center justify-center gap-2 disabled:opacity-60"
       >
         <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-        {loading ? "Đang tạo gợi ý..." : hasSearched ? "🎲 Reroll — Đổi tên khác" : "✨ Gợi ý tên"}
+        {loading ? "Đang tạo gợi ý..." : hasSearched ? "Reroll — Đổi tên khác" : "Gợi ý tên"}
       </button>
 
       {error && (
@@ -154,7 +154,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
       {suggestions.length > 0 && (
         <div className="mt-5">
           <p className="text-sm font-semibold text-gray-600 mb-3">
-            {gender === "male" ? "👦 Gợi ý tên con trai:" : "👧 Gợi ý tên con gái:"}
+            {gender === "male" ? "Gợi ý tên con trai:" : "Gợi ý tên con gái:"}
           </p>
           <div className="grid grid-cols-2 gap-2">
             {suggestions.map((s, i) => (
@@ -168,13 +168,15 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
               >
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400 w-5">{i + 1}.</span>
-                  <span className={`text-sm font-medium ${s.duplicate ? "text-orange-700" : "text-gray-800"}`}>
+                  <span className={`text-sm font-medium ${
+                    s.duplicate ? "text-orange-700" : "text-gray-800"
+                  }`}>
                     {s.name}
                   </span>
                 </div>
                 {s.duplicate ? (
                   <div className="group relative">
-                    <AlertTriangle className="w-4 h-4 text-orange-400 cursor-help" />
+                    <AlertTriangle className="w-4 h-4 text-orange-400 cursor-help shrink-0" />
                     <div className="absolute right-0 bottom-6 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition z-10 pointer-events-none">
                       Trùng với: {s.duplicateWith}
                     </div>
