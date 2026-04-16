@@ -3,6 +3,7 @@
 import { useDashboard } from "@/components/DashboardContext";
 import DashboardMemberList from "@/components/DashboardMemberList";
 import RootSelector from "@/components/RootSelector";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { Person, Relationship } from "@/types";
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
@@ -34,6 +35,10 @@ export default function DashboardViews({
   familyId,
 }: DashboardViewsProps) {
   const { view: currentView, rootId } = useDashboard();
+
+  // Lock body scroll on canvas views so mobile browser nav bar stays hidden
+  const isCanvasView = currentView === "tree" || currentView === "mindmap" || currentView === "bubble";
+  useLockBodyScroll(isCanvasView);
 
   const { personsMap, roots, defaultRootId } = useMemo(() => {
     const pMap = new Map<string, Person>();
