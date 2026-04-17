@@ -45,7 +45,7 @@ function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolea
     {
       href: `/dashboard/${familyId}/stats`,
       label: "Thống kê",
-      sub: "Số liệu thành viên, địa bàn...",
+      sub: "Thống kê thành viên, phân bổ...",
       icon: <BarChart2 className="w-5 h-5" />,
       color: "text-purple-600",
       bg: "hover:bg-purple-50",
@@ -54,7 +54,7 @@ function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolea
     {
       href: `/dashboard/${familyId}/events`,
       label: "Lịch sự kiện",
-      sub: "Giỗ, sinh nhật, rằm, mụng 1,...",
+      sub: "Giỗ, sinh nhật, rằm, mùng 1, lễ, tết,...",
       icon: <CalendarDays className="w-5 h-5" />,
       color: "text-rose-600",
       bg: "hover:bg-rose-50",
@@ -71,8 +71,8 @@ function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolea
     },
     {
       href: `/dashboard/${familyId}/baby-names`,
-      label: "Gợi ý tên cho con",
-      sub: "Tạo tên theo dòng họ",
+      label: "Chọn tên cho con",
+      sub: "Tìm tên cho con theo gợi ý",
       icon: <Baby className="w-5 h-5" />,
       color: "text-pink-600",
       bg: "hover:bg-pink-50",
@@ -89,47 +89,47 @@ function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolea
     },
     ...(canShare
       ? [{
-          href: `/dashboard/${familyId}/share`,
-          label: "Chia sẻ gia phả",
-          sub: "Mời thành viên xem hoặc sửa",
-          icon: <Share2 className="w-5 h-5" />,
-          color: "text-green-600",
-          bg: "hover:bg-green-50",
-          border: "border-green-100",
-        }]
+        href: `/dashboard/${familyId}/share`,
+        label: "Chia sẻ gia phả",
+        sub: "Mời thành viên xem hoặc sửa",
+        icon: <Share2 className="w-5 h-5" />,
+        color: "text-green-600",
+        bg: "hover:bg-green-50",
+        border: "border-green-100",
+      }]
       : []),
     ...(canLineage
       ? [{
-          href: `/dashboard/${familyId}/lineage`,
-          label: "Thứ tự gia phả",
-          sub: "Xếp thứ bậc, đời gia phả",
-          icon: <Sparkles className="w-5 h-5" />,
-          color: "text-indigo-600",
-          bg: "hover:bg-indigo-50",
-          border: "border-indigo-100",
-        }]
+        href: `/dashboard/${familyId}/lineage`,
+        label: "Thứ tự gia phả",
+        sub: "Xếp thứ bậc, đời gia phả",
+        icon: <Sparkles className="w-5 h-5" />,
+        color: "text-indigo-600",
+        bg: "hover:bg-indigo-50",
+        border: "border-indigo-100",
+      }]
       : []),
     ...(canSeeFund
       ? [{
-          href: `/dashboard/${familyId}/fund`,
-          label: "Quỹ gia phả",
-          sub: isOwner ? "Quản lý thu chi, đóng góp quỹ" : "Xem thông tin và nhật ký quỹ",
-          icon: <Coins className="w-5 h-5" />,
-          color: "text-amber-600",
-          bg: "hover:bg-amber-50",
-          border: "border-amber-100",
-        }]
+        href: `/dashboard/${familyId}/fund`,
+        label: "Quỹ gia phả",
+        sub: isOwner ? "Quản lý thu chi, đóng góp quỹ" : "Xem thông tin và nhật ký quỹ",
+        icon: <Coins className="w-5 h-5" />,
+        color: "text-amber-600",
+        bg: "hover:bg-amber-50",
+        border: "border-amber-100",
+      }]
       : []),
     ...(isOwner
       ? [{
-          href: `/dashboard/${familyId}/data`,
-          label: "Sao lưu & Phục hồi",
-          sub: "Xuất, nhập dữ liệu gia phả",
-          icon: <Database className="w-5 h-5" />,
-          color: "text-teal-600",
-          bg: "hover:bg-teal-50",
-          border: "border-teal-100",
-        }]
+        href: `/dashboard/${familyId}/data`,
+        label: "Sao lưu & Phục hồi",
+        sub: "Xuất, nhập dữ liệu gia phả",
+        icon: <Database className="w-5 h-5" />,
+        color: "text-teal-600",
+        bg: "hover:bg-teal-50",
+        border: "border-teal-100",
+      }]
       : []),
   ];
 }
@@ -194,11 +194,9 @@ export default function FamilyQuickLinks({
           <Link
             key={link.href}
             href={link.href}
-            className={`flex items-center gap-4 px-4 py-3.5 transition-colors ${
-              link.bg
-            } ${
-              i < links.length - 1 ? "border-b border-stone-50" : ""
-            } group`}
+            className={`flex items-center gap-4 px-4 py-3.5 transition-colors ${link.bg
+              } ${i < links.length - 1 ? "border-b border-stone-50" : ""
+              } group`}
           >
             <div
               className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${link.color} bg-white shadow-sm border ${link.border}`}
