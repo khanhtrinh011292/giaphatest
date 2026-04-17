@@ -27,14 +27,24 @@ interface Props {
   userId: string;
 }
 
-function useCountdown(expiresAt: string) {
+function useCountdown(expiresAt: string | null) {
   const [timeLeft, setTimeLeft] = useState("");
   const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
+    // Chỉ chạy khi có expiresAt thật sự
+    if (!expiresAt) return;
+
+    // Reset trạng thái mỗi khi expiresAt thay đổi
+    setIsExpired(false);
+
     function update() {
-      const diff = new Date(expiresAt).getTime() - Date.now();
-      if (diff <= 0) { setIsExpired(true); setTimeLeft(""); return; }
+      const diff = new Date(expiresAt!).getTime() - Date.now();
+      if (diff <= 0) {
+        setIsExpired(true);
+        setTimeLeft("");
+        return;
+      }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -50,7 +60,6 @@ function useCountdown(expiresAt: string) {
   return { timeLeft, isExpired };
 }
 
-// Popup danh sách người vote
 function VoterPopup({
   optionLabel,
   voters,
@@ -126,7 +135,6 @@ export default function PollCard({ announcementId, userId }: Props) {
 
   const fetchVotes = useCallback(async () => {
     if (!poll) return;
-    // Join với profiles để lấy display_name
     const { data } = await supabase
       .from("poll_votes")
       .select("option_id, user_id, profiles(display_name)")
@@ -150,7 +158,8 @@ export default function PollCard({ announcementId, userId }: Props) {
     return () => { supabase.removeChannel(channel); };
   }, [poll, fetchVotes]);
 
-  const { timeLeft, isExpired } = useCountdown(poll?.expires_at ?? new Date().toISOString());
+  // Truyền null khi poll chưa load xong — tránh countdown chạy sớm
+  const { timeLeft, isExpired } = useCountdown(poll?.expires_at ?? null);
 
   async function handleVote(optionId: string) {
     if (!poll || isExpired || myVote || voting) return;
@@ -211,7 +220,6 @@ export default function PollCard({ announcementId, userId }: Props) {
                   ${ isChosen ? "ring-2 ring-amber-400" : "" }
                 `}
               >
-                {/* Progress bar */}
                 {showResults && (
                   <div
                     className={`absolute inset-y-0 left-0 rounded-xl transition-all duration-700 ${ isChosen ? "bg-amber-200" : "bg-stone-100" }`}
@@ -228,7 +236,6 @@ export default function PollCard({ announcementId, userId }: Props) {
                         {percent}%
                       </span>
                     )}
-                    {/* Nút xem người vote */}
                     {showResults && count > 0 && (
                       <button
                         ref={anchorRef as React.RefObject<HTMLButtonElement>}
@@ -246,7 +253,6 @@ export default function PollCard({ announcementId, userId }: Props) {
                 </div>
               </button>
 
-              {/* Voter popup */}
               {openPopup === opt.id && (
                 <VoterPopup
                   optionLabel={opt.label}
