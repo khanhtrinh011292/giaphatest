@@ -238,9 +238,11 @@ export default function FamilyFund({
     }
 
     startTransition(async () => {
+      const emailToLogin = session?.user?.email as string;
+
       // Xác thực lại bằng mật khẩu
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: session.user.email,
+        email: emailToLogin,
         password: pwd,
       });
 
