@@ -14,10 +14,10 @@ interface QuickLink {
   color: string;
   bg: string;
   border: string;
-  ownerOnly?: boolean;
 }
 
-function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
+function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolean): QuickLink[] {
+  const canSeeFund = isOwner || isMemberOrEditor;
   return [
     {
       href: `/dashboard/${familyId}?view=tree`,
@@ -100,28 +100,27 @@ function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
       bg: "hover:bg-indigo-50",
       border: "border-indigo-100",
     },
+    ...(canSeeFund
+      ? [{
+          href: `/dashboard/${familyId}/fund`,
+          label: "Quỹ gia phả",
+          sub: isOwner ? "Quản lý thu chi, đóng góp quỹ" : "Xem thông tin và nhật ký quỹ",
+          icon: <Coins className="w-5 h-5" />,
+          color: "text-amber-600",
+          bg: "hover:bg-amber-50",
+          border: "border-amber-100",
+        }]
+      : []),
     ...(isOwner
-      ? [
-          {
-            href: `/dashboard/${familyId}/fund`,
-            label: "Quỹ gia phả",
-            sub: "Quản lý thu chi, đóng góp quỹ",
-            icon: <Coins className="w-5 h-5" />,
-            color: "text-amber-600",
-            bg: "hover:bg-amber-50",
-            border: "border-amber-100",
-            ownerOnly: true,
-          },
-          {
-            href: `/dashboard/${familyId}/data`,
-            label: "Sao lưu & Phục hồi",
-            sub: "Xuất, nhập dữ liệu gia phả",
-            icon: <Database className="w-5 h-5" />,
-            color: "text-teal-600",
-            bg: "hover:bg-teal-50",
-            border: "border-teal-100",
-          },
-        ]
+      ? [{
+          href: `/dashboard/${familyId}/data`,
+          label: "Sao lưu & Phục hồi",
+          sub: "Xuất, nhập dữ liệu gia phả",
+          icon: <Database className="w-5 h-5" />,
+          color: "text-teal-600",
+          bg: "hover:bg-teal-50",
+          border: "border-teal-100",
+        }]
       : []),
   ];
 }
@@ -129,35 +128,35 @@ function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
 interface Props {
   familyId: string;
   isOwner: boolean;
-  /** Số dư quỹ gia phả — truyền từ server component. null = không có quyền xem */
+  isMemberOrEditor?: boolean;
   fundBalance?: number | null;
 }
 
 export default function FamilyQuickLinks({
   familyId,
   isOwner,
+  isMemberOrEditor = false,
   fundBalance,
 }: Props) {
-  const links = buildLinks(familyId, isOwner);
+  const links = buildLinks(familyId, isOwner, isMemberOrEditor);
+  const canSeeFund = isOwner || isMemberOrEditor;
 
   return (
     <section className="space-y-3 pb-8">
       {/* Ô số dư quỹ gia phả */}
-      {fundBalance !== null && fundBalance !== undefined && (
+      {canSeeFund && fundBalance !== null && fundBalance !== undefined && (
         <Link
-          href={isOwner ? `/dashboard/${familyId}/fund` : "#"}
-          className={`block rounded-2xl border border-stone-100 bg-white px-4 py-3 shadow-sm transition ${
-            isOwner ? "hover:bg-stone-50 cursor-pointer" : "cursor-default"
-          }`}
+          href={`/dashboard/${familyId}/fund`}
+          className="block rounded-2xl border border-stone-100 bg-white px-4 py-3 shadow-sm transition hover:bg-stone-50 cursor-pointer"
         >
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center text-amber-600 bg-white shadow-sm border border-amber-100">
               <Coins className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-stone-800">Quỹ gia phả</p>
               <p className="text-xs text-stone-400">
-                {isOwner ? "Nhấn để quản lý thu chi" : "Số dư hiện tại"}
+                {isOwner ? "Nhấn để quản lý thu chi" : "Xem nhật ký thu chi"}
               </p>
             </div>
             <div className="text-right">
@@ -167,9 +166,7 @@ export default function FamilyQuickLinks({
                   currency: "VND",
                 }).format(fundBalance)}
               </p>
-              {isOwner && (
-                <span className="text-stone-300 text-base">›</span>
-              )}
+              <span className="text-stone-300 text-base">›</span>
             </div>
           </div>
         </Link>
@@ -199,14 +196,10 @@ export default function FamilyQuickLinks({
               {link.icon}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-stone-800">
-                {link.label}
-              </p>
+              <p className="text-sm font-semibold text-stone-800">{link.label}</p>
               <p className="text-xs text-stone-400 truncate">{link.sub}</p>
             </div>
-            <span className="text-stone-300 text-base group-hover:translate-x-0.5 transition-transform">
-              ›
-            </span>
+            <span className="text-stone-300 text-base group-hover:translate-x-0.5 transition-transform">›</span>
           </Link>
         ))}
       </div>

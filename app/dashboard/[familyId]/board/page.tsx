@@ -35,7 +35,6 @@ export default async function BoardPage({ params }: PageProps) {
 
   const isOwner = family.owner_id === user.id;
 
-  // Admin cũng có quyền đăng bảng tin
   let canPost = isOwner;
   let isMemberOrEditor = false;
 
@@ -67,7 +66,7 @@ export default async function BoardPage({ params }: PageProps) {
       .eq("family_id", familyId);
     if (txs) {
       fundBalance = txs.reduce(
-        (acc, t) => (t.type === "thu" ? acc + t.amount : acc - t.amount),
+        (acc, t) => (t.type === "chi" ? acc - t.amount : acc + t.amount),
         0
       );
     }
@@ -75,7 +74,6 @@ export default async function BoardPage({ params }: PageProps) {
 
   return (
     <main className="flex-1 py-8 px-4">
-      {/* Tiêu đề */}
       <div className="max-w-5xl mx-auto mb-6">
         <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-0.5">
           Gia phả
@@ -85,9 +83,7 @@ export default async function BoardPage({ params }: PageProps) {
         </h1>
       </div>
 
-      {/* Layout responsive: stack trên mobile, 2 cột trên desktop */}
       <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-6 items-start">
-        {/* Cột trái: Bảng tin */}
         <div className="flex-1 min-w-0 w-full">
           <AnnouncementBoard
             familyId={familyId}
@@ -97,11 +93,11 @@ export default async function BoardPage({ params }: PageProps) {
           />
         </div>
 
-        {/* Cột phải: Danh mục — sticky trên desktop, bình thường trên mobile */}
         <div className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-24 lg:self-start">
           <FamilyQuickLinks
             familyId={familyId}
             isOwner={isOwner}
+            isMemberOrEditor={isMemberOrEditor}
             fundBalance={fundBalance}
           />
         </div>

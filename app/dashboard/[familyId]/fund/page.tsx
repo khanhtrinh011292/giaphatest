@@ -29,7 +29,19 @@ export default async function FundPage({ params }: PageProps) {
   if (!family) redirect("/dashboard");
 
   const isOwner = family.owner_id === user.id;
-  if (!isOwner) redirect(`/dashboard/${familyId}/board`);
+
+  // Kiểm tra member/editor nếu không phải owner
+  let canView = isOwner;
+  if (!isOwner) {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    canView = !!share;
+  }
+  if (!canView) redirect(`/dashboard/${familyId}/board`);
 
   const [{ data: txData }, { data: personsData }] = await Promise.all([
     supabase
