@@ -33,14 +33,14 @@ export default async function SharePage({
       .eq("family_id", familyId)
       .eq("shared_with", user.id)
       .single();
-    // Chỉ owner và admin mới vào được
-    if (!share || share.role === "viewer" || share.role === "member" || share.role === "editor") {
+    // viewer và member không được vào
+    if (!share || share.role === "viewer" || share.role === "member") {
       redirect(`/dashboard/${familyId}/board`);
     }
-    shareRole = share?.role ?? null;
+    shareRole = share.role;
   }
 
-  // owner và admin được chia sẻ qua email; editor chỉ tạo link
+  // owner và admin mới được chia sẻ qua email; editor chỉ tạo link
   const canShareEmail = isOwner || shareRole === "admin";
 
   const result = await getFamilyShares(familyId);

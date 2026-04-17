@@ -18,7 +18,10 @@ interface QuickLink {
 
 function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolean, shareRole: string | null): QuickLink[] {
   const canSeeFund = isOwner || isMemberOrEditor;
-  const canShare = isOwner || shareRole === "admin";
+  // editor cũng thấy Chia sẻ (nhưng chỉ tab Link)
+  const canShare = isOwner || shareRole === "admin" || shareRole === "editor";
+  // Thứ tự gia phả chỉ owner và admin
+  const canLineage = isOwner || shareRole === "admin";
 
   return [
     {
@@ -84,7 +87,6 @@ function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolea
       bg: "hover:bg-orange-50",
       border: "border-orange-100",
     },
-    // Chỉ owner và admin mới thấy Chia sẻ gia phả
     ...(canShare
       ? [{
           href: `/dashboard/${familyId}/share`,
@@ -96,8 +98,7 @@ function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolea
           border: "border-green-100",
         }]
       : []),
-    // Chỉ owner và admin mới thấy Thứ tự gia phả
-    ...(canShare
+    ...(canLineage
       ? [{
           href: `/dashboard/${familyId}/lineage`,
           label: "Thứ tự gia phả",
@@ -153,7 +154,6 @@ export default function FamilyQuickLinks({
 
   return (
     <section className="space-y-3 pb-8">
-      {/* Ô số dư quỹ gia phả */}
       {canSeeFund && fundBalance !== null && fundBalance !== undefined && (
         <Link
           href={`/dashboard/${familyId}/fund`}
