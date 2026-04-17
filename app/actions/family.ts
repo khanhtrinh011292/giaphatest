@@ -4,7 +4,7 @@ import { Family, FamilyShare, ShareRole } from "@/types";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { revalidatePath } from "next/cache";
 
-// ── Lấy danh sách gia phả (sở hữu + được share) ────────────────────────────────────────────
+// ── Lấy danh sách gia phả (sở hữu + được share) ────────────────────────────────────────────────────────
 export async function getFamilies(): Promise<
   { owned: Family[]; shared: (FamilyShare & { family: Family })[] } | { error: string }
 > {
@@ -34,7 +34,7 @@ export async function getFamilies(): Promise<
   };
 }
 
-// ── Tạo gia phả mới ──────────────────────────────────────────────────────────────────
+// ── Tạo gia phả mới ──────────────────────────────────────────────────────────────────────────────────
 export async function createFamily(name: string, description?: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -52,7 +52,7 @@ export async function createFamily(name: string, description?: string) {
   return { data: data as Family };
 }
 
-// ── Cập nhật tên/mô tả gia phả ───────────────────────────────────────────────────────
+// ── Cập nhật tên/mô tả gia phả ─────────────────────────────────────────────────────────────────────────────
 export async function updateFamily(
   familyId: string,
   updates: { name?: string; description?: string }
@@ -70,12 +70,11 @@ export async function updateFamily(
   if (error) return { error: error.message };
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/${familyId}`);
-  // Fix #3: revalidate layout để DashboardHeader cập nhật tên mới ngay
   revalidatePath(`/dashboard/${familyId}`, "layout");
   return { success: true };
 }
 
-// ── Xóa gia phả (cascade xóa hết persons, relationships, ...) ───────────────────────
+// ── Xóa gia phả (cascade xóa hết persons, relationships, ...) ───────────────────────────────────────
 export async function deleteFamily(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -93,7 +92,8 @@ export async function deleteFamily(familyId: string) {
   return { success: true };
 }
 
-// ── Lấy danh sách người được share trong 1 family ────────────────────────────────
+// ── Lấy danh sách người được share trong 1 family ────────────────────────────────────────────────
+// Owner và admin mới được xem danh sách; editor trả về mảng rỗng
 export async function getFamilyShares(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -105,8 +105,22 @@ export async function getFamilyShares(familyId: string) {
     .eq("id", familyId)
     .single();
 
-  if (!family || family.owner_id !== user.id)
-    return { error: "Bạn không có quyền xem danh sách chia sẻ." };
+  if (!family) return { error: "Không tìm thấy gia phả." };
+
+  const isOwner = family.owner_id === user.id;
+
+  if (!isOwner) {
+    // Kiểm tra có phải admin không
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+
+    // Editor chỉ được tạo link, không xem danh sách share → trả về mảng rỗng
+    if (!share || share.role !== "admin") return { data: [] };
+  }
 
   const { data, error } = await supabase
     .from("family_shares_with_email")
@@ -118,7 +132,7 @@ export async function getFamilyShares(familyId: string) {
   return { data: data ?? [] };
 }
 
-// ── Chia sẻ gia phả theo email ───────────────────────────────────────────────
+// ── Chia sẻ gia phả theo email ─────────────────────────────────────────────────────────────────────────────
 export async function shareFamily(
   familyId: string,
   targetEmail: string,
@@ -159,7 +173,7 @@ export async function shareFamily(
   return { success: true };
 }
 
-// ── Cập nhật quyền share ─────────────────────────────────────────────────────────────
+// ── Cập nhật quyền share ─────────────────────────────────────────────────────────────────────────────────────
 export async function updateShareRole(shareId: string, newRole: ShareRole) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -176,7 +190,7 @@ export async function updateShareRole(shareId: string, newRole: ShareRole) {
   return { success: true };
 }
 
-// ── Thu hồi quyền chia sẻ ───────────────────────────────────────────────────────────────
+// ── Thu hồi quyền chia sẻ ──────────────────────────────────────────────────────────────────────────────────────
 export async function revokeShare(shareId: string, familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -193,7 +207,7 @@ export async function revokeShare(shareId: string, familyId: string) {
   return { success: true };
 }
 
-// ── Rời khỏi gia phả được share (tự xóa bản thân) ─────────────────────────────────
+// ── Rời khỏi gia phả được share (tự xóa bản thân) ────────────────────────────────────────────────
 export async function leaveFamily(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -210,7 +224,7 @@ export async function leaveFamily(familyId: string) {
   return { success: true };
 }
 
-// ── Tạo share link mới ──────────────────────────────────────────────────────────────────
+// ── Tạo share link mới ──────────────────────────────────────────────────────────────────────────────────────
 export async function createShareLink(
   familyId: string,
   role: "viewer" | "editor" = "viewer"
@@ -224,8 +238,20 @@ export async function createShareLink(
     .select("owner_id")
     .eq("id", familyId)
     .single();
-  if (!family || family.owner_id !== user.id)
-    return { error: "Bạn không có quyền tạo link chia sẻ." };
+  if (!family) return { error: "Không tìm thấy gia phả." };
+
+  const isOwner = family.owner_id === user.id;
+  if (!isOwner) {
+    // Kiểm tra editor hoặc admin
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    if (!share || (share.role !== "editor" && share.role !== "admin"))
+      return { error: "Bạn không có quyền tạo link chia sẻ." };
+  }
 
   const array = new Uint8Array(24);
   crypto.getRandomValues(array);
@@ -252,7 +278,7 @@ export async function createShareLink(
   return { data };
 }
 
-// ── Lấy danh sách share links của một gia phả ──────────────────────────────────────────
+// ── Lấy danh sách share links của một gia phả ────────────────────────────────────────────────────────
 export async function getShareLinks(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -269,7 +295,7 @@ export async function getShareLinks(familyId: string) {
   return { data: data ?? [] };
 }
 
-// ── Thu hồi share link ───────────────────────────────────────────────────────────────────
+// ── Thu hồi share link ───────────────────────────────────────────────────────────────────────────────────────
 export async function revokeShareLink(linkId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -286,7 +312,7 @@ export async function revokeShareLink(linkId: string) {
   return { success: true };
 }
 
-// ── Tham gia gia phả bằng token ───────────────────────────────────────────────────────────
+// ── Tham gia gia phả bằng token ───────────────────────────────────────────────────────────────────────────────────
 export async function joinByShareLink(token: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -330,7 +356,6 @@ export async function joinByShareLink(token: string) {
     });
 
   if (shareError) return { error: shareError.message };
-  // Fix #4: revalidate cả family mới join để hiển thị ngay
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/${link.family_id}`, "layout");
   return { success: true, familyId: link.family_id };
