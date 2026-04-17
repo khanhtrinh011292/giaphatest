@@ -45,7 +45,17 @@ function roleLabel(role: ShareRole) {
   return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === "admin" ? "Quản trị" : role);
 }
 
-// ── Tab: Chia sẻ qua Email ─────────────────────────────────────────────────────────────────────────────────
+// ── Tạo URL chia sẻ theo role ──────────────────────────────────────────────
+function buildShareUrl(token: string, role: "viewer" | "editor"): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  // viewer → /view/[token] (không cần đăng nhập)
+  // editor → /join/[token] (cần đăng nhập để join)
+  return role === "viewer"
+    ? `${origin}/view/${token}`
+    : `${origin}/join/${token}`;
+}
+
+// ── Tab: Chia sẻ qua Email ─────────────────────────────────────────────────
 function EmailShareTab({
   familyId,
   initialShares,
@@ -196,7 +206,7 @@ function EmailShareTab({
   );
 }
 
-// ── Tab: Link chia sẻ ──────────────────────────────────────────────────────────────────────────────────────
+// ── Tab: Link chia sẻ ──────────────────────────────────────────────────────
 function ShareLinkTab({
   familyId,
   showStatus,
@@ -221,7 +231,6 @@ function ShareLinkTab({
 
   async function handleCreate() {
     setLoading(true);
-    // Link chia sẻ chỉ tạo với role "viewer"
     const result = await createShareLink(familyId, "viewer");
     if (result.error) {
       showStatus("err", result.error);
@@ -244,8 +253,8 @@ function ShareLinkTab({
     });
   }
 
-  function copyToClipboard(token: string) {
-    const url = `${window.location.origin}/join/${token}`;
+  function copyToClipboard(token: string, role: "viewer" | "editor") {
+    const url = buildShareUrl(token, role);
     navigator.clipboard.writeText(url);
     setCopied(token);
     setTimeout(() => setCopied(null), 2000);
@@ -258,7 +267,8 @@ function ShareLinkTab({
           <LinkIcon className="w-4 h-4" /> Tạo link chia sẻ
         </h2>
         <p className="text-xs text-stone-400">
-          Link có hiệu lực trong 7 ngày. Bất kỳ ai có link đều có thể tham gia gia phả với quyền <strong>Chỉ xem</strong>.
+          Link có hiệu lực trong 7 ngày. Bất kỳ ai có link đều có thể xem gia phả{" "}
+          <strong>mà không cần đăng nhập</strong>.
         </p>
         <button
           onClick={handleCreate}
@@ -287,9 +297,7 @@ function ShareLinkTab({
               <li key={link.id} className="flex items-center gap-3 px-5 py-3 flex-wrap">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-mono text-stone-500 truncate">
-                    {typeof window !== "undefined"
-                      ? `${window.location.origin}/join/${link.token}`
-                      : `/join/${link.token}`}
+                    {buildShareUrl(link.token, link.role)}
                   </p>
                   <p className="text-xs text-stone-400 mt-0.5">
                     Hết hạn: {new Date(link.expires_at).toLocaleDateString("vi-VN")}
@@ -299,7 +307,7 @@ function ShareLinkTab({
                   Chỉ xem
                 </span>
                 <button
-                  onClick={() => copyToClipboard(link.token)}
+                  onClick={() => copyToClipboard(link.token, link.role)}
                   className="flex items-center gap-1 text-xs px-2.5 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors"
                 >
                   <ClipboardCopyIcon className="w-3.5 h-3.5" />
@@ -322,7 +330,7 @@ function ShareLinkTab({
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────────────────────────────────
+// ── Main Component ─────────────────────────────────────────────────────────
 export default function ShareManager({
   familyId,
   initialShares,
@@ -361,7 +369,7 @@ export default function ShareManager({
         </div>
       )}
 
-      {/* Tab switcher — ẩn tab Email nếu không có quyền */}
+      {/* Tab switcher */}
       <div className="flex border-b border-stone-200">
         {canShareEmail && (
           <button
