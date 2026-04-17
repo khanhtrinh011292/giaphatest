@@ -1,9 +1,16 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
 import PublicFamilyView from "@/components/PublicFamilyView";
 
 export const metadata = { title: "Xem gia phả" };
+
+// Anon client — không dùng session, để RLS anon hoạt động đúng
+function getAnonClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+}
 
 export default async function PublicViewPage({
   params,
@@ -11,8 +18,7 @@ export default async function PublicViewPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = getAnonClient();
 
   // Tìm share link hợp lệ
   const { data: link } = await supabase
