@@ -1,6 +1,7 @@
 import BackToBoardButton from "@/components/BackToBoardButton";
 import { getFamilyShares } from "@/app/actions/family";
 import ShareManager from "@/components/ShareManager";
+import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
 
 export default async function SharePage({
@@ -10,11 +11,34 @@ export default async function SharePage({
 }) {
   const { familyId } = await params;
 
-  const result = await getFamilyShares(familyId);
+  const user = await getUser();
+  if (!user) redirect("/login");
 
-  if ("error" in result) {
-    redirect(`/dashboard/${familyId}`);
+  const supabase = await getSupabase();
+
+  const { data: family } = await supabase
+    .from("families")
+    .select("id, owner_id")
+    .eq("id", familyId)
+    .single();
+  if (!family) redirect("/dashboard");
+
+  const isOwner = family.owner_id === user.id;
+  if (!isOwner) {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    // Chỉ owner và admin mới vào được
+    if (!share || share.role === "viewer" || share.role === "member" || share.role === "editor") {
+      redirect(`/dashboard/${familyId}/board`);
+    }
   }
+
+  const result = await getFamilyShares(familyId);
+  if ("error" in result) redirect(`/dashboard/${familyId}/board`);
 
   return (
     <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">

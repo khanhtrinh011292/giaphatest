@@ -16,8 +16,10 @@ interface QuickLink {
   border: string;
 }
 
-function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolean): QuickLink[] {
+function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolean, shareRole: string | null): QuickLink[] {
   const canSeeFund = isOwner || isMemberOrEditor;
+  const canShare = isOwner || shareRole === "admin";
+
   return [
     {
       href: `/dashboard/${familyId}?view=tree`,
@@ -82,24 +84,30 @@ function buildLinks(familyId: string, isOwner: boolean, isMemberOrEditor: boolea
       bg: "hover:bg-orange-50",
       border: "border-orange-100",
     },
-    {
-      href: `/dashboard/${familyId}/share`,
-      label: "Chia sẻ gia phả",
-      sub: "Mời thành viên xem hoặc sửa",
-      icon: <Share2 className="w-5 h-5" />,
-      color: "text-green-600",
-      bg: "hover:bg-green-50",
-      border: "border-green-100",
-    },
-    {
-      href: `/dashboard/${familyId}/lineage`,
-      label: "Thứ tự gia phả",
-      sub: "Xếp thứ bậc, đời gia phả",
-      icon: <Sparkles className="w-5 h-5" />,
-      color: "text-indigo-600",
-      bg: "hover:bg-indigo-50",
-      border: "border-indigo-100",
-    },
+    // Chỉ owner và admin mới thấy Chia sẻ gia phả
+    ...(canShare
+      ? [{
+          href: `/dashboard/${familyId}/share`,
+          label: "Chia sẻ gia phả",
+          sub: "Mời thành viên xem hoặc sửa",
+          icon: <Share2 className="w-5 h-5" />,
+          color: "text-green-600",
+          bg: "hover:bg-green-50",
+          border: "border-green-100",
+        }]
+      : []),
+    // Chỉ owner và admin mới thấy Thứ tự gia phả
+    ...(canShare
+      ? [{
+          href: `/dashboard/${familyId}/lineage`,
+          label: "Thứ tự gia phả",
+          sub: "Xếp thứ bậc, đời gia phả",
+          icon: <Sparkles className="w-5 h-5" />,
+          color: "text-indigo-600",
+          bg: "hover:bg-indigo-50",
+          border: "border-indigo-100",
+        }]
+      : []),
     ...(canSeeFund
       ? [{
           href: `/dashboard/${familyId}/fund`,
@@ -129,6 +137,7 @@ interface Props {
   familyId: string;
   isOwner: boolean;
   isMemberOrEditor?: boolean;
+  shareRole?: string | null;
   fundBalance?: number | null;
 }
 
@@ -136,9 +145,10 @@ export default function FamilyQuickLinks({
   familyId,
   isOwner,
   isMemberOrEditor = false,
+  shareRole = null,
   fundBalance,
 }: Props) {
-  const links = buildLinks(familyId, isOwner, isMemberOrEditor);
+  const links = buildLinks(familyId, isOwner, isMemberOrEditor, shareRole);
   const canSeeFund = isOwner || isMemberOrEditor;
 
   return (

@@ -37,6 +37,7 @@ export default async function BoardPage({ params }: PageProps) {
 
   let canPost = isOwner;
   let isMemberOrEditor = false;
+  let shareRole: string | null = null;
 
   if (!isOwner) {
     const { data: share } = await supabase
@@ -47,6 +48,7 @@ export default async function BoardPage({ params }: PageProps) {
       .single();
     canPost = share?.role === "admin";
     isMemberOrEditor = !!share;
+    shareRole = share?.role ?? null;
   }
 
   const { data: announcements } = await supabase
@@ -56,7 +58,6 @@ export default async function BoardPage({ params }: PageProps) {
     .order("created_at", { ascending: false })
     .limit(30);
 
-  // Lấy số dư quỹ cho owner, member, editor
   let fundBalance: number | null = null;
   const canViewFund = isOwner || isMemberOrEditor;
   if (canViewFund) {
@@ -98,6 +99,7 @@ export default async function BoardPage({ params }: PageProps) {
             familyId={familyId}
             isOwner={isOwner}
             isMemberOrEditor={isMemberOrEditor}
+            shareRole={shareRole}
             fundBalance={fundBalance}
           />
         </div>
