@@ -11,6 +11,7 @@ interface Person {
   birth_year: number | null;
   gender: string;
   is_deceased: boolean;
+  is_in_law: boolean;
   generation: number | null;
 }
 
@@ -64,24 +65,38 @@ export default function RelationshipSuggestions({
     return set;
   }, [relationships]);
 
-  // Map: childId → số cha/mẹ hiện có (biological hoặc adopted)
+  // Map: childId → số cha/mẹ hiện có
   const parentCountMap = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of relationships) {
       if (r.type === "biological_child" || r.type === "adopted_child") {
-        // person_a là cha/mẹ, person_b là con
         map.set(r.person_b, (map.get(r.person_b) ?? 0) + 1);
       }
     }
     return map;
   }, [relationships]);
 
-  // Map: parentId → số con hiện có
-  const childCountMap = useMemo(() => {
-    const map = new Map<string, number>();
+  // Map: personId → Set các id vợ/chồng (marriage)
+  const spouseMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const r of relationships) {
+      if (r.type === "marriage") {
+        if (!map.has(r.person_a)) map.set(r.person_a, new Set());
+        if (!map.has(r.person_b)) map.set(r.person_b, new Set());
+        map.get(r.person_a)!.add(r.person_b);
+        map.get(r.person_b)!.add(r.person_a);
+      }
+    }
+    return map;
+  }, [relationships]);
+
+  // Map: parentId → Set các childId
+  const childrenMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
     for (const r of relationships) {
       if (r.type === "biological_child" || r.type === "adopted_child") {
-        map.set(r.person_a, (map.get(r.person_a) ?? 0) + 1);
+        if (!map.has(r.person_a)) map.set(r.person_a, new Set());
+        map.get(r.person_a)!.add(r.person_b);
       }
     }
     return map;
@@ -89,32 +104,46 @@ export default function RelationshipSuggestions({
 
   const suggestions = useMemo(() => {
     const result: Suggestion[] = [];
-    const seen = new Set<string>(); // tránh trùng cặp
+    const seen = new Set<string>();
 
     for (const candidate of persons) {
+      // Bỏ qua con dâu / con rể
+      if (candidate.is_in_law) continue;
       // Bỏ qua nếu đã có đủ 2 cha/mẹ
       if ((parentCountMap.get(candidate.id) ?? 0) >= 2) continue;
       // Bắt buộc có generation hợp lệ
       if (candidate.generation === null) continue;
+      // Bắt buộc có năm sinh
+      if (!candidate.birth_year) continue;
 
       for (const parent of persons) {
         if (parent.id === candidate.id) continue;
-        // Bắt buộc có generation hợp lệ
+        // Bỏ qua con dâu / con rể làm cha/mẹ
+        if (parent.is_in_law) continue;
         if (parent.generation === null) continue;
+        if (!parent.birth_year) continue;
+
         // Đã có bất kỳ quan hệ nào giữa 2 người → bỏ qua
         if (existingPairs.has(`${parent.id}-${candidate.id}`)) continue;
-        // Tránh trùng cặp đã xử lý
+
         const pairKey = `${parent.id}-${candidate.id}`;
         if (seen.has(pairKey)) continue;
 
+        // Chỉ đời liền kề (genDiff = 1)
         const genDiff = candidate.generation - parent.generation;
-        // Chỉ xét đúng 1 đời chênh lệch
         if (genDiff !== 1) continue;
 
-        // Kiểm tra năm sinh: bắt buộc cả hai phải có
-        if (!candidate.birth_year || !parent.birth_year) continue;
         const yearDiff = candidate.birth_year - parent.birth_year;
         if (yearDiff < 15 || yearDiff > 55) continue;
+
+        // Không gợi ý nếu candidate đã kết hôn với con của parent
+        // (tức candidate đang là con dâu/rể của parent)
+        const parentChildren = childrenMap.get(parent.id) ?? new Set();
+        const candidateSpouses = spouseMap.get(candidate.id) ?? new Set();
+        const isInLawOfParent = [...parentChildren].some((childId) =>
+          candidateSpouses.has(childId)
+        );
+        if (isInLawOfParent) continue;
 
         // Không gợi ý nếu parent đã là con của candidate (vòng lặp)
         if (existingPairs.has(`${candidate.id}-${parent.id}`)) continue;
@@ -148,7 +177,7 @@ export default function RelationshipSuggestions({
 
     const order = { high: 0, medium: 1, low: 2 };
     return result.sort((a, b) => order[a.confidence] - order[b.confidence]);
-  }, [persons, relationships, existingPairs, parentCountMap]);
+  }, [persons, relationships, existingPairs, parentCountMap, spouseMap, childrenMap]);
 
   const visible = suggestions.filter(
     (s) => !confirmedKeys.has(`${s.personA.id}-${s.personB.id}`)
