@@ -12,6 +12,7 @@ interface Person {
   birth_year: number | null;
   gender: string;
   is_deceased: boolean;
+  is_in_law: boolean;
   generation: number | null;
 }
 
