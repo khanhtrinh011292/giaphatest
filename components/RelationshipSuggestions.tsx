@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, UserPlus, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, Loader2, UserPlus, XCircle, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Lightbulb } from "lucide-react";
 
@@ -24,8 +24,23 @@ interface Relationship {
 interface Suggestion {
   personA: Person;
   personB: Person;
-  reason: string;
-  confidence: "high" | "medium" | "low";
+  tags: string[];
+  confidence: "high" | "medium";
+}
+
+const DISMISSED_KEY = "dismissed_suggestions";
+
+function getDismissed(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(DISMISSED_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch { return new Set(); }
+}
+
+function saveDismissed(set: Set<string>) {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...set])); } catch {}
 }
 
 function getLastName(name: string) {
@@ -54,8 +69,17 @@ export default function RelationshipSuggestions({
   loadingKey?: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [dismissed, setDismissed] = useState<Set<string>>(() => getDismissed());
 
-  // Tập các cặp đã có quan hệ (bất kỳ loại nào)
+  const dismiss = (key: string) => {
+    setDismissed((prev) => {
+      const next = new Set([...prev, key]);
+      saveDismissed(next);
+      return next;
+    });
+  };
+
+  // Tập các cặp đã có quan hệ
   const existingPairs = useMemo(() => {
     const set = new Set<string>();
     for (const r of relationships) {
@@ -65,7 +89,7 @@ export default function RelationshipSuggestions({
     return set;
   }, [relationships]);
 
-  // Map: childId → số cha/mẹ hiện có
+  // Map: childId → số cha/mẹ
   const parentCountMap = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of relationships) {
@@ -76,7 +100,7 @@ export default function RelationshipSuggestions({
     return map;
   }, [relationships]);
 
-  // Map: personId → Set các id vợ/chồng (marriage)
+  // Map: personId → Set vợ/chồng
   const spouseMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     for (const r of relationships) {
@@ -104,84 +128,99 @@ export default function RelationshipSuggestions({
 
   const suggestions = useMemo(() => {
     const result: Suggestion[] = [];
-    const seen = new Set<string>();
+    const seen = new Set<string>(); // cặp đã xử lý
+    const candidateSeen = new Set<string>(); // mỗi candidate chỉ 1 gợi ý tốt nhất
+
+    // Sắp xếp: high confidence được xét trước
+    const scored: Array<{ parent: Person; candidate: Person; confidence: "high" | "medium"; tags: string[] }> = [];
 
     for (const candidate of persons) {
-      // Bỏ qua con dâu / con rể
       if (candidate.is_in_law) continue;
-      // Bỏ qua nếu đã có đủ 2 cha/mẹ
       if ((parentCountMap.get(candidate.id) ?? 0) >= 2) continue;
-      // Bắt buộc có generation hợp lệ
       if (candidate.generation === null) continue;
-      // Bắt buộc có năm sinh
       if (!candidate.birth_year) continue;
 
       for (const parent of persons) {
         if (parent.id === candidate.id) continue;
-        // Bỏ qua con dâu / con rể làm cha/mẹ
         if (parent.is_in_law) continue;
         if (parent.generation === null) continue;
         if (!parent.birth_year) continue;
-
-        // Đã có bất kỳ quan hệ nào giữa 2 người → bỏ qua
         if (existingPairs.has(`${parent.id}-${candidate.id}`)) continue;
+        if (existingPairs.has(`${candidate.id}-${parent.id}`)) continue;
 
         const pairKey = `${parent.id}-${candidate.id}`;
         if (seen.has(pairKey)) continue;
 
-        // Chỉ đời liền kề (genDiff = 1)
         const genDiff = candidate.generation - parent.generation;
         if (genDiff !== 1) continue;
 
         const yearDiff = candidate.birth_year - parent.birth_year;
         if (yearDiff < 15 || yearDiff > 55) continue;
 
-        // Không gợi ý nếu candidate đã kết hôn với con của parent
-        // (tức candidate đang là con dâu/rể của parent)
+        // Kiểm tra con dâu/rể gán tiếp
         const parentChildren = childrenMap.get(parent.id) ?? new Set();
         const candidateSpouses = spouseMap.get(candidate.id) ?? new Set();
-        const isInLawOfParent = [...parentChildren].some((childId) =>
-          candidateSpouses.has(childId)
-        );
+        const isInLawOfParent = [...parentChildren].some((cid) => candidateSpouses.has(cid));
         if (isInLawOfParent) continue;
-
-        // Không gợi ý nếu parent đã là con của candidate (vòng lặp)
-        if (existingPairs.has(`${candidate.id}-${parent.id}`)) continue;
 
         const candidateLast = getLastName(candidate.full_name);
         const parentLast = getLastName(parent.full_name);
         const parentMiddle = getMiddleName(parent.full_name);
 
-        let confidence: "high" | "medium" | "low" = "low";
-        let reason = "";
+        const tags: string[] = [];
+        let confidence: "high" | "medium" | null = null;
 
         if (candidateLast === parentLast) {
           confidence = "high";
-          reason = `Cùng họ "${candidateLast}", chênh ${yearDiff} tuổi, đời ${parent.generation} → ${candidate.generation}`;
+          tags.push(`🔤 Cùng họ "${candidateLast}"`);
         } else if (parentMiddle && candidateLast === parentMiddle) {
           confidence = "medium";
-          reason = `Tên đệm "${parentMiddle}" khớp họ con, chênh ${yearDiff} tuổi, đời ${parent.generation} → ${candidate.generation}`;
-        } else if (yearDiff >= 18 && yearDiff <= 45) {
-          confidence = "low";
-          reason = `Đời liền kề (đời ${parent.generation} → ${candidate.generation}), chênh ${yearDiff} tuổi`;
+          tags.push(`🔤 Họ khớp tên đệm`);
         } else {
+          // Bỏ qua low confidence hoàn toàn
           continue;
         }
 
+        tags.push(`📅 Chênh ${yearDiff} tuổi`);
+        tags.push(`🌳 Đời ${parent.generation} → ${candidate.generation}`);
+
+        // Kiểm tra có anh/chị/em cùng parent đã tồn tại → tăng độ tin cậy
+        const siblings = [...parentChildren].filter((cid) => {
+          const sibling = persons.find((p) => p.id === cid);
+          if (!sibling || !sibling.birth_year || !candidate.birth_year) return false;
+          return (
+            getLastName(sibling.full_name) === candidateLast &&
+            Math.abs(sibling.birth_year - candidate.birth_year) <= 25
+          );
+        });
+        if (siblings.length > 0) {
+          confidence = "high";
+          tags.push(`👨‍👩‍👦 Có ${siblings.length} anh/chị/em cùng họ`);
+        }
+
         seen.add(pairKey);
-        result.push({ personA: parent, personB: candidate, reason, confidence });
-        if (result.length >= 20) break;
+        scored.push({ parent, candidate, confidence, tags });
       }
+    }
+
+    // Sắp xếp: high trước, rồi chứng năng hồ sơ nhất
+    scored.sort((a, b) => (a.confidence === b.confidence ? 0 : a.confidence === "high" ? -1 : 1));
+
+    // Giới hạn 1 gợi ý tốt nhất cho mỗi candidate
+    for (const s of scored) {
+      if (candidateSeen.has(s.candidate.id)) continue;
+      candidateSeen.add(s.candidate.id);
+      result.push({ personA: s.parent, personB: s.candidate, tags: s.tags, confidence: s.confidence });
       if (result.length >= 20) break;
     }
 
-    const order = { high: 0, medium: 1, low: 2 };
-    return result.sort((a, b) => order[a.confidence] - order[b.confidence]);
+    return result;
   }, [persons, relationships, existingPairs, parentCountMap, spouseMap, childrenMap]);
 
-  const visible = suggestions.filter(
-    (s) => !confirmedKeys.has(`${s.personA.id}-${s.personB.id}`)
-  );
+  const visible = suggestions.filter((s) => {
+    const key = `${s.personA.id}-${s.personB.id}`;
+    return !confirmedKeys.has(key) && !dismissed.has(key);
+  });
   const shown = expanded ? visible : visible.slice(0, 3);
 
   if (visible.length === 0) return (
@@ -191,16 +230,10 @@ export default function RelationshipSuggestions({
     </div>
   );
 
-  const confidenceBadge = (c: "high" | "medium" | "low") => {
-    if (c === "high") return "bg-green-100 text-green-700";
-    if (c === "medium") return "bg-amber-100 text-amber-700";
-    return "bg-stone-100 text-stone-500";
-  };
-  const confidenceLabel = (c: "high" | "medium" | "low") => {
-    if (c === "high") return "Khả năng cao";
-    if (c === "medium") return "Có thể";
-    return "Gợi ý";
-  };
+  const confidenceBadge = (c: "high" | "medium") =>
+    c === "high" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700";
+  const confidenceLabel = (c: "high" | "medium") =>
+    c === "high" ? "Khả năng cao" : "Có thể";
 
   return (
     <div className="bg-amber-50/60 border border-amber-200/60 rounded-3xl p-5 space-y-4">
@@ -228,36 +261,51 @@ export default function RelationshipSuggestions({
                 exit={{ opacity: 0, x: 20 }}
                 className="bg-white/90 rounded-2xl border border-stone-200/60 p-3.5"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-sm font-semibold text-stone-800 truncate">{s.personA.full_name}</span>
+                      <span className="text-sm font-semibold text-stone-800">{s.personA.full_name}</span>
                       <span className="text-xs text-stone-400">→ con →</span>
-                      <span className="text-sm font-semibold text-stone-800 truncate">{s.personB.full_name}</span>
+                      <span className="text-sm font-semibold text-stone-800">{s.personB.full_name}</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${confidenceBadge(s.confidence)}`}>
                         {confidenceLabel(s.confidence)}
                       </span>
                     </div>
-                    <p className="text-xs text-stone-400 mt-0.5">{s.reason}</p>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {s.tags.map((tag) => (
+                        <span key={tag} className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
 
-                  {onAddRelationship && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {onAddRelationship && (
+                      <button
+                        onClick={() => onAddRelationship(s.personA.id, s.personB.id)}
+                        disabled={isLoading}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                          isLoading
+                            ? "bg-stone-100 text-stone-400 cursor-not-allowed"
+                            : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                        }`}
+                      >
+                        {isLoading ? (
+                          <><Loader2 className="size-3.5 animate-spin" /> Đang thêm...</>
+                        ) : (
+                          <><UserPlus className="size-3.5" /> Xác nhận</>
+                        )}
+                      </button>
+                    )}
                     <button
-                      onClick={() => onAddRelationship(s.personA.id, s.personB.id)}
-                      disabled={isLoading}
-                      className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                        isLoading
-                          ? "bg-stone-100 text-stone-400 cursor-not-allowed"
-                          : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                      }`}
+                      onClick={() => dismiss(key)}
+                      title="Bỏ qua gợi ý này"
+                      className="p-1.5 rounded-xl text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-all"
                     >
-                      {isLoading ? (
-                        <><Loader2 className="size-3.5 animate-spin" /> Đang thêm...</>
-                      ) : (
-                        <><UserPlus className="size-3.5" /> Xác nhận thêm</>
-                      )}
+                      <X className="size-3.5" />
                     </button>
-                  )}
+                  </div>
                 </div>
 
                 {errMsg && (
