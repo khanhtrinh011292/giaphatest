@@ -37,6 +37,8 @@ export default async function BoardPage({ params }: PageProps) {
 
   // Admin cũng có quyền đăng bảng tin
   let canPost = isOwner;
+  let isMemberOrEditor = false;
+
   if (!isOwner) {
     const { data: share } = await supabase
       .from("family_shares")
@@ -45,6 +47,7 @@ export default async function BoardPage({ params }: PageProps) {
       .eq("shared_with", user.id)
       .single();
     canPost = share?.role === "admin";
+    isMemberOrEditor = !!share;
   }
 
   const { data: announcements } = await supabase
@@ -54,12 +57,32 @@ export default async function BoardPage({ params }: PageProps) {
     .order("created_at", { ascending: false })
     .limit(30);
 
+  // Lấy số dư quỹ cho owner, member, editor
+  let fundBalance: number | null = null;
+  const canViewFund = isOwner || isMemberOrEditor;
+  if (canViewFund) {
+    const { data: txs } = await supabase
+      .from("family_fund_transactions")
+      .select("type, amount")
+      .eq("family_id", familyId);
+    if (txs) {
+      fundBalance = txs.reduce(
+        (acc, t) => (t.type === "thu" ? acc + t.amount : acc - t.amount),
+        0
+      );
+    }
+  }
+
   return (
     <main className="flex-1 py-8 px-4">
       {/* Tiêu đề */}
       <div className="max-w-5xl mx-auto mb-6">
-        <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-0.5">Gia phả</p>
-        <h1 className="text-2xl font-serif font-bold text-stone-800">{family.name}</h1>
+        <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-0.5">
+          Gia phả
+        </p>
+        <h1 className="text-2xl font-serif font-bold text-stone-800">
+          {family.name}
+        </h1>
       </div>
 
       {/* Layout responsive: stack trên mobile, 2 cột trên desktop */}
@@ -76,7 +99,11 @@ export default async function BoardPage({ params }: PageProps) {
 
         {/* Cột phải: Danh mục — sticky trên desktop, bình thường trên mobile */}
         <div className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-24 lg:self-start">
-          <FamilyQuickLinks familyId={familyId} isOwner={isOwner} />
+          <FamilyQuickLinks
+            familyId={familyId}
+            isOwner={isOwner}
+            fundBalance={fundBalance}
+          />
         </div>
       </div>
     </main>

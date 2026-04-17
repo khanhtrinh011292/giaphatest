@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   Network, GitMerge, BarChart2, CalendarDays,
-  Baby, ClipboardList, Share2, Sparkles, Database, Map, Heart
+  Baby, ClipboardList, Share2, Sparkles, Database, Map, Heart, Coins
 } from "lucide-react";
 
 interface QuickLink {
@@ -100,33 +100,67 @@ function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
       border: "border-indigo-100",
     },
     ...(isOwner
-      ? [{
-          href: `/dashboard/${familyId}/data`,
-          label: "Sao lưu & Phục hồi",
-          sub: "Xuất, nhập dữ liệu gia phả",
-          icon: <Database className="w-5 h-5" />,
-          color: "text-teal-600",
-          bg: "hover:bg-teal-50",
-          border: "border-teal-100",
-        }]
+      ? [
+          {
+            href: `/dashboard/${familyId}/data`,
+            label: "Sao lưu & Phục hồi",
+            sub: "Xuất, nhập dữ liệu gia phả",
+            icon: <Database className="w-5 h-5" />,
+            color: "text-teal-600",
+            bg: "hover:bg-teal-50",
+            border: "border-teal-100",
+          },
+        ]
       : []),
   ];
+}
+
+interface Props {
+  familyId: string;
+  isOwner: boolean;
+  /** Số dư quỹ gia phả — truyền từ server component. null = không có quyền xem */
+  fundBalance?: number | null;
 }
 
 export default function FamilyQuickLinks({
   familyId,
   isOwner,
-}: {
-  familyId: string;
-  isOwner: boolean;
-}) {
+  fundBalance,
+}: Props) {
   const links = buildLinks(familyId, isOwner);
 
   return (
     <section className="space-y-3 pb-8">
+      {/* Ô số dư quỹ gia phả — hiển thị nếu có quyền xem */}
+      {fundBalance !== null && fundBalance !== undefined && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-0.5">
+            <Coins className="w-4 h-4 text-amber-600" />
+            <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+              Quỹ gia phả
+            </p>
+          </div>
+          <p
+            className={`text-xl font-bold ${
+              fundBalance >= 0 ? "text-green-700" : "text-red-600"
+            }`}
+          >
+            {new Intl.NumberFormat("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            }).format(fundBalance)}
+          </p>
+          <p className="text-xs text-amber-600 mt-0.5">
+            {fundBalance >= 0 ? "Số dư hiện tại" : "Tạm thâm hụt"}
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         <Map className="w-4 h-4 text-stone-400" />
-        <h2 className="text-sm font-bold text-stone-500 uppercase tracking-wider">Danh mục</h2>
+        <h2 className="text-sm font-bold text-stone-500 uppercase tracking-wider">
+          Danh mục
+        </h2>
       </div>
 
       <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
@@ -140,7 +174,9 @@ export default function FamilyQuickLinks({
               i < links.length - 1 ? "border-b border-stone-50" : ""
             } group`}
           >
-            <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${link.color} bg-white shadow-sm border ${link.border}`}>
+            <div
+              className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${link.color} bg-white shadow-sm border ${link.border}`}
+            >
               {link.icon}
             </div>
             <div className="flex-1 min-w-0">
@@ -149,7 +185,9 @@ export default function FamilyQuickLinks({
               </p>
               <p className="text-xs text-stone-400 truncate">{link.sub}</p>
             </div>
-            <span className="text-stone-300 text-base group-hover:translate-x-0.5 transition-transform">›</span>
+            <span className="text-stone-300 text-base group-hover:translate-x-0.5 transition-transform">
+              ›
+            </span>
           </Link>
         ))}
       </div>
