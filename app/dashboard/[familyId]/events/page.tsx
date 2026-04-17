@@ -1,8 +1,11 @@
 import BackToBoardButton from "@/components/BackToBoardButton";
 import { DashboardProvider } from "@/components/DashboardContext";
 import EventsList from "@/components/EventsList";
+import FamilyFund from "@/components/FamilyFund";
 import MemberDetailModal from "@/components/MemberDetailModal";
-import { getEvents, getPersons } from "@/utils/supabase/queries";
+import { getEvents, getPersons, getSupabase, getUser } from "@/utils/supabase/queries";
+import { redirect } from "next/navigation";
+import type { FundTransaction } from "@/components/FamilyFund";
 
 export const metadata = { title: "Sự kiện gia phả" };
 
@@ -12,6 +15,34 @@ interface PageProps {
 
 export default async function EventsPage({ params }: PageProps) {
   const { familyId } = await params;
+
+  const user = await getUser();
+  if (!user) redirect("/login");
+
+  const supabase = await getSupabase();
+
+  const { data: family } = await supabase
+    .from("families")
+    .select("id, owner_id")
+    .eq("id", familyId)
+    .single();
+  if (!family) redirect("/dashboard");
+
+  const isOwner = family.owner_id === user.id;
+
+  // Chỉ owner mới load giao dịch quỹ
+  let fundTransactions: FundTransaction[] = [];
+  if (isOwner) {
+    const { data } = await supabase
+      .from("family_fund_transactions")
+      .select(
+        "id, type, contributor_name, amount, note, transaction_date, created_at"
+      )
+      .eq("family_id", familyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false });
+    fundTransactions = (data ?? []) as FundTransaction[];
+  }
 
   const [personsAll, customEvents] = await Promise.all([
     getPersons(familyId),
@@ -45,7 +76,21 @@ export default async function EventsPage({ params }: PageProps) {
           </p>
         </div>
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
-          <EventsList persons={persons} customEvents={customEvents} familyId={familyId} />
+          {/* Quỹ gia phả — chỉ owner mới thấy */}
+          {isOwner && (
+            <FamilyFund
+              familyId={familyId}
+              isOwner={isOwner}
+              initialTransactions={fundTransactions}
+            />
+          )}
+
+          {/* Lịch sự kiện */}
+          <EventsList
+            persons={persons}
+            customEvents={customEvents}
+            familyId={familyId}
+          />
         </main>
       </div>
       <MemberDetailModal familyId={familyId} />
