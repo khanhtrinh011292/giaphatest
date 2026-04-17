@@ -12,8 +12,10 @@ export default function ViewToggle({ canEdit = false }: { canEdit?: boolean }) {
   const { view: currentView, setView, showSuggestions, setShowSuggestions } = useDashboard();
   const pathname = usePathname();
 
-  const familyId = pathname?.split("/")[2] ?? null;
-  const boardHref = familyId ? `/dashboard/${familyId}/board` : "/dashboard";
+  // Chỉ hiển nút Bảng tin khi đang ở trong /dashboard/[familyId]
+  const isDashboard = pathname?.startsWith("/dashboard/");
+  const familyId = isDashboard ? pathname?.split("/")[2] ?? null : null;
+  const boardHref = familyId ? `/dashboard/${familyId}/board` : null;
 
   const tabs = [
     { id: "list",    label: "Danh sách", icon: <List className="size-6 sm:size-4" /> },
@@ -25,13 +27,15 @@ export default function ViewToggle({ canEdit = false }: { canEdit?: boolean }) {
   return (
     <div className="flex flex-col items-center gap-2 mt-4 mb-2">
       <div className="flex items-center gap-3">
-        <Link
-          href={boardHref}
-          className="inline-flex items-center gap-2 px-4 py-1.5 sm:py-2.5 text-sm font-semibold rounded-full border border-stone-200/60 bg-white shadow-sm text-stone-500 hover:text-amber-700 hover:border-amber-300 hover:bg-amber-50 transition-all duration-200"
-        >
-          <LayoutDashboard className="size-6 sm:size-4 text-stone-400" />
-          <span className="hidden sm:block tracking-wide">Bảng tin</span>
-        </Link>
+        {boardHref && (
+          <Link
+            href={boardHref}
+            className="inline-flex items-center gap-2 px-4 py-1.5 sm:py-2.5 text-sm font-semibold rounded-full border border-stone-200/60 bg-white shadow-sm text-stone-500 hover:text-amber-700 hover:border-amber-300 hover:bg-amber-50 transition-all duration-200"
+          >
+            <LayoutDashboard className="size-6 sm:size-4 text-stone-400" />
+            <span className="hidden sm:block tracking-wide">Bảng tin</span>
+          </Link>
+        )}
 
         <div className="flex bg-stone-200/50 p-1.5 rounded-full shadow-inner w-fit relative border border-stone-200/60 backdrop-blur-sm z-10">
           {tabs.map((tab) => {
