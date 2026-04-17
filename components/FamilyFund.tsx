@@ -1,12 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+
+export interface FundPerson {
+  id: string;
+  full_name: string;
+  birth_year: number | null;
+  is_deceased: boolean;
+}
 
 export interface FundTransaction {
   id: string;
   type: "thu" | "chi" | "cung_tien";
   contributor_name: string;
+  person_id: string | null;
   amount: number;
   note: string | null;
   transaction_date: string;
@@ -17,13 +25,11 @@ interface Props {
   familyId: string;
   isOwner: boolean;
   initialTransactions: FundTransaction[];
+  persons: FundPerson[];
 }
 
 function formatVND(amount: number) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(amount);
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 }
 
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
@@ -32,26 +38,112 @@ const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> 
   cung_tien: { label: "Cúng tiến", color: "text-amber-700", bg: "bg-amber-100" },
 };
 
+// === Combobox tìm kiếm người ===
+function PersonCombobox({
+  persons,
+  value,
+  onChange,
+  placeholder,
+}: {
+  persons: FundPerson[];
+  value: string;
+  onChange: (name: string, personId: string | null) => void;
+  placeholder: string;
+}) {
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Sync nếu value bị reset từ ngoài
+  useEffect(() => { setQuery(value); }, [value]);
+
+  // Đóng khi click ra ngoài
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filtered = query.trim() === ""
+    ? persons
+    : persons.filter((p) =>
+        p.full_name.toLowerCase().includes(query.toLowerCase())
+      );
+
+  function select(p: FundPerson) {
+    setQuery(p.full_name);
+    setOpen(false);
+    onChange(p.full_name, p.id);
+  }
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    setQuery(e.target.value);
+    setOpen(true);
+    // Nếu xóa hết thì reset person_id
+    if (!e.target.value.trim()) onChange("", null);
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={query}
+        onChange={handleInput}
+        onFocus={() => setOpen(true)}
+        autoComplete="off"
+        className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+        required
+      />
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
+          {filtered.map((p) => (
+            <li
+              key={p.id}
+              onMouseDown={() => select(p)}
+              className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-amber-50 cursor-pointer border-b border-stone-50 last:border-b-0"
+            >
+              <span className="font-medium text-stone-800">{p.full_name}</span>
+              {p.birth_year && (
+                <span className="text-xs text-stone-400">
+                  ({p.is_deceased ? "mất" : "sinh"} {p.birth_year})
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && query.trim() !== "" && filtered.length === 0 && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-400 shadow-lg">
+          Không tìm thấy trong gia phả
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FamilyFund({
   familyId,
   isOwner,
   initialTransactions,
+  persons,
 }: Props) {
-  const [transactions, setTransactions] =
-    useState<FundTransaction[]>(initialTransactions);
-
-  // Tab: "fund" | "so_vang"
+  const [transactions, setTransactions] = useState<FundTransaction[]>(initialTransactions);
   const [activeTab, setActiveTab] = useState<"fund" | "so_vang">("fund");
 
   // Form thu/chi
   const [type, setType] = useState<"thu" | "chi">("thu");
   const [name, setName] = useState("");
+  const [personId, setPersonId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
 
   // Form sổ vàng
   const [svName, setSvName] = useState("");
+  const [svPersonId, setSvPersonId] = useState<string | null>(null);
   const [svAmount, setSvAmount] = useState("");
   const [svNote, setSvNote] = useState("");
   const [svDate, setSvDate] = useState(new Date().toISOString().split("T")[0]);
@@ -61,13 +153,11 @@ export default function FamilyFund({
 
   const supabase = createClient();
 
-  // Số dư = thu + cung_tien - chi
   const balance = transactions.reduce((acc, t) => {
     if (t.type === "chi") return acc - t.amount;
     return acc + t.amount;
   }, 0);
 
-  // Tổng cúng tiến
   const totalCungTien = transactions
     .filter((t) => t.type === "cung_tien")
     .reduce((acc, t) => acc + t.amount, 0);
@@ -81,7 +171,7 @@ export default function FamilyFund({
     setError("");
     const parsedAmount = parseAmountInput(amount);
     if (!name.trim() || parsedAmount <= 0) {
-      setError("Vui lòng nhập đầy đủ tên và số tiền hợp lệ.");
+      setError("Vui lòng chọn người và nhập số tiền hợp lệ.");
       return;
     }
     startTransition(async () => {
@@ -91,6 +181,7 @@ export default function FamilyFund({
           family_id: familyId,
           type,
           contributor_name: name.trim(),
+          person_id: personId,
           amount: parsedAmount,
           note: note.trim() || null,
           transaction_date: date,
@@ -99,7 +190,7 @@ export default function FamilyFund({
         .single();
       if (err || !data) { setError(err?.message ?? "Lỗi không xác định."); return; }
       setTransactions((prev) => [data as FundTransaction, ...prev]);
-      setName(""); setAmount(""); setNote("");
+      setName(""); setPersonId(null); setAmount(""); setNote("");
       setDate(new Date().toISOString().split("T")[0]);
     });
   }
@@ -109,7 +200,7 @@ export default function FamilyFund({
     setError("");
     const parsedAmount = parseAmountInput(svAmount);
     if (!svName.trim() || parsedAmount <= 0) {
-      setError("Vui lòng nhập đầy đủ tên và số tiền hợp lệ.");
+      setError("Vui lòng chọn người và nhập số tiền hợp lệ.");
       return;
     }
     startTransition(async () => {
@@ -119,6 +210,7 @@ export default function FamilyFund({
           family_id: familyId,
           type: "cung_tien",
           contributor_name: svName.trim(),
+          person_id: svPersonId,
           amount: parsedAmount,
           note: svNote.trim() || null,
           transaction_date: svDate,
@@ -127,7 +219,7 @@ export default function FamilyFund({
         .single();
       if (err || !data) { setError(err?.message ?? "Lỗi không xác định."); return; }
       setTransactions((prev) => [data as FundTransaction, ...prev]);
-      setSvName(""); setSvAmount(""); setSvNote("");
+      setSvName(""); setSvPersonId(null); setSvAmount(""); setSvNote("");
       setSvDate(new Date().toISOString().split("T")[0]);
     });
   }
@@ -163,57 +255,32 @@ export default function FamilyFund({
     URL.revokeObjectURL(url);
   }
 
-  // Lọc giao dịch theo tab
   const fundTxs = transactions.filter((t) => t.type !== "cung_tien");
   const soVangTxs = transactions.filter((t) => t.type === "cung_tien");
-  const auditTxs = activeTab === "fund" ? fundTxs : soVangTxs;
 
   return (
     <div className="mb-8 space-y-6">
 
       {/* === CARD THÔNG TIN QUỸ === */}
       <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-        <h2 className="text-base font-serif font-bold text-stone-800 mb-4">
-          Thông tin Quỹ gia phả
-        </h2>
-
+        <h2 className="text-base font-serif font-bold text-stone-800 mb-4">Thông tin Quỹ gia phả</h2>
         <div className="space-y-4 text-sm text-stone-600 leading-relaxed">
           <div>
             <p className="font-semibold text-stone-800 mb-1">1. Nguồn thu quỹ họ</p>
             <ul className="space-y-1 pl-4 list-disc">
-              <li>
-                <span className="font-medium text-stone-700">Đóng góp theo định suất:</span>{" "}
-                Mức đóng góp do toàn họ quyết định, thường thu theo chi, nhánh hoặc từng gia đình.
-              </li>
-              <li>
-                <span className="font-medium text-stone-700">Sự hảo tâm (Cung tiến):</span>{" "}
-                Con cháu nội ngoại công đức, ủng hộ thêm để xây dựng, tôn tạo nhà thờ hoặc sửa chữa gia phả.
-              </li>
+              <li><span className="font-medium text-stone-700">Đóng góp theo định suất:</span> Mức đóng góp do toàn họ quyết định, thường thu theo chi, nhánh hoặc từng gia đình.</li>
+              <li><span className="font-medium text-stone-700">Sự hảo tâm (Cung tiến):</span> Con cháu nội ngoại công đức, ủng hộ thêm để xây dựng, tôn tạo nhà thờ hoặc sửa chữa gia phả.</li>
             </ul>
           </div>
-
           <div>
             <p className="font-semibold text-stone-800 mb-1">2. Mục đích sử dụng quỹ</p>
             <ul className="space-y-1 pl-4 list-disc">
-              <li>
-                <span className="font-medium text-stone-700">Xây dựng và duy trì gia phả:</span>{" "}
-                Chi phí cho việc tìm kiếm gốc tích, ghi chép, in ấn gia phả mới, bảo quản gia phả cũ.
-              </li>
-              <li>
-                <span className="font-medium text-stone-700">Tổ chức giỗ Tổ, lễ Tết:</span>{" "}
-                Chi phí mua sắm lễ vật, tổ chức ăn uống, gặp mặt con cháu vào ngày giỗ Tổ hoặc mùng 1 Tết tại nhà thờ họ.
-              </li>
-              <li>
-                <span className="font-medium text-stone-700">Tương trợ, hiếu hỉ:</span>{" "}
-                Thăm hỏi, phúng viếng khi thành viên trong họ ốm đau, qua đời.
-              </li>
-              <li>
-                <span className="font-medium text-stone-700">Khuyến học:</span>{" "}
-                Khen thưởng con cháu có thành tích học tập tốt, hỗ trợ con cháu nghèo hiếu học.
-              </li>
+              <li><span className="font-medium text-stone-700">Xây dựng và duy trì gia phả:</span> Chi phí cho việc tìm kiếm gốc tích, ghi chép, in ấn gia phả mới, bảo quản gia phả cũ.</li>
+              <li><span className="font-medium text-stone-700">Tổ chức giỗ Tổ, lễ Tết:</span> Chi phí mua sắm lễ vật, tổ chức ăn uống, gặp mặt con cháu vào ngày giỗ Tổ hoặc mùng 1 Tết tại nhà thờ họ.</li>
+              <li><span className="font-medium text-stone-700">Tương trợ, hiếu hỉ:</span> Thăm hỏi, phúng viếng khi thành viên trong họ ốm đau, qua đời.</li>
+              <li><span className="font-medium text-stone-700">Khuyến học:</span> Khen thưởng con cháu có thành tích học tập tốt, hỗ trợ con cháu nghèo hiếu học.</li>
             </ul>
           </div>
-
           <div>
             <p className="font-semibold text-stone-800 mb-1">3. Quy định đóng góp</p>
             <ul className="space-y-1 pl-4 list-disc">
@@ -225,7 +292,7 @@ export default function FamilyFund({
         </div>
       </div>
 
-      {/* === CARD SỐ DƯ + TABS === */}
+      {/* === CARD QUỸ + TABS === */}
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
 
         {/* Header số dư */}
@@ -249,36 +316,24 @@ export default function FamilyFund({
 
         {/* Tabs */}
         <div className="flex gap-1 mb-5 border-b border-amber-200">
-          <button
-            onClick={() => setActiveTab("fund")}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition ${
-              activeTab === "fund"
-                ? "bg-white border border-b-white border-amber-200 text-amber-900 -mb-px"
-                : "text-amber-700 hover:text-amber-900"
-            }`}
-          >
-            Thu Chi Quỹ
-          </button>
-          <button
-            onClick={() => setActiveTab("so_vang")}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition ${
-              activeTab === "so_vang"
-                ? "bg-white border border-b-white border-amber-200 text-amber-900 -mb-px"
-                : "text-amber-700 hover:text-amber-900"
-            }`}
-          >
-            Sổ Vàng Cúng Tiến
-          </button>
+          {(["fund", "so_vang"] as const).map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition ${
+                activeTab === tab
+                  ? "bg-white border border-b-white border-amber-200 text-amber-900 -mb-px"
+                  : "text-amber-700 hover:text-amber-900"
+              }`}>
+              {tab === "fund" ? "Thu Chi Quỹ" : "Sổ Vàng Cúng Tiến"}
+            </button>
+          ))}
         </div>
 
-        {/* === TAB: THU CHI QUỸ === */}
+        {/* === TAB: THU CHI === */}
         {activeTab === "fund" && (
           <>
             {isOwner && (
-              <form
-                onSubmit={handleSubmitFund}
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 pb-6 border-b border-amber-200"
-              >
+              <form onSubmit={handleSubmitFund}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 pb-6 border-b border-amber-200">
                 <div className="sm:col-span-2 flex gap-6">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="radio" name="fund-type" value="thu" checked={type === "thu"}
@@ -294,13 +349,15 @@ export default function FamilyFund({
 
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-amber-800">
-                    {type === "thu" ? "Tên người đóng góp" : "Tên người/mục chi"}
+                    {type === "thu" ? "Người đóng góp" : "Người / mục chi"}
                     <span className="text-red-500 ml-0.5">*</span>
                   </label>
-                  <input type="text"
-                    placeholder={type === "thu" ? "VD: Nguyễn Văn A" : "VD: Chi tổ chức giỗ"}
-                    value={name} onChange={(e) => setName(e.target.value)}
-                    className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" required />
+                  <PersonCombobox
+                    persons={persons}
+                    value={name}
+                    placeholder={type === "thu" ? "Tìm tên trong gia phả..." : "Tìm tên người chi..."}
+                    onChange={(n, pid) => { setName(n); setPersonId(pid); }}
+                  />
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -332,11 +389,8 @@ export default function FamilyFund({
                 </div>
 
                 {error && (
-                  <p className="sm:col-span-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
-                    {error}
-                  </p>
+                  <p className="sm:col-span-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
                 )}
-
                 <div className="sm:col-span-2">
                   <button type="submit" disabled={isPending}
                     className="rounded-lg bg-amber-700 hover:bg-amber-800 text-white text-sm font-semibold px-6 py-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -349,25 +403,25 @@ export default function FamilyFund({
           </>
         )}
 
-        {/* === TAB: SỔ VÀNG CÚNG TIẼN === */}
+        {/* === TAB: SỔ VÀNG === */}
         {activeTab === "so_vang" && (
           <>
             <div className="mb-4 rounded-xl bg-amber-100 border border-amber-200 px-4 py-3 text-sm text-amber-800">
               Sổ vàng cúng tiến ghi nhận tấm lòng hảo tâm của con cháu nội ngoại đóng góp tự nguyện vượt ngoài định suất, được trân trọng ghi vào sổ riêng để lưu truyền cho đời sau.
             </div>
-
             {isOwner && (
-              <form
-                onSubmit={handleSubmitSoVang}
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 pb-6 border-b border-amber-200"
-              >
+              <form onSubmit={handleSubmitSoVang}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 pb-6 border-b border-amber-200">
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-amber-800">
-                    Tên người cúng tiến<span className="text-red-500 ml-0.5">*</span>
+                    Người cúng tiến<span className="text-red-500 ml-0.5">*</span>
                   </label>
-                  <input type="text" placeholder="VD: Nguyễn Thị B"
-                    value={svName} onChange={(e) => setSvName(e.target.value)}
-                    className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" required />
+                  <PersonCombobox
+                    persons={persons}
+                    value={svName}
+                    placeholder="Tìm tên trong gia phả..."
+                    onChange={(n, pid) => { setSvName(n); setSvPersonId(pid); }}
+                  />
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -399,11 +453,8 @@ export default function FamilyFund({
                 </div>
 
                 {error && (
-                  <p className="sm:col-span-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
-                    {error}
-                  </p>
+                  <p className="sm:col-span-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
                 )}
-
                 <div className="sm:col-span-2">
                   <button type="submit" disabled={isPending}
                     className="rounded-lg bg-amber-700 hover:bg-amber-800 text-white text-sm font-semibold px-6 py-2.5 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -420,13 +471,8 @@ export default function FamilyFund({
   );
 }
 
-// === Sub-component bảng audit log ===
 function AuditTable({
-  txs,
-  isOwner,
-  onDelete,
-  onDownload,
-  isSoVang = false,
+  txs, isOwner, onDelete, onDownload, isSoVang = false,
 }: {
   txs: FundTransaction[];
   isOwner: boolean;
@@ -447,7 +493,6 @@ function AuditTable({
           </button>
         )}
       </div>
-
       {txs.length === 0 ? (
         <p className="text-sm text-amber-600 italic py-4 text-center">
           {isSoVang ? "Chưa có ghi chép cúng tiến nào." : "Chưa có giao dịch nào."}

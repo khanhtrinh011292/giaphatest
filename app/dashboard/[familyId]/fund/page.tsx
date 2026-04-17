@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import BackToBoardButton from "@/components/BackToBoardButton";
 import FamilyFund from "@/components/FamilyFund";
-import type { FundTransaction } from "@/components/FamilyFund";
+import type { FundTransaction, FundPerson } from "@/components/FamilyFund";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -28,18 +28,25 @@ export default async function FundPage({ params }: PageProps) {
     .single();
   if (!family) redirect("/dashboard");
 
-  // Chỉ owner mới được truy cập
   const isOwner = family.owner_id === user.id;
   if (!isOwner) redirect(`/dashboard/${familyId}/board`);
 
-  const { data } = await supabase
-    .from("family_fund_transactions")
-    .select("id, type, contributor_name, amount, note, transaction_date, created_at")
-    .eq("family_id", familyId)
-    .order("transaction_date", { ascending: false })
-    .order("created_at", { ascending: false });
+  const [{ data: txData }, { data: personsData }] = await Promise.all([
+    supabase
+      .from("family_fund_transactions")
+      .select("id, type, contributor_name, person_id, amount, note, transaction_date, created_at")
+      .eq("family_id", familyId)
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("persons")
+      .select("id, full_name, birth_year, is_deceased")
+      .eq("family_id", familyId)
+      .order("full_name", { ascending: true }),
+  ]);
 
-  const fundTransactions = (data ?? []) as FundTransaction[];
+  const fundTransactions = (txData ?? []) as FundTransaction[];
+  const persons = (personsData ?? []) as FundPerson[];
 
   return (
     <div className="flex-1 w-full flex flex-col pb-12">
@@ -55,6 +62,7 @@ export default async function FundPage({ params }: PageProps) {
           familyId={familyId}
           isOwner={isOwner}
           initialTransactions={fundTransactions}
+          persons={persons}
         />
       </main>
     </div>
