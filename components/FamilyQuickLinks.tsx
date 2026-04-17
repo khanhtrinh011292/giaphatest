@@ -14,6 +14,7 @@ interface QuickLink {
   color: string;
   bg: string;
   border: string;
+  ownerOnly?: boolean;
 }
 
 function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
@@ -102,6 +103,16 @@ function buildLinks(familyId: string, isOwner: boolean): QuickLink[] {
     ...(isOwner
       ? [
           {
+            href: `/dashboard/${familyId}/fund`,
+            label: "Quỹ gia phả",
+            sub: "Quản lý thu chi, đóng góp quỹ",
+            icon: <Coins className="w-5 h-5" />,
+            color: "text-amber-600",
+            bg: "hover:bg-amber-50",
+            border: "border-amber-100",
+            ownerOnly: true,
+          },
+          {
             href: `/dashboard/${familyId}/data`,
             label: "Sao lưu & Phục hồi",
             sub: "Xuất, nhập dữ liệu gia phả",
@@ -133,12 +144,20 @@ export default function FamilyQuickLinks({
     <section className="space-y-3 pb-8">
       {/* Ô số dư quỹ gia phả — hiển thị nếu có quyền xem */}
       {fundBalance !== null && fundBalance !== undefined && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+        <Link
+          href={isOwner ? `/dashboard/${familyId}/fund` : "#"}
+          className={`block rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm transition ${
+            isOwner ? "hover:bg-amber-100 cursor-pointer" : "cursor-default"
+          }`}
+        >
           <div className="flex items-center gap-2 mb-0.5">
             <Coins className="w-4 h-4 text-amber-600" />
             <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">
               Quỹ gia phả
             </p>
+            {isOwner && (
+              <span className="ml-auto text-amber-400 text-sm">›</span>
+            )}
           </div>
           <p
             className={`text-xl font-bold ${
@@ -151,9 +170,13 @@ export default function FamilyQuickLinks({
             }).format(fundBalance)}
           </p>
           <p className="text-xs text-amber-600 mt-0.5">
-            {fundBalance >= 0 ? "Số dư hiện tại" : "Tạm thâm hụt"}
+            {isOwner
+              ? "Nhấn để quản lý thu chi"
+              : fundBalance >= 0
+              ? "Số dư hiện tại"
+              : "Tạm thâm hụt"}
           </p>
-        </div>
+        </Link>
       )}
 
       <div className="flex items-center gap-2">
