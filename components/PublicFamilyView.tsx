@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, TreePine, Users } from "lucide-react";
+import { TreePine, Users } from "lucide-react";
 import { Suspense } from "react";
 import { DashboardProvider } from "@/components/DashboardContext";
 import DashboardViews from "@/components/DashboardViews";
@@ -65,22 +65,10 @@ export default function PublicFamilyView({ family, persons, relationships }: Pro
         </div>
       </header>
 
-      {/* Family description */}
-      {family.description && (
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 w-full">
-          <div className="bg-white/80 rounded-2xl border border-stone-200/60 p-5 flex gap-3">
-            <BookOpen className="size-5 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-stone-600 text-sm leading-relaxed">{family.description}</p>
-          </div>
-        </div>
-      )}
-
       {/* ViewToggle + DashboardViews bọn trong Provider */}
       <Suspense>
         <DashboardProvider initialView="list">
-          {/* canEdit=false → ViewToggle tự ẩn nút Gợi ý quan hệ */}
           <ViewToggle canEdit={false} />
-
           <div className="flex-1 flex flex-col">
             <DashboardViews
               persons={persons as any}
