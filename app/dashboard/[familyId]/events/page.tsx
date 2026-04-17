@@ -1,6 +1,7 @@
 import BackToBoardButton from "@/components/BackToBoardButton";
 import { DashboardProvider } from "@/components/DashboardContext";
 import EventsList from "@/components/EventsList";
+import MemberDetailModal from "@/components/MemberDetailModal";
 import { getEvents, getPersons, getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
 
