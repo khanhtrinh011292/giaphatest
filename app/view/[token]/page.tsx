@@ -1,14 +1,20 @@
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { notFound } from "next/navigation";
 import PublicFamilyView from "@/components/PublicFamilyView";
 
 export const metadata = { title: "Xem gia phả" };
 
-// Anon client — không dùng session, để RLS anon hoạt động đúng
+// Tạo Supabase client không có cookie → chạy với role anon
 function getAnonClient() {
-  return createClient(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
+    {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
+      },
+    },
   );
 }
 
