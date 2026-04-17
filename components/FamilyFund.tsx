@@ -224,13 +224,44 @@ export default function FamilyFund({
     });
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Xoá giao dịch này?")) return;
-    const { error: err } = await supabase
-      .from("family_fund_transactions")
-      .delete()
-      .eq("id", id);
-    if (!err) setTransactions((prev) => prev.filter((t) => t.id !== id));
+  async function handleResetAll() {
+    if (!confirm("Bạn có chắc chắn muốn xóa TOÀN BỘ dữ liệu (Quỹ & Sổ Vàng) không? Hành động này không thể hoàn tác.")) return;
+    
+    const pwd = prompt("Vui lòng nhập mật khẩu tài khoản của bạn để xác nhận xóa toàn bộ:");
+    if (!pwd) return;
+
+    setError("");
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.email) {
+      setError("Không tìm thấy thông tin phiên đăng nhập.");
+      return;
+    }
+
+    startTransition(async () => {
+      // Xác thực lại bằng mật khẩu
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: pwd,
+      });
+
+      if (authError) {
+        setError("Mật khẩu không chính xác hoặc xác thực thất bại.");
+        return;
+      }
+
+      // Mật khẩu đúng, tiến hành xóa
+      const { error: err } = await supabase
+        .from("family_fund_transactions")
+        .delete()
+        .eq("family_id", familyId);
+
+      if (!err) {
+        setTransactions([]);
+        alert("Đã đặt lại toàn bộ dữ liệu thành công.");
+      } else {
+        setError("Không thể xóa: " + err.message);
+      }
+    });
   }
 
   function handleDownload() {
@@ -293,7 +324,7 @@ export default function FamilyFund({
       </div>
 
       {/* === CARD QUỸ + TABS === */}
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+      <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
 
         {/* Header số dư */}
         <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
@@ -399,7 +430,7 @@ export default function FamilyFund({
                 </div>
               </form>
             )}
-            <AuditTable txs={fundTxs} isOwner={isOwner} onDelete={handleDelete} onDownload={handleDownload} />
+            <AuditTable txs={fundTxs} isOwner={isOwner} onResetAll={handleResetAll} onDownload={handleDownload} />
           </>
         )}
 
@@ -463,7 +494,7 @@ export default function FamilyFund({
                 </div>
               </form>
             )}
-            <AuditTable txs={soVangTxs} isOwner={isOwner} onDelete={handleDelete} onDownload={handleDownload} isSoVang />
+            <AuditTable txs={soVangTxs} isOwner={isOwner} onResetAll={handleResetAll} onDownload={handleDownload} isSoVang />
           </>
         )}
       </div>
@@ -472,11 +503,11 @@ export default function FamilyFund({
 }
 
 function AuditTable({
-  txs, isOwner, onDelete, onDownload, isSoVang = false,
+  txs, isOwner, onResetAll, onDownload, isSoVang = false,
 }: {
   txs: FundTransaction[];
   isOwner: boolean;
-  onDelete: (id: string) => void;
+  onResetAll: () => void;
   onDownload: () => void;
   isSoVang?: boolean;
 }) {
@@ -486,11 +517,21 @@ function AuditTable({
         <h3 className="text-xs font-bold text-amber-800 uppercase tracking-widest">
           {isSoVang ? "Danh sách cúng tiến" : "Nhật ký thu chi"}
         </h3>
-        {txs.length > 0 && (
-          <button onClick={onDownload}
-            className="text-xs text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2 transition">
-            Tải về CSV
-          </button>
+        {(txs.length > 0 || isOwner) && (
+          <div className="flex items-center gap-4">
+            {txs.length > 0 && (
+              <button onClick={onDownload}
+                className="text-xs text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2 transition">
+                Tải về CSV
+              </button>
+            )}
+            {isOwner && (
+              <button onClick={onResetAll}
+                className="text-xs text-red-600 hover:text-red-700 font-medium underline underline-offset-2 transition">
+                Xóa tất cả (Đặt lại)
+              </button>
+            )}
+          </div>
         )}
       </div>
       {txs.length === 0 ? (
@@ -507,7 +548,6 @@ function AuditTable({
                 <th className="px-3 py-2 font-semibold">{isSoVang ? "Người cúng tiến" : "Tên"}</th>
                 <th className="px-3 py-2 font-semibold text-right">Số tiền</th>
                 <th className="px-3 py-2 font-semibold">{isSoVang ? "Mục đích" : "Ghi chú"}</th>
-                {isOwner && <th className="px-3 py-2"></th>}
               </tr>
             </thead>
             <tbody>
@@ -533,14 +573,6 @@ function AuditTable({
                       {t.type === "chi" ? "−" : "+"}{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(t.amount)}
                     </td>
                     <td className="px-3 py-2.5 text-stone-400 text-xs">{t.note ?? "—"}</td>
-                    {isOwner && (
-                      <td className="px-3 py-2.5">
-                        <button onClick={() => onDelete(t.id)}
-                          className="text-red-300 hover:text-red-500 transition text-xs font-bold" title="Xoá">
-                          ✕
-                        </button>
-                      </td>
-                    )}
                   </tr>
                 );
               })}
