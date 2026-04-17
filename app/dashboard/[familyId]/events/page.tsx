@@ -30,23 +30,22 @@ export default async function EventsPage({ params }: PageProps) {
 
   const isOwner = family.owner_id === user.id;
 
-  // Xác định role của user trong gia phả
-  let userRole: "owner" | "editor" | "admin" | "member" | "viewer" | null = null;
-  if (isOwner) {
-    userRole = "owner";
-  } else {
+  // Xác định role từ family_shares nếu không phải owner
+  let shareRole: string | null = null;
+  if (!isOwner) {
     const { data: share } = await supabase
       .from("family_shares")
       .select("role")
       .eq("family_id", familyId)
       .eq("shared_with", user.id)
       .single();
-    if (share) userRole = share.role as typeof userRole;
+    shareRole = share?.role ?? null;
+    // Không phải owner và không có share → redirect
+    if (!shareRole) redirect("/dashboard");
   }
-  if (!userRole) redirect(`/dashboard`);
 
-  const canAdd = userRole === "owner" || userRole === "editor" || userRole === "admin";
-  const canViewFund = isOwner || userRole === "editor" || userRole === "admin" || userRole === "member";
+  const canAdd = isOwner || shareRole === "editor" || shareRole === "admin";
+  const canViewFund = isOwner || shareRole === "editor" || shareRole === "admin" || shareRole === "member";
 
   // Chỉ load giao dịch quỹ nếu có quyền
   let fundTransactions: FundTransaction[] = [];
@@ -99,7 +98,6 @@ export default async function EventsPage({ params }: PageProps) {
           </p>
         </div>
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
-          {/* Quỹ gia phả — chỉ hiển thị với owner/member/editor */}
           {canViewFund && (
             <FamilyFund
               familyId={familyId}
@@ -108,7 +106,6 @@ export default async function EventsPage({ params }: PageProps) {
               persons={fundPersons}
             />
           )}
-
           <EventsList
             persons={persons}
             customEvents={customEvents}
