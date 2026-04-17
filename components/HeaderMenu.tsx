@@ -44,7 +44,6 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-stone-200/60 py-2 z-50 overflow-hidden"
           >
-            {/* Thông tin tài khoản */}
             <div className="px-4 py-3 border-b border-stone-100 bg-stone-50/50">
               <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-0.5">Tài khoản</p>
               <p className="text-sm font-medium text-stone-900 truncate">{userEmail}</p>
@@ -54,18 +53,6 @@ export default function HeaderMenu({ familyId }: { familyId?: string }) {
             </div>
 
             <div className="py-1">
-              {/* Về trang chủ gia phả hiện tại (nếu đang trong 1 gia phả) */}
-              {familyId && (
-                <Link
-                  href={`/dashboard/${familyId}/board`}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-stone-700 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-                >
-                  <Home className="size-4" />
-                  Bảng tin gia phả
-                </Link>
-              )}
-
               <Link
                 href="/dashboard"
                 onClick={() => setIsOpen(false)}
