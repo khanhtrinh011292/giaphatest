@@ -75,14 +75,12 @@ export default function PublicFamilyView({ family, persons, relationships }: Pro
         </div>
       )}
 
-      {/* ViewToggle toolbar — không có nút Gợi ý */}
+      {/* ViewToggle + DashboardViews bọn trong Provider */}
       <Suspense>
         <DashboardProvider initialView="list">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 pb-2 w-full flex items-center justify-between gap-4">
-            <ViewToggle hideSuggestions />
-          </div>
+          {/* canEdit=false → ViewToggle tự ẩn nút Gợi ý quan hệ */}
+          <ViewToggle canEdit={false} />
 
-          {/* Main content */}
           <div className="flex-1 flex flex-col">
             <DashboardViews
               persons={persons as any}
