@@ -30,13 +30,11 @@ export function getCanChiNgay(dd: number, mm: number, yy: number): { canIdx: num
   const a = Math.floor((14 - mm) / 12);
   const y = yy + 4800 - a;
   const m = mm + 12 * a - 3;
-  let jdn = dd + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+  const jdn = dd + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
   // offset: JDN 2299161 (15/10/1582) đổi lịch Gregory
   // Giáp Tý = JDN 0 mod 60 = 0, nhưng offset thực tế: ngày 01/01/1900 là Giáp Tý
   // JDN của 31/01/1900 = 2415079, can chi = Giáp Tý (0,0)
   // Kiểm tra: (2415079 - offset) mod 60 = 0 ⇒ offset = 2415079 mod 60 = 19
-  const OFFSET_CAN = (2415079) % 10; // = 9... Nhâm
-  const OFFSET_CHI = (2415079) % 12; // = 7... Mùi
   // Ngày 31/01/1900 = Nhâm Dậu? Không đúng — cần calibrate chính xác
   // Calibration: ngày 01/01/2000 = Giáp Tý theo nhiều nguồn? Không.
   // Calibration chính xác: 01/01/2000 dương = ngày Nhâm Tý (can=8, chi=0)

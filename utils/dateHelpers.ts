@@ -230,15 +230,15 @@ export function getCanChi(
     try {
       const solar = Solar.fromYmd(year, parseInt(month.toString()), parseInt(day.toString()));
       targetYear = solar.getLunar().getYear();
-    } catch (_) {
-      // fallback to solar year
+    } catch {
+      // ignore
     }
   }
   try {
     const lunar = Lunar.fromYmd(targetYear, 1, 1);
     const ganZhi = lunar.getYearInGanZhi();
     return ganZhiToVietnamese(ganZhi);
-  } catch (_) {
+  } catch {
     return null;
   }
 }
@@ -382,7 +382,7 @@ export function getMenhNguHanh(
     try {
       const solar = Solar.fromYmd(year, parseInt(month.toString()), parseInt(day.toString()));
       targetYear = solar.getLunar().getYear();
-    } catch (_) {
+    } catch {
       // fallback
     }
   }
@@ -404,7 +404,7 @@ export function getMenhDetail(
     try {
       const solar = Solar.fromYmd(year, parseInt(month.toString()), parseInt(day.toString()));
       targetYear = solar.getLunar().getYear();
-    } catch (_) {
+    } catch {
       // fallback
     }
   }

@@ -31,7 +31,7 @@ function jdFromDate(dd: number, mm: number, yy: number): number {
   return jdn;
 }
 
-function jdToDate(jd: number): { dd: number; mm: number; yy: number } {
+export function jdToDate(jd: number): { dd: number; mm: number; yy: number } {
   let a: number, b: number, c: number;
   if (jd > 2299160) {
     a = jd + 32044;
