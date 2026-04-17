@@ -1,11 +1,8 @@
 import BackToBoardButton from "@/components/BackToBoardButton";
 import { DashboardProvider } from "@/components/DashboardContext";
 import EventsList from "@/components/EventsList";
-import FamilyFund from "@/components/FamilyFund";
-import MemberDetailModal from "@/components/MemberDetailModal";
 import { getEvents, getPersons, getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
-import type { FundTransaction, FundPerson } from "@/components/FamilyFund";
 
 export const metadata = { title: "Sự kiện gia phả" };
 
@@ -45,19 +42,6 @@ export default async function EventsPage({ params }: PageProps) {
   }
 
   const canAdd = isOwner || shareRole === "editor" || shareRole === "admin";
-  const canViewFund = isOwner || shareRole === "editor" || shareRole === "admin" || shareRole === "member";
-
-  // Chỉ load giao dịch quỹ nếu có quyền
-  let fundTransactions: FundTransaction[] = [];
-  if (canViewFund) {
-    const { data } = await supabase
-      .from("family_fund_transactions")
-      .select("id, type, contributor_name, person_id, amount, note, transaction_date, created_at")
-      .eq("family_id", familyId)
-      .order("transaction_date", { ascending: false })
-      .order("created_at", { ascending: false });
-    fundTransactions = (data ?? []) as FundTransaction[];
-  }
 
   const [personsAll, customEvents] = await Promise.all([
     getPersons(familyId),
@@ -80,12 +64,7 @@ export default async function EventsPage({ params }: PageProps) {
     avatar_url: p.avatar_url,
   }));
 
-  const fundPersons: FundPerson[] = personsAll.map((p) => ({
-    id: p.id,
-    full_name: p.full_name,
-    birth_year: p.birth_year ?? null,
-    is_deceased: p.is_deceased,
-  }));
+
 
   return (
     <DashboardProvider>
@@ -98,14 +77,7 @@ export default async function EventsPage({ params }: PageProps) {
           </p>
         </div>
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
-          {canViewFund && (
-            <FamilyFund
-              familyId={familyId}
-              isOwner={isOwner}
-              initialTransactions={fundTransactions}
-              persons={fundPersons}
-            />
-          )}
+
           <EventsList
             persons={persons}
             customEvents={customEvents}
