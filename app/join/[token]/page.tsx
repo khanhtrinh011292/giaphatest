@@ -7,16 +7,18 @@ import { redirect } from "next/navigation";
 export default async function JoinPage({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
+  const { token } = await params;
+
   const user = await getUser();
 
   // Chưa đăng nhập → redirect đến login kèm returnUrl
   if (!user) {
-    redirect(`/login?returnUrl=/join/${params.token}`);
+    redirect(`/login?returnUrl=/join/${token}`);
   }
 
-  const result = await joinByShareLink(params.token);
+  const result = await joinByShareLink(token);
 
   if (result.error) {
     return (
