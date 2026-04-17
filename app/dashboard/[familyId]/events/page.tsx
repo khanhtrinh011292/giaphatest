@@ -5,7 +5,7 @@ import FamilyFund from "@/components/FamilyFund";
 import MemberDetailModal from "@/components/MemberDetailModal";
 import { getEvents, getPersons, getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
-import type { FundTransaction } from "@/components/FamilyFund";
+import type { FundTransaction, FundPerson } from "@/components/FamilyFund";
 
 export const metadata = { title: "Sự kiện gia phả" };
 
@@ -35,9 +35,7 @@ export default async function EventsPage({ params }: PageProps) {
   if (isOwner) {
     const { data } = await supabase
       .from("family_fund_transactions")
-      .select(
-        "id, type, contributor_name, amount, note, transaction_date, created_at"
-      )
+      .select("id, type, contributor_name, person_id, amount, note, transaction_date, created_at")
       .eq("family_id", familyId)
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false });
@@ -65,6 +63,14 @@ export default async function EventsPage({ params }: PageProps) {
     avatar_url: p.avatar_url,
   }));
 
+  // FundPerson: chỉ lấy các field cần thiết cho combobox
+  const fundPersons: FundPerson[] = personsAll.map((p) => ({
+    id: p.id,
+    full_name: p.full_name,
+    birth_year: p.birth_year ?? null,
+    is_deceased: p.is_deceased,
+  }));
+
   return (
     <DashboardProvider>
       <div className="flex-1 w-full flex flex-col pb-12">
@@ -82,6 +88,7 @@ export default async function EventsPage({ params }: PageProps) {
               familyId={familyId}
               isOwner={isOwner}
               initialTransactions={fundTransactions}
+              persons={fundPersons}
             />
           )}
 
