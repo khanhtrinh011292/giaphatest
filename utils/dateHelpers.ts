@@ -243,68 +243,68 @@ export function getCanChi(
   }
 }
 
-// Ngũ hành mệnh theo Can Chi (60-year cycle)
+// Ngũ hành mệnh theo Nạp Âm (60-year cycle) — đồng bộ với MENH_DETAIL
 const MENH_NGU_HANH: string[] = [
-  "Kim",  // 0: Giáp Tý
-  "Kim",  // 1: Ất Sửu
-  "Hỏa",  // 2: Bính Dần
-  "Hỏa",  // 3: Đinh Mão
-  "Mộc",  // 4: Mậu Thìn
-  "Mộc",  // 5: Kỷ Tỵ
-  "Thổ",  // 6: Canh Ngọ
-  "Thổ",  // 7: Tân Mùi
-  "Kim",  // 8: Nhâm Thân
-  "Kim",  // 9: Quý Dậu
-  "Hỏa",  // 10: Giáp Tuất
-  "Hỏa",  // 11: Ất Hợi
-  "Mộc",  // 12: Bính Tý
-  "Mộc",  // 13: Đinh Sửu
-  "Hỏa",  // 14: Mậu Dần
-  "Hỏa",  // 15: Kỷ Mão
-  "Thổ",  // 16: Canh Thìn
-  "Thổ",  // 17: Tân Tỵ
-  "Mộc",  // 18: Nhâm Ngọ
-  "Mộc",  // 19: Quý Mùi
-  "Thủy", // 20: Giáp Thân
-  "Thủy", // 21: Ất Dậu
-  "Thổ",  // 22: Bính Tuất
-  "Thổ",  // 23: Đinh Hợi
-  "Thủy", // 24: Mậu Tý
-  "Thủy", // 25: Kỷ Sửu
-  "Thổ",  // 26: Canh Dần
-  "Thổ",  // 27: Tân Mão
-  "Kim",  // 28: Nhâm Thìn
-  "Kim",  // 29: Quý Tỵ
-  "Kim",  // 30: Giáp Ngọ
-  "Kim",  // 31: Ất Mùi
-  "Hỏa",  // 32: Bính Thân
-  "Hỏa",  // 33: Đinh Dậu
-  "Mộc",  // 34: Mậu Tuất
-  "Mộc",  // 35: Kỷ Hợi
-  "Thổ",  // 36: Canh Tý
-  "Thổ",  // 37: Tân Sửu
-  "Kim",  // 38: Nhâm Dần
-  "Kim",  // 39: Quý Mão
-  "Hỏa",  // 40: Giáp Thìn
-  "Hỏa",  // 41: Ất Tỵ
-  "Thủy", // 42: Bính Ngọ
-  "Thủy", // 43: Đinh Mùi
-  "Mộc",  // 44: Mậu Thân
-  "Mộc",  // 45: Kỷ Dậu
-  "Thổ",  // 46: Canh Tuất
-  "Thổ",  // 47: Tân Hợi
-  "Thủy", // 48: Nhâm Tý
-  "Thủy", // 49: Quý Sửu
-  "Kim",  // 50: Giáp Dần
-  "Kim",  // 51: Ất Mão
-  "Thủy", // 52: Bính Thìn
-  "Thủy", // 53: Đinh Tỵ
-  "Mộc",  // 54: Mậu Ngọ
-  "Mộc",  // 55: Kỷ Mùi
-  "Thổ",  // 56: Canh Thân
-  "Thổ",  // 57: Tân Dậu
-  "Mộc",  // 58: Nhâm Tuất
-  "Mộc",  // 59: Quý Hợi
+  "Kim",   // 0: Giáp Tý — Hải Trung Kim
+  "Kim",   // 1: Ất Sửu — Hải Trung Kim
+  "Hỏa",  // 2: Bính Dần — Lư Trung Hỏa
+  "Hỏa",  // 3: Đinh Mão — Lư Trung Hỏa
+  "Mộc",  // 4: Mậu Thìn — Đại Lâm Mộc
+  "Mộc",  // 5: Kỷ Tỵ — Đại Lâm Mộc
+  "Thổ",  // 6: Canh Ngọ — Lộ Bàng Thổ
+  "Thổ",  // 7: Tân Mùi — Lộ Bàng Thổ
+  "Kim",  // 8: Nhâm Thân — Kiếm Phong Kim
+  "Kim",  // 9: Quý Dậu — Kiếm Phong Kim
+  "Hỏa",  // 10: Giáp Tuất — Sơn Đầu Hỏa
+  "Hỏa",  // 11: Ất Hợi — Sơn Đầu Hỏa
+  "Thủy", // 12: Bính Tý — Giản Hạ Thủy
+  "Thủy", // 13: Đinh Sửu — Giản Hạ Thủy
+  "Thổ",  // 14: Mậu Dần — Thành Đầu Thổ
+  "Thổ",  // 15: Kỷ Mão — Thành Đầu Thổ
+  "Kim",  // 16: Canh Thìn — Bạch Lạp Kim
+  "Kim",  // 17: Tân Tỵ — Bạch Lạp Kim
+  "Mộc",  // 18: Nhâm Ngọ — Dương Liễu Mộc
+  "Mộc",  // 19: Quý Mùi — Dương Liễu Mộc
+  "Thủy", // 20: Giáp Thân — Tuyền Trung Thủy
+  "Thủy", // 21: Ất Dậu — Tuyền Trung Thủy
+  "Thổ",  // 22: Bính Tuất — Ốc Thượng Thổ
+  "Thổ",  // 23: Đinh Hợi — Ốc Thượng Thổ
+  "Hỏa",  // 24: Mậu Tý — Tích Lịch Hỏa
+  "Hỏa",  // 25: Kỷ Sửu — Tích Lịch Hỏa
+  "Mộc",  // 26: Canh Dần — Tùng Bách Mộc
+  "Mộc",  // 27: Tân Mão — Tùng Bách Mộc
+  "Thủy", // 28: Nhâm Thìn — Trường Lưu Thủy
+  "Thủy", // 29: Quý Tỵ — Trường Lưu Thủy
+  "Kim",  // 30: Giáp Ngọ — Sa Trung Kim
+  "Kim",  // 31: Ất Mùi — Sa Trung Kim
+  "Hỏa",  // 32: Bính Thân — Sơn Hạ Hỏa
+  "Hỏa",  // 33: Đinh Dậu — Sơn Hạ Hỏa
+  "Mộc",  // 34: Mậu Tuất — Bình Địa Mộc
+  "Mộc",  // 35: Kỷ Hợi — Bình Địa Mộc
+  "Thổ",  // 36: Canh Tý — Bích Thượng Thổ
+  "Thổ",  // 37: Tân Sửu — Bích Thượng Thổ
+  "Kim",  // 38: Nhâm Dần — Kim Bạch Kim
+  "Kim",  // 39: Quý Mão — Kim Bạch Kim
+  "Hỏa",  // 40: Giáp Thìn — Phúc Đăng Hỏa
+  "Hỏa",  // 41: Ất Tỵ — Phúc Đăng Hỏa
+  "Thủy", // 42: Bính Ngọ — Thiên Hà Thủy
+  "Thủy", // 43: Đinh Mùi — Thiên Hà Thủy
+  "Thổ",  // 44: Mậu Thân — Đại Trạch Thổ
+  "Thổ",  // 45: Kỷ Dậu — Đại Trạch Thổ
+  "Kim",  // 46: Canh Tuất — Thoa Xuyến Kim
+  "Kim",  // 47: Tân Hợi — Thoa Xuyến Kim
+  "Mộc",  // 48: Nhâm Tý — Tang Đố Mộc
+  "Mộc",  // 49: Quý Sửu — Tang Đố Mộc
+  "Thủy", // 50: Giáp Dần — Đại Khê Thủy
+  "Thủy", // 51: Ất Mão — Đại Khê Thủy
+  "Thổ",  // 52: Bính Thìn — Sa Trung Thổ
+  "Thổ",  // 53: Đinh Tỵ — Sa Trung Thổ
+  "Hỏa",  // 54: Mậu Ngọ — Thiên Thượng Hỏa
+  "Hỏa",  // 55: Kỷ Mùi — Thiên Thượng Hỏa
+  "Mộc",  // 56: Canh Thân — Thạch Lựu Mộc
+  "Mộc",  // 57: Tân Dậu — Thạch Lựu Mộc
+  "Thủy", // 58: Nhâm Tuất — Đại Hải Thủy
+  "Thủy", // 59: Quý Hợi — Đại Hải Thủy
 ];
 
 // Tên chi tiết của 60 mệnh (Nạp Âm)

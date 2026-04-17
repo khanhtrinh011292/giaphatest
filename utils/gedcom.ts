@@ -138,12 +138,12 @@ export function exportToGedcom(data: {
     if (!person.id) continue;
     gedcom += `0 ${getIndiXref(person.id)} INDI\n`;
 
-    // Name
+    // Name — Vietnamese convention: family name is the FIRST word
     if (person.full_name) {
       const parts = person.full_name.trim().split(" ");
-      const lastName = parts.length > 1 ? parts.pop() : "";
-      const firstName = parts.join(" ");
-      gedcom += `1 NAME ${firstName} /${lastName}/\n`;
+      const surname = parts.length > 1 ? parts[0] : parts[0];
+      const givenName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+      gedcom += `1 NAME ${givenName} /${surname}/\n`;
     } else {
       gedcom += `1 NAME Unknown /Unknown/\n`;
     }

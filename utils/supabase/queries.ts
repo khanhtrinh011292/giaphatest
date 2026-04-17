@@ -35,7 +35,7 @@ export const getProfile = cache(async (userId?: string) => {
 
 export const getIsAdmin = cache(async () => {
   const profile = await getProfile();
-  return profile?.role === "admin";
+  return profile?.role === "admin" || profile?.role === "superadmin";
 });
 
 // ── Family queries ───────────────────────────────────────────────────────────────────

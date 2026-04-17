@@ -148,9 +148,15 @@ function chiThang(lunarMonth: number): number {
   return (lunarMonth + 1) % 12;
 }
 
-export function getThapNhiTruc(lunarDay: number, lunarMonth: number): string {
+/**
+ * Tính Thập Nhị Trực theo can chi ngày thực.
+ * Trực Kiến rơi vào ngày có chi ngày = chi tháng.
+ * @param chiNgayIdx - index Địa Chi của ngày (0=Tý..11=Hợi) từ lục thập hoa giáp
+ * @param lunarMonth - tháng âm lịch (1-12)
+ */
+export function getThapNhiTruc(chiNgayIdx: number, lunarMonth: number): string {
   const cT = chiThang(lunarMonth);
-  const idx = (cT + lunarDay - 1) % 12;
+  const idx = ((chiNgayIdx - cT) % 12 + 12) % 12;
   return THAP_NHI_TRUC[idx];
 }
 
@@ -275,7 +281,8 @@ export function rateDayForWedding(
   const [yStr, mStr, dStr] = solarDateStr.split("-");
   const yy = parseInt(yStr), mm = parseInt(mStr), dd = parseInt(dStr);
   const lunar = solarToLunar(dd, mm, yy);
-  const truc = getThapNhiTruc(lunar.day, lunar.month);
+  const { chiIdx: chiNgayIdx_truc } = getCanChiNgay(dd, mm, yy);
+  const truc = getThapNhiTruc(chiNgayIdx_truc, lunar.month);
   const hoangDao = isHoangDaoNgay(dd, mm, yy);
   const tamNuong = isTamNuongSat(lunar.day);
   const nguyetKy = isNguyetKy(lunar.day);
