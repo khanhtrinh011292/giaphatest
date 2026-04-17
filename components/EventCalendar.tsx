@@ -186,7 +186,8 @@ export default function EventCalendar({ events }: EventCalendarProps) {
               <div className="flex items-center gap-[3px] flex-wrap justify-center px-0.5 mt-auto pb-0.5">
                 {hasMung1 && <span className="size-1.5 rounded-full bg-amber-400" />}
                 {hasRam && <span className="size-1.5 rounded-full bg-yellow-400" />}
-                {hasHoliday && <span className="size-1.5 rounded-full bg-orange-400" />}
+                {/* Lễ Tết: đỏ */}
+                {hasHoliday && <span className="size-1.5 rounded-full bg-red-500" />}
                 {hasBirthday && <span className="size-1.5 rounded-full bg-blue-400" />}
                 {hasDeath && <span className="size-1.5 rounded-full bg-rose-400" />}
                 {hasCustom && <span className="size-1.5 rounded-full bg-purple-400" />}
@@ -205,7 +206,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
           <span className="size-2 rounded-full bg-yellow-400 shrink-0" /> Rằm
         </span>
         <span className="flex items-center gap-1.5 text-[11px] text-stone-500 font-medium">
-          <span className="size-2 rounded-full bg-red-400 shrink-0" /> Lễ Tết
+          <span className="size-2 rounded-full bg-red-500 shrink-0" /> Lễ Tết
         </span>
         <span className="w-px h-3 bg-stone-200" />
         <span className="flex items-center gap-1.5 text-[11px] text-stone-500 font-medium">
@@ -270,22 +271,27 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     <button
                       key={i}
                       onClick={() => { if (ev.personId && ev.type !== "custom_event" && ev.type !== "lunar_festival" && ev.type !== "holiday") setMemberModalId(ev.personId); }}
-                      className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${(isFestival || isHolidayEv)
-                          ? "bg-amber-50 border-amber-100 hover:border-amber-300 cursor-default"
-                          : ev.dot === "birthday"
-                            ? "bg-blue-50 border-blue-100 hover:border-blue-300"
-                            : ev.dot === "custom"
-                              ? "bg-purple-50 border-purple-100 hover:border-purple-300"
-                              : "bg-rose-50 border-rose-100 hover:border-rose-300"
+                      className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                        isHolidayEv
+                          ? "bg-red-50 border-red-100 hover:border-red-300 cursor-default"
+                          : isFestival
+                            ? "bg-amber-50 border-amber-100 hover:border-amber-300 cursor-default"
+                            : ev.dot === "birthday"
+                              ? "bg-blue-50 border-blue-100 hover:border-blue-300"
+                              : ev.dot === "custom"
+                                ? "bg-purple-50 border-purple-100 hover:border-purple-300"
+                                : "bg-rose-50 border-rose-100 hover:border-rose-300"
                         }`}
                     >
-                      <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${(isFestival || isHolidayEv) ? "bg-amber-100 text-amber-600" :
-                          ev.dot === "birthday" ? "bg-blue-100 text-blue-500" :
-                            ev.dot === "custom" ? "bg-purple-100 text-purple-500" :
-                              "bg-rose-100 text-rose-500"
+                      <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        isHolidayEv ? "bg-red-100 text-red-500" :
+                          isFestival ? "bg-amber-100 text-amber-600" :
+                            ev.dot === "birthday" ? "bg-blue-100 text-blue-500" :
+                              ev.dot === "custom" ? "bg-purple-100 text-purple-500" :
+                                "bg-rose-100 text-rose-500"
                         }`}>
-                        {isFestival ? <Moon className="size-4" /> :
-                          isHolidayEv ? <PartyPopper className="size-4" /> :
+                        {isHolidayEv ? <PartyPopper className="size-4" /> :
+                          isFestival ? <Moon className="size-4" /> :
                             ev.dot === "birthday" ? <Cake className="size-4" /> :
                               ev.dot === "custom" ? <Star className="size-4" /> :
                                 <Flower className="size-4" />}
@@ -298,7 +304,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                               {isMung1Ev ? "Mùng 1" : "Rằm"} · {ev.eventDateLabel}
                             </p>
                           ) : isHolidayEv ? (
-                            <p className="text-xs font-semibold text-amber-700">
+                            <p className="text-xs font-semibold text-red-600">
                               Lễ Tết · {ev.eventDateLabel}
                             </p>
                           ) : ev.dot === "death" ? (
