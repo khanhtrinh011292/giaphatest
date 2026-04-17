@@ -36,17 +36,16 @@ type ShareLink = {
   created_at: string;
 };
 
-// Chỉ Xem và Chỉnh sửa — đã loại bỏ Quản trị
 const ROLE_OPTIONS: { value: "viewer" | "editor"; label: string; desc: string }[] = [
-  { value: "viewer", label: "👁️ Chỉ xem",   desc: "Xem sơ đồ và danh sách, không chỉnh sửa" },
-  { value: "editor", label: "✏️ Chỉnh sửa", desc: "Thêm, sửa, xóa thành viên và quan hệ" },
+  { value: "viewer", label: "Chỉ xem",   desc: "Xem sơ đồ và danh sách, không chỉnh sửa" },
+  { value: "editor", label: "Chỉnh sửa", desc: "Thêm, sửa, xóa thành viên và quan hệ" },
 ];
 
 function roleLabel(role: ShareRole) {
-  return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === "admin" ? "⚙️ Quản trị" : role);
+  return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === "admin" ? "Quản trị" : role);
 }
 
-// ── Tab: Chia sẻ qua Email ────────────────────────────────────────────────────
+// ── Tab: Chia sẻ qua Email ─────────────────────────────────────────────────────────────────────────────────
 function EmailShareTab({
   familyId,
   initialShares,
@@ -102,7 +101,6 @@ function EmailShareTab({
 
   return (
     <div className="space-y-6">
-      {/* Form mời */}
       <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm space-y-4">
         <h2 className="font-semibold text-stone-700 flex items-center gap-2">
           <UserPlusIcon className="w-4 h-4" /> Mời người dùng
@@ -150,7 +148,6 @@ function EmailShareTab({
         </button>
       </div>
 
-      {/* Danh sách đã chia sẻ */}
       <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-stone-100">
           <h2 className="font-semibold text-stone-700 flex items-center gap-2">
@@ -199,7 +196,7 @@ function EmailShareTab({
   );
 }
 
-// ── Tab: Link chia sẻ ─────────────────────────────────────────────────────────
+// ── Tab: Link chia sẻ ──────────────────────────────────────────────────────────────────────────────────────
 function ShareLinkTab({
   familyId,
   showStatus,
@@ -209,7 +206,6 @@ function ShareLinkTab({
 }) {
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [copied, setCopied] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -224,7 +220,8 @@ function ShareLinkTab({
 
   async function handleCreate() {
     setLoading(true);
-    const result = await createShareLink(familyId, role);
+    // Link chia sẻ chỉ tạo với role "viewer"
+    const result = await createShareLink(familyId, "viewer");
     if (result.error) {
       showStatus("err", result.error);
     } else {
@@ -253,42 +250,25 @@ function ShareLinkTab({
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const roleLabelFn = (r: string) => r === "editor" ? "✏️ Chỉnh sửa" : "👁️ Chỉ xem";
-
   return (
     <div className="space-y-6">
-      {/* Tạo link mới */}
       <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm space-y-4">
         <h2 className="font-semibold text-stone-700 flex items-center gap-2">
           <LinkIcon className="w-4 h-4" /> Tạo link chia sẻ
         </h2>
         <p className="text-xs text-stone-400">
-          Link có hiệu lực trong 7 ngày. Bất kỳ ai có link đều có thể tham gia gia phả.
+          Link có hiệu lực trong 7 ngày. Bất kỳ ai có link đều có thể tham gia gia phả với quyền <strong>Chỉ xem</strong>.
         </p>
-        <div className="flex gap-3 items-end">
-          <div>
-            <label className="block text-xs font-medium text-stone-500 mb-1">Quyền</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as "viewer" | "editor")}
-              className="border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-            >
-              <option value="viewer">👁️ Chỉ xem</option>
-              <option value="editor">✏️ Chỉnh sửa</option>
-            </select>
-          </div>
-          <button
-            onClick={handleCreate}
-            disabled={loading}
-            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
-          >
-            <LinkIcon className="w-4 h-4" />
-            {loading ? "Đang tạo..." : "+ Tạo link mới"}
-          </button>
-        </div>
+        <button
+          onClick={handleCreate}
+          disabled={loading}
+          className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+        >
+          <LinkIcon className="w-4 h-4" />
+          {loading ? "Đang tạo..." : "+ Tạo link mới"}
+        </button>
       </div>
 
-      {/* Danh sách link */}
       <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-stone-100">
           <h2 className="font-semibold text-stone-700 flex items-center gap-2">
@@ -315,7 +295,7 @@ function ShareLinkTab({
                   </p>
                 </div>
                 <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">
-                  {roleLabelFn(link.role)}
+                  Chỉ xem
                 </span>
                 <button
                   onClick={() => copyToClipboard(link.token)}
@@ -341,15 +321,17 @@ function ShareLinkTab({
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────────────────────────────────
 export default function ShareManager({
   familyId,
   initialShares,
+  canShareEmail = true,
 }: {
   familyId: string;
   initialShares: ShareRow[];
+  canShareEmail?: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<"email" | "link">("email");
+  const [activeTab, setActiveTab] = useState<"email" | "link">(canShareEmail ? "email" : "link");
   const [statusMsg, setStatusMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   function showStatus(type: "ok" | "err", text: string) {
@@ -359,7 +341,6 @@ export default function ShareManager({
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-serif font-bold text-stone-800">Chia sẻ Gia phả</h1>
         <p className="text-sm text-stone-500 mt-0.5">
@@ -367,7 +348,6 @@ export default function ShareManager({
         </p>
       </div>
 
-      {/* Status */}
       {statusMsg && (
         <div
           className={`rounded-lg px-4 py-3 text-sm font-medium ${
@@ -380,19 +360,21 @@ export default function ShareManager({
         </div>
       )}
 
-      {/* Tab switcher */}
+      {/* Tab switcher — ẩn tab Email nếu không có quyền */}
       <div className="flex border-b border-stone-200">
-        <button
-          onClick={() => setActiveTab("email")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-            activeTab === "email"
-              ? "border-amber-600 text-amber-700"
-              : "border-transparent text-stone-500 hover:text-stone-700"
-          }`}
-        >
-          <MailIcon className="w-4 h-4" />
-          Chia sẻ qua Email
-        </button>
+        {canShareEmail && (
+          <button
+            onClick={() => setActiveTab("email")}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === "email"
+                ? "border-amber-600 text-amber-700"
+                : "border-transparent text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            <MailIcon className="w-4 h-4" />
+            Chia sẻ qua Email
+          </button>
+        )}
         <button
           onClick={() => setActiveTab("link")}
           className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
@@ -406,8 +388,7 @@ export default function ShareManager({
         </button>
       </div>
 
-      {/* Tab content */}
-      {activeTab === "email" && (
+      {activeTab === "email" && canShareEmail && (
         <EmailShareTab
           familyId={familyId}
           initialShares={initialShares}
