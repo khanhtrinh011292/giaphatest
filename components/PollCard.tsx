@@ -32,19 +32,11 @@ function useCountdown(expiresAt: string | null) {
   const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
-    // Chỉ chạy khi có expiresAt thật sự
     if (!expiresAt) return;
-
-    // Reset trạng thái mỗi khi expiresAt thay đổi
     setIsExpired(false);
-
     function update() {
       const diff = new Date(expiresAt!).getTime() - Date.now();
-      if (diff <= 0) {
-        setIsExpired(true);
-        setTimeLeft("");
-        return;
-      }
+      if (diff <= 0) { setIsExpired(true); setTimeLeft(""); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -61,10 +53,7 @@ function useCountdown(expiresAt: string | null) {
 }
 
 function VoterPopup({
-  optionLabel,
-  voters,
-  onClose,
-  anchorRef,
+  optionLabel, voters, onClose, anchorRef,
 }: {
   optionLabel: string;
   voters: PollVote[];
@@ -72,7 +61,6 @@ function VoterPopup({
   anchorRef: React.RefObject<HTMLElement | null>;
 }) {
   const popupRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
@@ -85,15 +73,10 @@ function VoterPopup({
   }, [onClose, anchorRef]);
 
   return (
-    <div
-      ref={popupRef}
-      className="absolute right-0 top-full mt-1.5 z-50 w-52 bg-white rounded-xl shadow-lg border border-stone-100 overflow-hidden"
-    >
+    <div ref={popupRef} className="absolute right-0 top-full mt-1.5 z-50 w-52 bg-white rounded-xl shadow-lg border border-stone-100 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 bg-amber-50 border-b border-amber-100">
         <span className="text-xs font-semibold text-amber-800 truncate max-w-[160px]">{optionLabel}</span>
-        <button onClick={onClose} className="text-stone-400 hover:text-stone-600 ml-1 shrink-0">
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <button onClick={onClose} className="text-stone-400 hover:text-stone-600 ml-1 shrink-0"><X className="w-3.5 h-3.5" /></button>
       </div>
       {voters.length === 0 ? (
         <p className="text-xs text-stone-400 text-center py-4">Chưa có ai chọn</p>
@@ -102,9 +85,7 @@ function VoterPopup({
           {voters.map((v) => (
             <li key={v.user_id} className="flex items-center gap-2 px-3 py-2">
               <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-amber-600">
-                  {(v.display_name || "?")[0].toUpperCase()}
-                </span>
+                <span className="text-xs font-bold text-amber-600">{(v.display_name || "?")[0].toUpperCase()}</span>
               </div>
               <span className="text-xs text-stone-700 truncate">{v.display_name || "Thành viên"}</span>
             </li>
@@ -119,6 +100,7 @@ export default function PollCard({ announcementId, userId }: Props) {
   const [poll, setPoll] = useState<Poll | null>(null);
   const [votes, setVotes] = useState<PollVote[]>([]);
   const [myVote, setMyVote] = useState<string | null>(null);
+  const [myVoteRowId, setMyVoteRowId] = useState<string | null>(null);
   const [voting, setVoting] = useState(false);
   const [openPopup, setOpenPopup] = useState<string | null>(null);
   const popupAnchorRefs = useRef<Record<string, React.RefObject<HTMLElement | null>>>({});
@@ -137,7 +119,7 @@ export default function PollCard({ announcementId, userId }: Props) {
     if (!poll) return;
     const { data } = await supabase
       .from("poll_votes")
-      .select("option_id, user_id, profiles(display_name)")
+      .select("id, option_id, user_id, profiles(display_name)")
       .eq("poll_id", poll.id);
     const mapped: PollVote[] = (data || []).map((v: any) => ({
       option_id: v.option_id,
@@ -145,7 +127,9 @@ export default function PollCard({ announcementId, userId }: Props) {
       display_name: v.profiles?.display_name ?? undefined,
     }));
     setVotes(mapped);
-    setMyVote(mapped.find((v) => v.user_id === userId)?.option_id || null);
+    const mine = (data || []).find((v: any) => v.user_id === userId);
+    setMyVote(mine?.option_id || null);
+    setMyVoteRowId(mine?.id || null);
   }, [poll, userId]);
 
   useEffect(() => {
@@ -158,14 +142,29 @@ export default function PollCard({ announcementId, userId }: Props) {
     return () => { supabase.removeChannel(channel); };
   }, [poll, fetchVotes]);
 
-  // Truyền null khi poll chưa load xong — tránh countdown chạy sớm
   const { timeLeft, isExpired } = useCountdown(poll?.expires_at ?? null);
 
   async function handleVote(optionId: string) {
-    if (!poll || isExpired || myVote || voting) return;
+    if (!poll || isExpired || voting) return;
+    // Nếu đã chọn đúng lựa chọn này rồi thì bỏ qua
+    if (myVote === optionId) return;
     setVoting(true);
-    await supabase.from("poll_votes").insert({ poll_id: poll.id, user_id: userId, option_id: optionId });
-    setVoting(false);
+    try {
+      if (myVoteRowId) {
+        // Đổi vote: UPDATE option_id trực tiếp
+        await supabase
+          .from("poll_votes")
+          .update({ option_id: optionId })
+          .eq("id", myVoteRowId);
+      } else {
+        // Vote lần đầu
+        await supabase
+          .from("poll_votes")
+          .insert({ poll_id: poll.id, user_id: userId, option_id: optionId });
+      }
+    } finally {
+      setVoting(false);
+    }
   }
 
   function getOrCreateRef(optId: string) {
@@ -178,6 +177,7 @@ export default function PollCard({ announcementId, userId }: Props) {
   if (!poll) return null;
 
   const totalVotes = votes.length;
+  // Hiện kết quả nếu đã vote (nhưng vẫn cho đổi) hoặc hết hạn
   const showResults = isExpired || !!myVote;
 
   return (
@@ -214,10 +214,16 @@ export default function PollCard({ announcementId, userId }: Props) {
             <div key={opt.id} className="relative">
               <button
                 onClick={() => handleVote(opt.id)}
-                disabled={isExpired || !!myVote || voting}
+                // Hết hạn mới disabled — trong thời hạn luôn cho click
+                disabled={isExpired || voting}
                 className={`w-full text-left rounded-xl overflow-hidden relative transition
-                  ${ !showResults ? "border border-amber-200 bg-white hover:border-amber-400 hover:bg-amber-50 active:scale-[.99]" : "border border-transparent" }
+                  ${ !showResults
+                    ? "border border-amber-200 bg-white hover:border-amber-400 hover:bg-amber-50 active:scale-[.99]"
+                    : isChosen
+                      ? "border border-amber-300 bg-white"
+                      : "border border-transparent" }
                   ${ isChosen ? "ring-2 ring-amber-400" : "" }
+                  ${ !isExpired && !isChosen ? "cursor-pointer" : "" }
                 `}
               >
                 {showResults && (
@@ -239,10 +245,7 @@ export default function PollCard({ announcementId, userId }: Props) {
                     {showResults && count > 0 && (
                       <button
                         ref={anchorRef as React.RefObject<HTMLButtonElement>}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenPopup(openPopup === opt.id ? null : opt.id);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setOpenPopup(openPopup === opt.id ? null : opt.id); }}
                         className="flex items-center gap-0.5 text-xs text-stone-400 hover:text-amber-600 transition"
                       >
                         <Users className="w-3.5 h-3.5" />
@@ -269,7 +272,11 @@ export default function PollCard({ announcementId, userId }: Props) {
       {/* Footer */}
       <p className="text-xs text-stone-400 text-right">
         {totalVotes} phiếu bầu
-        {!isExpired && !myVote && " · Chọn 1 đáp án"}
+        {!isExpired && (
+          myVote
+            ? " · Bấm lựa chọn khác để đổi vote"
+            : " · Chọn 1 đáp án"
+        )}
       </p>
     </div>
   );

@@ -17,6 +17,7 @@ interface PollDraft {
   question: string;
   options: string[];
   expiresHours: number;
+  defaultOptionIndex: number | null;
 }
 
 interface Props {
@@ -34,7 +35,7 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-const DEFAULT_POLL: PollDraft = { question: "", options: ["", ""], expiresHours: 24 };
+const DEFAULT_POLL: PollDraft = { question: "", options: ["", ""], expiresHours: 24, defaultOptionIndex: null };
 
 export default function AnnouncementBoard({ familyId, isOwner, userId, initialAnnouncements }: Props) {
   const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements);
@@ -66,7 +67,11 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
 
   function removeOption(idx: number) {
     if (poll.options.length <= 2) return;
-    setPoll((p) => ({ ...p, options: p.options.filter((_, i) => i !== idx) }));
+    setPoll((p) => ({
+      ...p,
+      options: p.options.filter((_, i) => i !== idx),
+      defaultOptionIndex: p.defaultOptionIndex === idx ? null : p.defaultOptionIndex !== null && p.defaultOptionIndex > idx ? p.defaultOptionIndex - 1 : p.defaultOptionIndex,
+    }));
   }
 
   async function handlePost() {
@@ -94,19 +99,31 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
         .single();
 
       if (!error && data) {
-        // Tạo poll nếu có
         if (showPollForm && poll.question.trim()) {
           const validOptions = poll.options
             .filter(Boolean)
             .map((label, i) => ({ id: `opt_${i + 1}`, label }));
           const expiresAt = new Date(Date.now() + poll.expiresHours * 3600 * 1000).toISOString();
-          await supabase.from("polls").insert({
+
+          const { data: pollData } = await supabase.from("polls").insert({
             announcement_id: data.id,
             family_id: familyId,
             question: poll.question.trim(),
             options: validOptions,
             expires_at: expiresAt,
-          });
+          }).select("id").single();
+
+          // Tự động vote cho chủ sở hữu nếu chọn default option
+          if (pollData && poll.defaultOptionIndex !== null) {
+            const chosenOpt = validOptions[poll.defaultOptionIndex];
+            if (chosenOpt) {
+              await supabase.from("poll_votes").insert({
+                poll_id: pollData.id,
+                user_id: userId,
+                option_id: chosenOpt.id,
+              });
+            }
+          }
         }
 
         setAnnouncements((prev) => [data, ...prev]);
@@ -133,13 +150,11 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
 
   return (
     <section className="space-y-3">
-      {/* Header */}
       <div className="flex items-center gap-2">
         <Newspaper className="w-4 h-4 text-amber-500" />
         <h2 className="text-sm font-bold text-stone-700 uppercase tracking-wider">Bảng tin</h2>
       </div>
 
-      {/* Form đăng — chỉ owner */}
       {isOwner && (
         <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
           <div className="p-4 space-y-3">
@@ -151,7 +166,6 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
               className="w-full text-sm text-stone-800 placeholder:text-stone-300 resize-none focus:outline-none bg-transparent"
             />
 
-            {/* Preview ảnh */}
             {imagePreview && (
               <div className="relative inline-block">
                 <img src={imagePreview} alt="preview" className="max-h-52 rounded-xl object-cover border border-stone-100" />
@@ -164,7 +178,6 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
               </div>
             )}
 
-            {/* Form tạo poll */}
             {showPollForm && (
               <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -186,6 +199,17 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
                 <div className="space-y-1.5">
                   {poll.options.map((opt, i) => (
                     <div key={i} className="flex items-center gap-1.5">
+                      {/* Radio chọn vote mặc định cho chủ */}
+                      <button
+                        type="button"
+                        onClick={() => setPoll((p) => ({ ...p, defaultOptionIndex: p.defaultOptionIndex === i ? null : i }))}
+                        className={`w-4 h-4 rounded-full border-2 shrink-0 transition ${
+                          poll.defaultOptionIndex === i
+                            ? "border-amber-500 bg-amber-500"
+                            : "border-stone-300 hover:border-amber-400"
+                        }`}
+                        title="Chọn đây là vote của bạn"
+                      />
                       <input
                         value={opt}
                         onChange={(e) => updateOption(i, e.target.value)}
@@ -200,13 +224,16 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
                     </div>
                   ))}
                   {poll.options.length < 6 && (
-                    <button onClick={addOption} className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 transition">
+                    <button onClick={addOption} className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 transition ml-5">
                       <Plus className="w-3.5 h-3.5" /> Thêm lựa chọn
                     </button>
                   )}
                 </div>
 
-                {/* Thời gian hết hạn */}
+                {poll.defaultOptionIndex !== null && (
+                  <p className="text-xs text-amber-600">Bạn sẽ tự động vote: <strong>{poll.options[poll.defaultOptionIndex] || `Lựa chọn ${poll.defaultOptionIndex + 1}`}</strong></p>
+                )}
+
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-stone-500 shrink-0">Hết hạn sau:</span>
                   <select
@@ -226,7 +253,6 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
             )}
           </div>
 
-          {/* Toolbar */}
           <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 border-t border-stone-100">
             <div className="flex items-center gap-3">
               <button
@@ -237,7 +263,6 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
                 Thêm ảnh
               </button>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-
               <button
                 onClick={() => setShowPollForm((v) => !v)}
                 className={`flex items-center gap-1.5 text-xs font-medium transition ${ showPollForm ? "text-amber-600" : "text-stone-400 hover:text-amber-600" }`}
@@ -246,7 +271,6 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
                 Tạo vote
               </button>
             </div>
-
             <button
               onClick={handlePost}
               disabled={posting || !canPost}
@@ -259,7 +283,6 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
         </div>
       )}
 
-      {/* Feed bài đăng */}
       {announcements.length === 0 ? (
         <div className="bg-white rounded-2xl border border-stone-100 py-10 text-center">
           <p className="text-2xl mb-2">📭</p>
@@ -269,18 +292,10 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
         <div className="space-y-3">
           {announcements.map((a) => (
             <article key={a.id} className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
-              {a.image_url && (
-                <img src={a.image_url} alt="" className="w-full max-h-72 object-cover" />
-              )}
-
+              {a.image_url && <img src={a.image_url} alt="" className="w-full max-h-72 object-cover" />}
               <div className="px-4 py-3">
-                {a.content && (
-                  <p className="text-sm text-stone-800 whitespace-pre-wrap leading-relaxed">{a.content}</p>
-                )}
-
-                {/* Poll card */}
+                {a.content && <p className="text-sm text-stone-800 whitespace-pre-wrap leading-relaxed">{a.content}</p>}
                 <PollCard announcementId={a.id} userId={userId} />
-
                 <div className="flex items-center justify-between mt-3">
                   <span className="text-xs text-stone-400">{timeAgo(a.created_at)}</span>
                   {(isOwner || a.author_id === userId) && (
@@ -289,9 +304,7 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
                       disabled={deletingId === a.id}
                       className="flex items-center gap-1 text-xs text-stone-300 hover:text-red-400 transition"
                     >
-                      {deletingId === a.id
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <Trash2 className="w-3.5 h-3.5" />}
+                      {deletingId === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                     </button>
                   )}
                 </div>
