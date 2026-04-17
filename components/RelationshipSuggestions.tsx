@@ -54,6 +54,7 @@ export default function RelationshipSuggestions({
 }) {
   const [expanded, setExpanded] = useState(false);
 
+  // Tập các cặp đã có quan hệ (bất kỳ loại nào)
   const existingPairs = useMemo(() => {
     const set = new Set<string>();
     for (const r of relationships) {
@@ -63,32 +64,60 @@ export default function RelationshipSuggestions({
     return set;
   }, [relationships]);
 
-  const personParents = useMemo(() => {
-    const childIds = new Set(
-      relationships
-        .filter((r) => r.type === "biological_child" || r.type === "adopted_child")
-        .map((r) => r.person_b)
-    );
-    return childIds;
+  // Map: childId → số cha/mẹ hiện có (biological hoặc adopted)
+  const parentCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of relationships) {
+      if (r.type === "biological_child" || r.type === "adopted_child") {
+        // person_a là cha/mẹ, person_b là con
+        map.set(r.person_b, (map.get(r.person_b) ?? 0) + 1);
+      }
+    }
+    return map;
+  }, [relationships]);
+
+  // Map: parentId → số con hiện có
+  const childCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of relationships) {
+      if (r.type === "biological_child" || r.type === "adopted_child") {
+        map.set(r.person_a, (map.get(r.person_a) ?? 0) + 1);
+      }
+    }
+    return map;
   }, [relationships]);
 
   const suggestions = useMemo(() => {
     const result: Suggestion[] = [];
+    const seen = new Set<string>(); // tránh trùng cặp
 
     for (const candidate of persons) {
-      if (personParents.has(candidate.id)) continue;
+      // Bỏ qua nếu đã có đủ 2 cha/mẹ
+      if ((parentCountMap.get(candidate.id) ?? 0) >= 2) continue;
+      // Bắt buộc có generation hợp lệ
+      if (candidate.generation === null) continue;
 
       for (const parent of persons) {
         if (parent.id === candidate.id) continue;
+        // Bắt buộc có generation hợp lệ
+        if (parent.generation === null) continue;
+        // Đã có bất kỳ quan hệ nào giữa 2 người → bỏ qua
         if (existingPairs.has(`${parent.id}-${candidate.id}`)) continue;
+        // Tránh trùng cặp đã xử lý
+        const pairKey = `${parent.id}-${candidate.id}`;
+        if (seen.has(pairKey)) continue;
 
-        const genDiff = (candidate.generation ?? 0) - (parent.generation ?? 0);
+        const genDiff = candidate.generation - parent.generation;
+        // Chỉ xét đúng 1 đời chênh lệch
         if (genDiff !== 1) continue;
 
-        const yearDiff = (candidate.birth_year ?? 0) - (parent.birth_year ?? 0);
-        if (candidate.birth_year && parent.birth_year) {
-          if (yearDiff < 15 || yearDiff > 55) continue;
-        }
+        // Kiểm tra năm sinh: bắt buộc cả hai phải có
+        if (!candidate.birth_year || !parent.birth_year) continue;
+        const yearDiff = candidate.birth_year - parent.birth_year;
+        if (yearDiff < 15 || yearDiff > 55) continue;
+
+        // Không gợi ý nếu parent đã là con của candidate (vòng lặp)
+        if (existingPairs.has(`${candidate.id}-${parent.id}`)) continue;
 
         const candidateLast = getLastName(candidate.full_name);
         const parentLast = getLastName(parent.full_name);
@@ -97,19 +126,20 @@ export default function RelationshipSuggestions({
         let confidence: "high" | "medium" | "low" = "low";
         let reason = "";
 
-        if (candidateLast === parentLast && candidate.birth_year && parent.birth_year) {
+        if (candidateLast === parentLast) {
           confidence = "high";
           reason = `Cùng họ "${candidateLast}", chênh ${yearDiff} tuổi, đời ${parent.generation} → ${candidate.generation}`;
-        } else if (candidateLast === parentMiddle && parentMiddle) {
+        } else if (parentMiddle && candidateLast === parentMiddle) {
           confidence = "medium";
-          reason = `Tên đệm "${parentMiddle}" khớp họ con, đời ${parent.generation} → ${candidate.generation}`;
-        } else if (genDiff === 1 && yearDiff >= 18 && yearDiff <= 45) {
+          reason = `Tên đệm "${parentMiddle}" khớp họ con, chênh ${yearDiff} tuổi, đời ${parent.generation} → ${candidate.generation}`;
+        } else if (yearDiff >= 18 && yearDiff <= 45) {
           confidence = "low";
-          reason = `Đời liền kề (đời ${parent.generation} → ${candidate.generation}), chênh ${yearDiff ?? "?"} tuổi`;
+          reason = `Đời liền kề (đời ${parent.generation} → ${candidate.generation}), chênh ${yearDiff} tuổi`;
         } else {
           continue;
         }
 
+        seen.add(pairKey);
         result.push({ personA: parent, personB: candidate, reason, confidence });
         if (result.length >= 20) break;
       }
@@ -118,7 +148,7 @@ export default function RelationshipSuggestions({
 
     const order = { high: 0, medium: 1, low: 2 };
     return result.sort((a, b) => order[a.confidence] - order[b.confidence]);
-  }, [persons, relationships, existingPairs, personParents]);
+  }, [persons, relationships, existingPairs, parentCountMap]);
 
   const visible = suggestions.filter(
     (s) => !confirmedKeys.has(`${s.personA.id}-${s.personB.id}`)
@@ -128,7 +158,7 @@ export default function RelationshipSuggestions({
   if (visible.length === 0) return (
     <div className="bg-green-50/60 border border-green-200/60 rounded-3xl p-5 flex items-center gap-3 text-green-700">
       <CheckCircle2 className="size-5 shrink-0" />
-      <p className="text-sm font-semibold">Đã xác nhận hết tất cả gợi ý!</p>
+      <p className="text-sm font-semibold">Không có gợi ý nào phù hợp.</p>
     </div>
   );
 
