@@ -284,11 +284,14 @@ export async function getShareLinks(familyId: string) {
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("family_share_links")
     .select("*")
     .eq("family_id", familyId)
     .eq("is_active", true)
+    // FIX: lọc bỏ link đã hết hạn (xử lý đúng cả trường hợp expires_at NULL = không hết hạn)
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
     .order("created_at", { ascending: false });
 
   if (error) return { error: error.message };
@@ -318,12 +321,14 @@ export async function joinByShareLink(token: string) {
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
+  const now = new Date().toISOString();
+  // FIX: dùng .or() để xử lý đúng expires_at NULL (link không hết hạn) và expires_at > now
   const { data: link, error: linkError } = await supabase
     .from("family_share_links")
     .select("*")
     .eq("token", token)
     .eq("is_active", true)
-    .gt("expires_at", new Date().toISOString())
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
     .single();
 
   if (linkError || !link) return { error: "Link không hợp lệ hoặc đã hết hạn." };
