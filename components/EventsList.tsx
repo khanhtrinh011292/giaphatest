@@ -123,25 +123,25 @@ function EventCard({
     ? isToday
       ? "bg-amber-50 border-amber-300 shadow-sm"
       : isPast
-      ? "bg-stone-50/60 border-stone-200/50"
-      : "bg-white/80 border-amber-200/60 hover:border-amber-400"
+        ? "bg-stone-50/60 border-stone-200/50"
+        : "bg-white/80 border-amber-200/60 hover:border-amber-400"
     : isToday
-    ? "bg-amber-50 border-amber-300 shadow-sm"
-    : isPast
-    ? "bg-stone-50/60 border-stone-200/50"
-    : isBirthday
-    ? "bg-white/80 border-stone-200/60 hover:border-blue-200"
-    : isCustom
-    ? "bg-white/80 border-stone-200/60 hover:border-purple-200"
-    : "bg-white/80 border-stone-200/60 hover:border-rose-200";
+      ? "bg-amber-50 border-amber-300 shadow-sm"
+      : isPast
+        ? "bg-stone-50/60 border-stone-200/50"
+        : isBirthday
+          ? "bg-white/80 border-stone-200/60 hover:border-blue-200"
+          : isCustom
+            ? "bg-white/80 border-stone-200/60 hover:border-purple-200"
+            : "bg-white/80 border-stone-200/60 hover:border-rose-200";
 
   const iconStyle = (isLunarFestival || isHoliday)
     ? isToday ? "bg-amber-100 text-amber-600" : isPast ? "bg-stone-100 text-stone-400" : "bg-amber-50 text-amber-500"
     : isToday ? "bg-amber-100 text-amber-600"
-    : isPast ? "bg-stone-100 text-stone-400"
-    : isBirthday ? "bg-blue-50 text-blue-500"
-    : isCustom ? "bg-purple-50 text-purple-500"
-    : "bg-rose-50 text-rose-500";
+      : isPast ? "bg-stone-100 text-stone-400"
+        : isBirthday ? "bg-blue-50 text-blue-500"
+          : isCustom ? "bg-purple-50 text-purple-500"
+            : "bg-rose-50 text-rose-500";
 
   return (
     <motion.div
@@ -149,9 +149,8 @@ function EventCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.04 }}
       onClick={(isLunarFestival || isHoliday) ? undefined : handleClick}
-      className={`w-full text-left flex items-start gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border transition-all ${
-        (isLunarFestival || isHoliday) ? "" : "cursor-pointer active:scale-[0.98] hover:shadow-md"
-      } group ${cardStyle}`}
+      className={`w-full text-left flex items-start gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border transition-all ${(isLunarFestival || isHoliday) ? "" : "cursor-pointer active:scale-[0.98] hover:shadow-md"
+        } group ${cardStyle}`}
     >
       <div className={`shrink-0 size-10 sm:size-11 flex items-center justify-center rounded-xl ${iconStyle}`}>
         {isLunarFestival ? (
@@ -169,18 +168,16 @@ function EventCard({
 
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className={`font-semibold text-[15px] sm:text-base truncate transition-colors ${
-            isPast ? "text-stone-500" : (isLunarFestival || isHoliday) ? "text-amber-800" : "text-stone-800 group-hover:text-amber-700"
-          }`}>
+          <p className={`font-semibold text-[15px] sm:text-base truncate transition-colors ${isPast ? "text-stone-500" : (isLunarFestival || isHoliday) ? "text-amber-800" : "text-stone-800 group-hover:text-amber-700"
+            }`}>
             {event.personName}
           </p>
 
           {isLunarFestival && (
-            <span className={`shrink-0 text-[10px] font-bold rounded-md px-1.5 py-0.5 whitespace-nowrap ${
-              isMung1
+            <span className={`shrink-0 text-[10px] font-bold rounded-md px-1.5 py-0.5 whitespace-nowrap ${isMung1
                 ? "bg-amber-100 text-amber-700 border border-amber-200"
                 : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-            }`}>
+              }`}>
               {isMung1 ? "🌚 Mùng 1" : "🌕 Rằm"}
             </span>
           )}
@@ -191,12 +188,11 @@ function EventCard({
             </span>
           )}
 
-          <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold leading-tight whitespace-nowrap ${
-            isToday ? "bg-amber-400 text-white"
-            : isPast ? "bg-stone-200/80 text-stone-500"
-            : isSoon ? "bg-red-100 text-red-600"
-            : "bg-stone-100 text-stone-500"
-          }`}>
+          <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold leading-tight whitespace-nowrap ${isToday ? "bg-amber-400 text-white"
+              : isPast ? "bg-stone-200/80 text-stone-500"
+                : isSoon ? "bg-red-100 text-red-600"
+                  : "bg-stone-100 text-stone-500"
+            }`}>
             {isToday && (
               <span className="relative flex size-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-200 opacity-75" />
@@ -372,17 +368,15 @@ export default function EventsList({
           <div className="flex items-center bg-stone-100/80 rounded-xl p-1 gap-1 mr-1">
             <button
               onClick={() => setViewMode("list")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                viewMode === "list" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${viewMode === "list" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                }`}
             >
               <List className="size-4" /> Danh sách
             </button>
             <button
               onClick={() => setViewMode("calendar")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                viewMode === "calendar" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
-              }`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${viewMode === "calendar" ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                }`}
             >
               <LayoutGrid className="size-4" /> Lịch
             </button>
@@ -391,26 +385,25 @@ export default function EventsList({
           {viewMode === "list" && (
             <>
               {([
-                { key: "all",               label: "Tất cả" },
-                { key: "birthday",          label: "Sinh nhật" },
+                { key: "all", label: "Tất cả" },
+                { key: "birthday", label: "Sinh nhật" },
                 { key: "death_anniversary", label: "Ngày giỗ" },
-                { key: "lunar_festival",    label: "🌙 Mùng 1 & Rằm" },
-                { key: "holiday",           label: "🎆 Ngày Lễ Tết" },
-                { key: "custom_event",      label: "Tuỳ chỉnh" },
-                { key: "past",              label: "Đã qua" },
+                { key: "lunar_festival", label: "Mùng 1 & Rằm" },
+                { key: "holiday", label: "Ngày Lễ Tết" },
+                { key: "custom_event", label: "Tuỳ chỉnh" },
+                { key: "past", label: "Đã qua" },
               ] as const).map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => { setFilter(tab.key); setShowCount(20); }}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    filter === tab.key
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${filter === tab.key
                       ? tab.key === "past"
                         ? "bg-stone-600 text-white shadow-sm"
                         : (tab.key === "lunar_festival" || tab.key === "holiday")
-                        ? "bg-amber-400 text-white shadow-sm"
-                        : "bg-amber-500 text-white shadow-sm"
+                          ? "bg-amber-400 text-white shadow-sm"
+                          : "bg-amber-500 text-white shadow-sm"
                       : "bg-white/80 text-stone-600 border border-stone-200/60 hover:border-amber-200 hover:text-amber-700"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>

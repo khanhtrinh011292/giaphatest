@@ -125,9 +125,8 @@ export default function EventCalendar({ events }: EventCalendarProps) {
       {/* Day of week labels */}
       <div className="grid grid-cols-7 px-3 pb-1">
         {DAY_LABELS.map((d, i) => (
-          <div key={d} className={`text-center text-[11px] font-bold py-1 ${
-            i === 0 ? "text-rose-400" : i === 6 ? "text-blue-400" : "text-stone-400"
-          }`}>{d}</div>
+          <div key={d} className={`text-center text-[11px] font-bold py-1 ${i === 0 ? "text-rose-400" : i === 6 ? "text-blue-400" : "text-stone-400"
+            }`}>{d}</div>
         ))}
       </div>
 
@@ -164,26 +163,22 @@ export default function EventCalendar({ events }: EventCalendarProps) {
             <button
               key={day}
               onClick={() => setSelectedDay(isSelected ? null : day)}
-              className={`relative bg-white min-h-[60px] sm:min-h-[72px] flex flex-col items-center pt-1.5 pb-1 gap-0.5 transition-all hover:bg-amber-50/60 group ${
-                isSelected ? "ring-2 ring-inset ring-amber-400 bg-amber-50/80" : ""
-              } ${
-                isLunarSpecial && !today_ && !isSelected ? "bg-amber-50/30" : ""
-              }`}
+              className={`relative bg-white min-h-[60px] sm:min-h-[72px] flex flex-col items-center pt-1.5 pb-1 gap-0.5 transition-all hover:bg-amber-50/60 group ${isSelected ? "ring-2 ring-inset ring-amber-400 bg-amber-50/80" : ""
+                } ${isLunarSpecial && !today_ && !isSelected ? "bg-amber-50/30" : ""
+                }`}
             >
-              <span className={`size-7 flex items-center justify-center rounded-full text-sm font-semibold transition-colors ${
-                today_ ? "bg-amber-500 text-white shadow-sm" :
-                isSelected ? "text-amber-700" :
-                "text-stone-700 group-hover:text-amber-700"
-              }`}>
+              <span className={`size-7 flex items-center justify-center rounded-full text-sm font-semibold transition-colors ${today_ ? "bg-amber-500 text-white shadow-sm" :
+                  isSelected ? "text-amber-700" :
+                    "text-stone-700 group-hover:text-amber-700"
+                }`}>
                 {day}
               </span>
 
               {lunarLabel && (
-                <span className={`text-[9px] sm:text-[10px] leading-none font-medium px-0.5 ${
-                  isMung1 ? "text-amber-700 font-bold" :
-                  isRam ? "text-amber-600 font-bold" :
-                  "text-stone-400"
-                }`}>
+                <span className={`text-[9px] sm:text-[10px] leading-none font-medium px-0.5 ${isMung1 ? "text-amber-700 font-bold" :
+                    isRam ? "text-amber-600 font-bold" :
+                      "text-stone-400"
+                  }`}>
                   {lunarLabel}
                 </span>
               )}
@@ -210,7 +205,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
           <span className="size-2 rounded-full bg-yellow-400 shrink-0" /> Rằm
         </span>
         <span className="flex items-center gap-1.5 text-[11px] text-stone-500 font-medium">
-          <span className="size-2 rounded-full bg-orange-400 shrink-0" /> Lễ Tết
+          <span className="size-2 rounded-full bg-red-400 shrink-0" /> Lễ Tết
         </span>
         <span className="w-px h-3 bg-stone-200" />
         <span className="flex items-center gap-1.5 text-[11px] text-stone-500 font-medium">
@@ -244,15 +239,14 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   )}
                 </p>
                 {selectedLunar && (
-                  <p className={`text-xs mt-0.5 font-semibold ${
-                    selectedLunar.lunarDay === 1 || selectedLunar.lunarDay === 15
+                  <p className={`text-xs mt-0.5 font-semibold ${selectedLunar.lunarDay === 1 || selectedLunar.lunarDay === 15
                       ? "text-amber-600" : "text-stone-400"
-                  }`}>
+                    }`}>
                     {selectedLunar.lunarDay === 1
                       ? `Mùng 1 tháng ${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""} Âm lịch`
                       : selectedLunar.lunarDay === 15
-                      ? `Rằm tháng ${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""} Âm lịch`
-                      : `${selectedLunar.lunarDay}/${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""} Âm lịch`
+                        ? `Rằm tháng ${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""} Âm lịch`
+                        : `${selectedLunar.lunarDay}/${selectedLunar.lunarMonth}${selectedLunar.isLeap ? " nhuận" : ""} Âm lịch`
                     }
                   </p>
                 )}
@@ -276,27 +270,25 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     <button
                       key={i}
                       onClick={() => { if (ev.personId && ev.type !== "custom_event" && ev.type !== "lunar_festival" && ev.type !== "holiday") setMemberModalId(ev.personId); }}
-                      className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
-                        (isFestival || isHolidayEv)
+                      className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${(isFestival || isHolidayEv)
                           ? "bg-amber-50 border-amber-100 hover:border-amber-300 cursor-default"
                           : ev.dot === "birthday"
-                          ? "bg-blue-50 border-blue-100 hover:border-blue-300"
-                          : ev.dot === "custom"
-                          ? "bg-purple-50 border-purple-100 hover:border-purple-300"
-                          : "bg-rose-50 border-rose-100 hover:border-rose-300"
-                      }`}
+                            ? "bg-blue-50 border-blue-100 hover:border-blue-300"
+                            : ev.dot === "custom"
+                              ? "bg-purple-50 border-purple-100 hover:border-purple-300"
+                              : "bg-rose-50 border-rose-100 hover:border-rose-300"
+                        }`}
                     >
-                      <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        (isFestival || isHolidayEv) ? "bg-amber-100 text-amber-600" :
-                        ev.dot === "birthday" ? "bg-blue-100 text-blue-500" :
-                        ev.dot === "custom" ? "bg-purple-100 text-purple-500" :
-                        "bg-rose-100 text-rose-500"
-                      }`}>
+                      <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${(isFestival || isHolidayEv) ? "bg-amber-100 text-amber-600" :
+                          ev.dot === "birthday" ? "bg-blue-100 text-blue-500" :
+                            ev.dot === "custom" ? "bg-purple-100 text-purple-500" :
+                              "bg-rose-100 text-rose-500"
+                        }`}>
                         {isFestival ? <Moon className="size-4" /> :
-                         isHolidayEv ? <PartyPopper className="size-4" /> :
-                         ev.dot === "birthday" ? <Cake className="size-4" /> :
-                         ev.dot === "custom" ? <Star className="size-4" /> :
-                         <Flower className="size-4" />}
+                          isHolidayEv ? <PartyPopper className="size-4" /> :
+                            ev.dot === "birthday" ? <Cake className="size-4" /> :
+                              ev.dot === "custom" ? <Star className="size-4" /> :
+                                <Flower className="size-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-stone-800 truncate">{ev.personName}</p>
