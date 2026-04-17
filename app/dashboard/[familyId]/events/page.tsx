@@ -30,9 +30,27 @@ export default async function EventsPage({ params }: PageProps) {
 
   const isOwner = family.owner_id === user.id;
 
-  // Chỉ owner mới load giao dịch quỹ
-  let fundTransactions: FundTransaction[] = [];
+  // Xác định role của user trong gia phả
+  let userRole: "owner" | "editor" | "admin" | "member" | "viewer" | null = null;
   if (isOwner) {
+    userRole = "owner";
+  } else {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    if (share) userRole = share.role as typeof userRole;
+  }
+  if (!userRole) redirect(`/dashboard`);
+
+  const canAdd = userRole === "owner" || userRole === "editor" || userRole === "admin";
+  const canViewFund = isOwner || userRole === "editor" || userRole === "admin" || userRole === "member";
+
+  // Chỉ load giao dịch quỹ nếu có quyền
+  let fundTransactions: FundTransaction[] = [];
+  if (canViewFund) {
     const { data } = await supabase
       .from("family_fund_transactions")
       .select("id, type, contributor_name, person_id, amount, note, transaction_date, created_at")
@@ -63,7 +81,6 @@ export default async function EventsPage({ params }: PageProps) {
     avatar_url: p.avatar_url,
   }));
 
-  // FundPerson: chỉ lấy các field cần thiết cho combobox
   const fundPersons: FundPerson[] = personsAll.map((p) => ({
     id: p.id,
     full_name: p.full_name,
@@ -82,8 +99,8 @@ export default async function EventsPage({ params }: PageProps) {
           </p>
         </div>
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
-          {/* Quỹ gia phả — chỉ owner mới thấy */}
-          {isOwner && (
+          {/* Quỹ gia phả — chỉ hiển thị với owner/member/editor */}
+          {canViewFund && (
             <FamilyFund
               familyId={familyId}
               isOwner={isOwner}
@@ -92,11 +109,11 @@ export default async function EventsPage({ params }: PageProps) {
             />
           )}
 
-          {/* Lịch sự kiện */}
           <EventsList
             persons={persons}
             customEvents={customEvents}
             familyId={familyId}
+            canAdd={canAdd}
           />
         </main>
       </div>

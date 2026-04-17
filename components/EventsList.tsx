@@ -45,6 +45,7 @@ interface EventsListProps {
   }[];
   customEvents?: CustomEventRecord[];
   familyId?: string;
+  canAdd?: boolean;
 }
 
 const DAY_LABELS: Record<string, string> = {
@@ -70,10 +71,12 @@ function EventCard({
   event,
   index,
   onEditCustomEvent,
+  canAdd,
 }: {
   event: FamilyEvent;
   index: number;
   onEditCustomEvent: (e: FamilyEvent) => void;
+  canAdd: boolean;
 }) {
   const isBirthday = event.type === "birthday";
   const isCustom = event.type === "custom_event";
@@ -87,7 +90,7 @@ function EventCard({
   const { setMemberModalId } = useDashboard();
 
   const handleClick = () => {
-    if (isCustom) onEditCustomEvent(event);
+    if (isCustom && canAdd) onEditCustomEvent(event);
     else if (event.personId) setMemberModalId(event.personId);
   };
 
@@ -114,7 +117,6 @@ function EventCard({
 
   const lunarDateLabel = isDeathAnniversary ? event.eventDateLabel : null;
 
-  // Style theo loại
   const cardStyle = isLunarFestival
     ? isToday
       ? "bg-amber-50 border-amber-300 shadow-sm"
@@ -169,7 +171,6 @@ function EventCard({
             {event.personName}
           </p>
 
-          {/* Badge Mùng 1 / Rằm */}
           {isLunarFestival && (
             <span className={`shrink-0 text-[10px] font-bold rounded-md px-1.5 py-0.5 whitespace-nowrap ${
               isMung1
@@ -212,7 +213,6 @@ function EventCard({
             )}
           </p>
 
-          {/* Âm lịch cho ngày giỗ và lễ âm */}
           {(lunarDateLabel || isLunarFestival) && (
             <p className="text-[13px] sm:text-sm flex items-center gap-1.5 leading-snug">
               <Moon className="size-3.5 shrink-0 text-amber-400" />
@@ -245,6 +245,7 @@ export default function EventsList({
   persons,
   customEvents = [],
   familyId,
+  canAdd = false,
 }: EventsListProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
@@ -258,10 +259,15 @@ export default function EventsList({
   const [editingCustomEvent, setEditingCustomEvent] = useState<CustomEventRecord | null>(null);
 
   const handleOpenEditModal = (event: FamilyEvent) => {
+    if (!canAdd) return;
     const rawEvent = customEvents.find((ce) => ce.id === event.personId);
     if (rawEvent) { setEditingCustomEvent(rawEvent); setIsModalOpen(true); }
   };
-  const handleOpenCreateModal = () => { setEditingCustomEvent(null); setIsModalOpen(true); };
+  const handleOpenCreateModal = () => {
+    if (!canAdd) return;
+    setEditingCustomEvent(null);
+    setIsModalOpen(true);
+  };
   const handleModalSuccess = () => { router.refresh(); };
 
   const [todayDate] = useState(() => {
@@ -281,7 +287,6 @@ export default function EventsList({
     return { solar: solarStr, lunar: lunarStr };
   });
 
-  // includeLunarFestivals = true → luôn có mùng 1 & rằm trong allEvents
   const allEvents = useMemo(
     () => computeEvents(persons, customEvents, true),
     [persons, customEvents]
@@ -295,10 +300,8 @@ export default function EventsList({
         .sort((a, b) => b.daysUntil - a.daysUntil);
     }
     if (filter !== "all") result = result.filter((e) => e.type === filter);
-    // ận sinh nhật ngườờờờờ i đã mất nếu không bật
     if (!showDeceasedBirthdays)
       result = result.filter((e) => !(e.type === "birthday" && e.isDeceased));
-    // ận lunar_festival đã qua (khi xem tất cả)
     if (filter === "all")
       result = result.filter((e) => !(e.type === "lunar_festival" && e.daysUntil < 0));
     return result.filter((e) => e.daysUntil >= 0 && e.daysUntil <= 365);
@@ -346,13 +349,17 @@ export default function EventsList({
             )}
           </div>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="relative z-10 w-full sm:w-auto px-5 py-3 rounded-xl bg-stone-800 text-white font-semibold hover:bg-stone-900 active:scale-95 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-        >
-          <Plus className="size-5 text-stone-300" />
-          <span>Thêm sự kiện</span>
-        </button>
+
+        {/* Chỉ hiển thị nút Thêm sự kiện với owner/editor */}
+        {canAdd && (
+          <button
+            onClick={handleOpenCreateModal}
+            className="relative z-10 w-full sm:w-auto px-5 py-3 rounded-xl bg-stone-800 text-white font-semibold hover:bg-stone-900 active:scale-95 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+          >
+            <Plus className="size-5 text-stone-300" />
+            <span>Thêm sự kiện</span>
+          </button>
+        )}
       </motion.div>
 
       {/* View mode toggle + filters */}
@@ -443,6 +450,7 @@ export default function EventsList({
                   event={event}
                   index={i}
                   onEditCustomEvent={handleOpenEditModal}
+                  canAdd={canAdd}
                 />
               ))}
             </div>

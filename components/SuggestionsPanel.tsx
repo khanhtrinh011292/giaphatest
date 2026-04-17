@@ -25,16 +25,21 @@ export default function SuggestionsPanel({
   familyId,
   persons,
   relationships,
+  canEdit = false,
 }: {
   familyId: string;
   persons: Person[];
   relationships: Relationship[];
+  canEdit?: boolean;
 }) {
   const { showSuggestions } = useDashboard();
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
+
+  // Không hiển thị với viewer
+  if (!canEdit) return null;
 
   const handleAdd = (parentId: string, childId: string) => {
     const key = `${parentId}-${childId}`;
