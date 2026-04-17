@@ -142,40 +142,36 @@ export default function FamilyQuickLinks({
 
   return (
     <section className="space-y-3 pb-8">
-      {/* Ô số dư quỹ gia phả — hiển thị nếu có quyền xem */}
+      {/* Ô số dư quỹ gia phả */}
       {fundBalance !== null && fundBalance !== undefined && (
         <Link
           href={isOwner ? `/dashboard/${familyId}/fund` : "#"}
-          className={`block rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm transition ${
-            isOwner ? "hover:bg-amber-100 cursor-pointer" : "cursor-default"
+          className={`block rounded-2xl border border-stone-100 bg-white px-4 py-3 shadow-sm transition ${
+            isOwner ? "hover:bg-stone-50 cursor-pointer" : "cursor-default"
           }`}
         >
           <div className="flex items-center gap-2 mb-0.5">
-            <Coins className="w-4 h-4 text-amber-600" />
-            <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">
-              Quỹ gia phả
-            </p>
-            {isOwner && (
-              <span className="ml-auto text-amber-400 text-sm">›</span>
-            )}
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-amber-600 bg-white shadow-sm border border-amber-100">
+              <Coins className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-stone-800">Quỹ gia phả</p>
+              <p className="text-xs text-stone-400">
+                {isOwner ? "Nhấn để quản lý thu chi" : "Số dư hiện tại"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className={`text-sm font-bold ${fundBalance >= 0 ? "text-green-700" : "text-red-600"}`}>
+                {new Intl.NumberFormat("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                }).format(fundBalance)}
+              </p>
+              {isOwner && (
+                <span className="text-stone-300 text-base">›</span>
+              )}
+            </div>
           </div>
-          <p
-            className={`text-xl font-bold ${
-              fundBalance >= 0 ? "text-green-700" : "text-red-600"
-            }`}
-          >
-            {new Intl.NumberFormat("vi-VN", {
-              style: "currency",
-              currency: "VND",
-            }).format(fundBalance)}
-          </p>
-          <p className="text-xs text-amber-600 mt-0.5">
-            {isOwner
-              ? "Nhấn để quản lý thu chi"
-              : fundBalance >= 0
-              ? "Số dư hiện tại"
-              : "Tạm thâm hụt"}
-          </p>
         </Link>
       )}
 
