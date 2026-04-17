@@ -36,7 +36,7 @@ export default function SuggestionsPanel({
   const { showSuggestions } = useDashboard();
   const [confirmed, setConfirmed] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
 
   // Không hiển thị với viewer

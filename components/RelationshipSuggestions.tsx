@@ -215,7 +215,7 @@ export default function RelationshipSuggestions({
     }
 
     return result;
-  }, [persons, relationships, existingPairs, parentCountMap, spouseMap, childrenMap]);
+  }, [persons, existingPairs, parentCountMap, spouseMap, childrenMap]);
 
   const visible = suggestions.filter((s) => {
     const key = `${s.personA.id}-${s.personB.id}`;
