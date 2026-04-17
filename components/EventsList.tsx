@@ -17,6 +17,7 @@ import {
   List,
   MapPin,
   Moon,
+  PartyPopper,
   Plus,
   Star,
 } from "lucide-react";
@@ -82,6 +83,7 @@ function EventCard({
   const isCustom = event.type === "custom_event";
   const isDeathAnniversary = event.type === "death_anniversary";
   const isLunarFestival = event.type === "lunar_festival";
+  const isHoliday = event.type === "holiday";
   const isMung1 = event.festivalKind === "mung1";
   const isToday = event.daysUntil === 0;
   const isPast = event.daysUntil < 0;
@@ -117,7 +119,7 @@ function EventCard({
 
   const lunarDateLabel = isDeathAnniversary ? event.eventDateLabel : null;
 
-  const cardStyle = isLunarFestival
+  const cardStyle = (isLunarFestival || isHoliday)
     ? isToday
       ? "bg-amber-50 border-amber-300 shadow-sm"
       : isPast
@@ -133,7 +135,7 @@ function EventCard({
     ? "bg-white/80 border-stone-200/60 hover:border-purple-200"
     : "bg-white/80 border-stone-200/60 hover:border-rose-200";
 
-  const iconStyle = isLunarFestival
+  const iconStyle = (isLunarFestival || isHoliday)
     ? isToday ? "bg-amber-100 text-amber-600" : isPast ? "bg-stone-100 text-stone-400" : "bg-amber-50 text-amber-500"
     : isToday ? "bg-amber-100 text-amber-600"
     : isPast ? "bg-stone-100 text-stone-400"
@@ -146,14 +148,16 @@ function EventCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.04 }}
-      onClick={isLunarFestival ? undefined : handleClick}
+      onClick={(isLunarFestival || isHoliday) ? undefined : handleClick}
       className={`w-full text-left flex items-start gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border transition-all ${
-        isLunarFestival ? "" : "cursor-pointer active:scale-[0.98] hover:shadow-md"
+        (isLunarFestival || isHoliday) ? "" : "cursor-pointer active:scale-[0.98] hover:shadow-md"
       } group ${cardStyle}`}
     >
       <div className={`shrink-0 size-10 sm:size-11 flex items-center justify-center rounded-xl ${iconStyle}`}>
         {isLunarFestival ? (
           <Moon className="size-[18px] sm:size-5" />
+        ) : isHoliday ? (
+          <PartyPopper className="size-[18px] sm:size-5" />
         ) : isBirthday ? (
           <Cake className="size-[18px] sm:size-5" />
         ) : isCustom ? (
@@ -166,7 +170,7 @@ function EventCard({
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p className={`font-semibold text-[15px] sm:text-base truncate transition-colors ${
-            isPast ? "text-stone-500" : isLunarFestival ? "text-amber-800" : "text-stone-800 group-hover:text-amber-700"
+            isPast ? "text-stone-500" : (isLunarFestival || isHoliday) ? "text-amber-800" : "text-stone-800 group-hover:text-amber-700"
           }`}>
             {event.personName}
           </p>
@@ -250,7 +254,7 @@ export default function EventsList({
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [filter, setFilter] = useState<
-    "all" | "birthday" | "death_anniversary" | "custom_event" | "lunar_festival" | "past"
+    "all" | "birthday" | "death_anniversary" | "custom_event" | "lunar_festival" | "holiday" | "past"
   >("all");
   const [showCount, setShowCount] = useState(20);
   const [showDeceasedBirthdays, setShowDeceasedBirthdays] = useState(false);
@@ -296,14 +300,14 @@ export default function EventsList({
     let result = allEvents;
     if (filter === "past") {
       return result
-        .filter((e) => e.daysUntil < 0 && e.daysUntil >= -365 && e.type !== "lunar_festival")
+        .filter((e) => e.daysUntil < 0 && e.daysUntil >= -365 && e.type !== "lunar_festival" && e.type !== "holiday")
         .sort((a, b) => b.daysUntil - a.daysUntil);
     }
     if (filter !== "all") result = result.filter((e) => e.type === filter);
     if (!showDeceasedBirthdays)
       result = result.filter((e) => !(e.type === "birthday" && e.isDeceased));
     if (filter === "all")
-      result = result.filter((e) => !(e.type === "lunar_festival" && e.daysUntil < 0));
+      result = result.filter((e) => !((e.type === "lunar_festival" || e.type === "holiday") && e.daysUntil < 0));
     return result.filter((e) => e.daysUntil >= 0 && e.daysUntil <= 365);
   }, [allEvents, filter, showDeceasedBirthdays]);
 
@@ -391,6 +395,7 @@ export default function EventsList({
                 { key: "birthday",          label: "Sinh nhật" },
                 { key: "death_anniversary", label: "Ngày giỗ" },
                 { key: "lunar_festival",    label: "🌙 Mùng 1 & Rằm" },
+                { key: "holiday",           label: "🎆 Ngày Lễ Tết" },
                 { key: "custom_event",      label: "Tuỳ chỉnh" },
                 { key: "past",              label: "Đã qua" },
               ] as const).map((tab) => (
@@ -401,7 +406,7 @@ export default function EventsList({
                     filter === tab.key
                       ? tab.key === "past"
                         ? "bg-stone-600 text-white shadow-sm"
-                        : tab.key === "lunar_festival"
+                        : (tab.key === "lunar_festival" || tab.key === "holiday")
                         ? "bg-amber-400 text-white shadow-sm"
                         : "bg-amber-500 text-white shadow-sm"
                       : "bg-white/80 text-stone-600 border border-stone-200/60 hover:border-amber-200 hover:text-amber-700"
@@ -417,7 +422,7 @@ export default function EventsList({
           )}
         </div>
 
-        {viewMode === "list" && filter !== "past" && filter !== "lunar_festival" && (
+        {viewMode === "list" && filter !== "past" && filter !== "lunar_festival" && filter !== "holiday" && (
           <div className="flex px-1">
             <label className="flex items-center gap-2.5 text-sm font-medium text-stone-600 cursor-pointer hover:text-stone-900 transition-colors select-none">
               <input
