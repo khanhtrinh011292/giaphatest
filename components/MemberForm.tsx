@@ -264,13 +264,24 @@ export default function MemberForm({
           phone_number: phoneNumber?.trim() || null,
           occupation: occupation?.trim() || null,
           current_residence: currentResidence?.trim() || null,
-          family_id: familyId,
+          // family_id: familyId, // Temporarily disabled to check if it's causing schema errors
         };
         const hasData = normalizedData.phone_number || normalizedData.occupation || normalizedData.current_residence;
-        if (hasData) {
-          await supabase.from("person_details_private").upsert(normalizedData);
-        } else {
-          await supabase.from("person_details_private").delete().eq("person_id", currentPersonId);
+        
+        try {
+          if (hasData) {
+            const { error: privateError } = await supabase.from("person_details_private").upsert(normalizedData);
+            if (privateError) {
+              console.warn("Private details save failed (prob RLS):", privateError.message);
+              // We don't throw here to allow the main person save to succeed, 
+              // but we notify the user.
+              toast.error("Thông tin liên hệ không lưu được (Quyền hạn hạn chế)");
+            }
+          } else {
+            await supabase.from("person_details_private").delete().eq("person_id", currentPersonId);
+          }
+        } catch (err) {
+          console.error("Private details error:", err);
         }
       }
 

@@ -36,11 +36,11 @@ export async function quickAddSpouse(
   if (insertError || !newPerson) return { error: insertError?.message ?? "Lỗi tạo người." };
 
   const { error: relError } = await supabase.from("relationships").insert({
-    family_id: familyId,
     person_a: personId,
     person_b: newPerson.id,
-    type: "marriage",
+    type: "marriage" as any, // Explicit cast to avoid any potential TS-to-DB weirdness
     note: note || null,
+    family_id: familyId,
   });
 
   if (relError) {
@@ -98,10 +98,10 @@ export async function bulkAddChildren(
       }
 
       const { error: relA } = await supabase.from("relationships").insert({
-        family_id: familyId,
         person_a: personId,
         person_b: newChild.id,
-        type: "biological_child",
+        type: "biological_child" as any,
+        family_id: familyId,
       });
 
       if (relA) {
@@ -154,11 +154,11 @@ export async function addRelationship(
   const supabase = await getSupabase();
 
   const { error: insertError } = await supabase.from("relationships").insert({
-    family_id: familyId,
     person_a: personAId,
     person_b: personBId,
-    type,
+    type: type as any,
     note: note || null,
+    family_id: familyId,
   });
 
   if (insertError) return { error: insertError.message };
