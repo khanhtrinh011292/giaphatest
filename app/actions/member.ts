@@ -2,136 +2,162 @@
 
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
-export async function deleteMemberProfile(memberId: string, familyId: string) {
-  const user = await getUser();
-  if (!user) return { error: "Vui lòng đăng nhập." };
-
-  const supabase = await getSupabase();
-
-  const { data: person, error: personError } = await supabase
-    .from("persons")
-    .select("id, family_id")
-    .eq("id", memberId)
-    .single();
-
-  if (personError || !person)
-    return { error: "Không tìm thấy thành viên này." };
-
-  if (person.family_id !== familyId)
-    return { error: "Dữ liệu không hợp lệ." };
-
-  const { data: family } = await supabase
-    .from("families")
-    .select("owner_id")
-    .eq("id", familyId)
-    .single();
-
-  const isOwner = family?.owner_id === user.id;
-
-  if (!isOwner) {
-    const { data: share } = await supabase
-      .from("family_shares")
-      .select("role")
-      .eq("family_id", familyId)
-      .eq("shared_with", user.id)
-      .single();
-
-    const canWrite = share?.role === "editor" || share?.role === "admin";
-    if (!canWrite)
-      return {
-        error: "Từ chối truy cập. Chỉ Owner, Admin hoặc Editor của gia phả này mới có quyền xoá hồ sơ.",
-      };
-  }
-
-  const { data: relationships, error: relationshipError } = await supabase
-    .from("relationships")
-    .select("id")
-    .or(`person_a.eq.${memberId},person_b.eq.${memberId}`)
-    .limit(1);
-
-  if (relationshipError) return { error: "Lỗi kiểm tra mối quan hệ gia đình." };
-
-  if (relationships && relationships.length > 0) {
-    return {
-      error: "Không thể xoá. Vui lòng xoá hết các mối quan hệ gia đình của người này trước.",
-    };
-  }
-
-  const { error: deleteError } = await supabase
-    .from("persons")
-    .delete()
-    .eq("id", memberId)
-    .eq("family_id", familyId);
-
-  if (deleteError) return { error: "Đã xảy ra lỗi khi xoá hồ sơ." };
-
-  revalidatePath(`/dashboard/${familyId}`);
-  revalidatePath(`/dashboard/${familyId}/members`);
-  // Fix: revalidate layout để sidebar/header cập nhật ngay sau khi xoá thành viên
-  revalidatePath(`/dashboard/${familyId}`, "layout");
-  redirect(`/dashboard/${familyId}`);
-}
-
-// ── Xác nhận gợi ý quan hệ: thêm quan hệ cha/mẹ → con vào DB ──────────────
-export async function confirmSuggestedRelationship(
+// ─── 1. Quick Add Spouse ───────────────────────────────────────────────────
+export async function quickAddSpouse(
   familyId: string,
-  parentId: string,
-  childId: string
+  personId: string,
+  spouseName: string,
+  spouseGender: "male" | "female" | "other",
+  spouseGeneration: number | null,
+  birthYear: number | null,
+  note: string | null
 ) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
-
   const supabase = await getSupabase();
 
-  const { data: family } = await supabase
-    .from("families")
-    .select("owner_id")
-    .eq("id", familyId)
+  const payload: Record<string, unknown> = {
+    family_id: familyId,
+    full_name: spouseName.trim(),
+    gender: spouseGender,
+    is_in_law: true,
+  };
+  if (spouseGeneration != null) payload.generation = spouseGeneration;
+  if (birthYear != null) payload.birth_year = birthYear;
+
+  const { data: newPerson, error: insertError } = await supabase
+    .from("persons")
+    .insert(payload)
+    .select("id")
     .single();
 
-  const isOwner = family?.owner_id === user.id;
-  if (!isOwner) {
-    const { data: share } = await supabase
-      .from("family_shares")
-      .select("role")
-      .eq("family_id", familyId)
-      .eq("shared_with", user.id)
-      .single();
-    const canEdit = share?.role === "editor" || share?.role === "admin";
-    if (!canEdit) return { error: "Bạn không có quyền chỉnh sửa gia phả này." };
+  if (insertError || !newPerson) return { error: insertError?.message ?? "Lỗi tạo người." };
+
+  const { error: relError } = await supabase.from("relationships").insert({
+    family_id: familyId,
+    person_a: personId,
+    person_b: newPerson.id,
+    type: "marriage",
+    note: note || null,
+  });
+
+  if (relError) {
+    await supabase.from("persons").delete().eq("id", newPerson.id);
+    return { error: relError.message };
   }
 
-  const { data: persons } = await supabase
-    .from("persons")
-    .select("id")
-    .eq("family_id", familyId)
-    .in("id", [parentId, childId]);
+  revalidatePath(`/dashboard/${familyId}`);
+  return { success: true };
+}
 
-  if (!persons || persons.length < 2)
-    return { error: "Không tìm thấy thành viên trong gia phả." };
+// ─── 2. Bulk Add Children ──────────────────────────────────────────────────
+export async function bulkAddChildren(
+  familyId: string,
+  personId: string,
+  spousePersonId: string | null,
+  children: Array<{
+    name: string;
+    gender: "male" | "female" | "other";
+    birthYear: number | null;
+    birthOrder: number | null;
+    generation: number | null;
+  }>
+) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
 
-  const { data: existing } = await supabase
-    .from("relationships")
-    .select("id")
-    .eq("family_id", familyId)
-    .eq("person_a", parentId)
-    .eq("person_b", childId)
-    .maybeSingle();
+  let successCount = 0;
+  for (const child of children) {
+    if (!child.name.trim()) continue;
 
-  if (existing) return { error: "Quan hệ này đã tồn tại." };
-
-  const { error: insertError } = await supabase
-    .from("relationships")
-    .insert({
+    const payload: Record<string, unknown> = {
       family_id: familyId,
-      person_a: parentId,
-      person_b: childId,
+      full_name: child.name.trim(),
+      gender: child.gender,
+      is_in_law: false,
+    };
+    if (child.generation != null) payload.generation = child.generation;
+    if (child.birthYear != null) payload.birth_year = child.birthYear;
+    if (child.birthOrder != null) payload.birth_order = child.birthOrder;
+
+    const { data: newChild, error: insertError } = await supabase
+      .from("persons")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (insertError || !newChild) continue;
+
+    const { error: relA } = await supabase.from("relationships").insert({
+      family_id: familyId,
+      person_a: personId,
+      person_b: newChild.id,
       type: "biological_child",
     });
 
+    if (relA) {
+      await supabase.from("persons").delete().eq("id", newChild.id);
+      continue;
+    }
+
+    if (spousePersonId) {
+      await supabase.from("relationships").insert({
+        family_id: familyId,
+        person_a: spousePersonId,
+        person_b: newChild.id,
+        type: "biological_child",
+      });
+    }
+
+    successCount++;
+  }
+
+  revalidatePath(`/dashboard/${familyId}`);
+  return { success: true, count: successCount };
+}
+
+// ─── 3. Add Relationship (Single) ─────────────────────────────────────────
+export async function addRelationship(
+  familyId: string,
+  personAId: string,
+  personBId: string,
+  type: "biological_child" | "adopted_child" | "marriage",
+  note: string | null,
+  targetPersonId: string,
+  direction: "parent" | "child" | "spouse",
+  targetGeneration: number | null,
+  personGeneration: number | null
+) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  const { error: insertError } = await supabase.from("relationships").insert({
+    family_id: familyId,
+    person_a: personAId,
+    person_b: personBId,
+    type,
+    note: note || null,
+  });
+
   if (insertError) return { error: insertError.message };
+
+  // Auto-update generation & is_in_law nếu target chưa có generation
+  if (targetGeneration == null) {
+    const updates: Record<string, unknown> = {};
+    if (personGeneration != null) {
+      if (direction === "child")       updates.generation = personGeneration + 1;
+      else if (direction === "parent") updates.generation = personGeneration - 1;
+      else                             updates.generation = personGeneration;
+    }
+    updates.is_in_law = direction === "spouse";
+
+    if (Object.keys(updates).length > 0) {
+      await supabase.from("persons").update(updates).eq("id", targetPersonId);
+    }
+  }
 
   revalidatePath(`/dashboard/${familyId}`);
   return { success: true };

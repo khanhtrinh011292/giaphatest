@@ -1,7 +1,8 @@
 "use client";
 
-import { createClient } from "@/utils/supabase/client";
+import { bulkAddChildren } from "@/app/actions/member";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface ExpectedSpouse {
   id: string;
@@ -29,8 +30,7 @@ export default function BulkAddChildrenModal({
   onSuccess,
   onCancel,
 }: BulkAddChildrenModalProps) {
-  const supabase = createClient();
-  const [selectedSpouseId, setSelectedSpouseId] = useState<string>("unknown");
+  const [selectedSpouseId, setSelectedSpouseId] = useState<string>("");
   const [bulkChildren, setBulkChildren] = useState([
     {
       name: "",
@@ -41,108 +41,36 @@ export default function BulkAddChildrenModal({
     },
   ]);
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleBulkAdd = async () => {
     const validChildren = bulkChildren.filter((c) => c.name.trim() !== "");
     if (validChildren.length === 0) {
-      setError("Vui lòng nhập ít nhất tên của 1 người con.");
-      setTimeout(() => setError(null), 5000);
+      toast.error("Vui lòng nhập ít nhất tên của 1 người con.");
       return;
     }
 
     setProcessing(true);
-    setError(null);
-    let successCount = 0;
 
-    try {
-      for (let i = 0; i < validChildren.length; i++) {
-        const child = validChildren[i];
+    const result = await bulkAddChildren(
+      familyId,
+      personId,
+      selectedSpouseId || null,
+      validChildren.map((c) => ({
+        name: c.name,
+        gender: c.gender as "male" | "female" | "other",
+        birthYear: c.birthYear ? Number(c.birthYear) : null,
+        birthOrder: c.birthOrder ? Number(c.birthOrder) : null,
+        generation: personGeneration != null ? personGeneration + 1 : null,
+      }))
+    );
 
-        const personPayload: {
-          family_id: string;
-          full_name: string;
-          gender: "male" | "female" | "other";
-          birth_year?: number;
-          birth_order?: number;
-          is_in_law?: boolean;
-          generation?: number;
-        } = {
-          family_id: familyId,
-          full_name: child.name.trim(),
-          gender: child.gender as "male" | "female" | "other",
-          is_in_law: false,
-        };
+    setProcessing(false);
 
-        if (personGeneration != null) {
-          personPayload.generation = personGeneration + 1;
-        }
-        if (child.birthYear.trim() !== "") {
-          const year = parseInt(child.birthYear);
-          if (!isNaN(year)) personPayload.birth_year = year;
-        }
-        if (child.birthOrder.trim() !== "") {
-          const order = parseInt(child.birthOrder);
-          if (!isNaN(order)) personPayload.birth_order = order;
-        }
-
-        const { data: newPersonData, error: insertError } = await supabase
-          .from("persons")
-          .insert(personPayload)
-          .select("id")
-          .single();
-
-        if (insertError || !newPersonData) {
-          continue;
-        }
-
-        const newChildId = newPersonData.id;
-
-        const { error: relErrorA } = await supabase
-          .from("relationships")
-          .insert({
-            family_id: familyId,
-            person_a: personId,
-            person_b: newChildId,
-            type: "biological_child",
-          });
-
-        if (relErrorA) {
-          await supabase.from("persons").delete().eq("id", newChildId);
-          continue;
-        }
-
-        if (selectedSpouseId && selectedSpouseId !== "unknown") {
-          const { error: relErrorB } = await supabase
-            .from("relationships")
-            .insert({
-              family_id: familyId,
-              person_a: selectedSpouseId,
-              person_b: newChildId,
-              type: "biological_child",
-            });
-
-          if (relErrorB) {
-            console.error("Failed to insert second parent relationship", relErrorB);
-          }
-        }
-
-        successCount++;
-      }
-
-      if (successCount === validChildren.length) {
-        onSuccess();
-      } else {
-        setError(`Đã xảy ra lỗi. Chỉ lưu thành công ${successCount}/${validChildren.length} người.`);
-        setTimeout(() => setError(null), 5000);
-        onSuccess(); // Triggers a reload to fetch successfully inserted ones
-      }
-    } catch (err: unknown) {
-      const e = err as Error;
-      setError("Không thể thêm danh sách con: " + e.message);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setProcessing(false);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success(`Đã thêm ${result.count} người con.`);
+      onSuccess();
     }
   };
 
@@ -161,7 +89,7 @@ export default function BulkAddChildrenModal({
             onChange={(e) => setSelectedSpouseId(e.target.value)}
             className="bg-white text-stone-900 block w-full max-w-full text-sm rounded-lg border-stone-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 p-2 sm:p-2.5 border transition-colors"
           >
-            <option value="unknown">Không rõ (hoặc Vợ/Chồng khác chưa thêm)</option>
+            <option value="">-- Không chọn --</option>
             {spouses.map((rel) => (
               <option key={rel.id} value={rel.targetPerson.id}>
                 {rel.targetPerson.full_name} {rel.note ? `(${rel.note})` : ""}
@@ -255,12 +183,6 @@ export default function BulkAddChildrenModal({
             + Thêm dòng
           </button>
         </div>
-
-        {error && (
-          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100 flex items-center gap-2">
-            {error}
-          </div>
-        )}
 
         <div className="flex gap-2 pt-4 border-t border-stone-200">
           <button

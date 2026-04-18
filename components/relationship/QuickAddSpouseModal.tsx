@@ -1,7 +1,8 @@
 "use client";
 
-import { createClient } from "@/utils/supabase/client";
+import { quickAddSpouse } from "@/app/actions/member";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface QuickAddSpouseModalProps {
   personId: string;
@@ -20,85 +21,43 @@ export default function QuickAddSpouseModal({
   onSuccess,
   onCancel,
 }: QuickAddSpouseModalProps) {
-  const supabase = createClient();
   const [newSpouseName, setNewSpouseName] = useState("");
   const [newSpouseBirthYear, setNewSpouseBirthYear] = useState("");
   const [newSpouseNote, setNewSpouseNote] = useState("");
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleQuickAddSpouse = async () => {
     if (!newSpouseName.trim()) {
-      setError("Vui lòng nhập tên Vợ/Chồng.");
-      setTimeout(() => setError(null), 5000);
+      toast.error("Vui lòng nhập tên Vợ/Chồng.");
       return;
     }
 
+    const newSpouseGender =
+      personGender === "male"
+        ? "female"
+        : personGender === "female"
+        ? "male"
+        : "female";
+
     setProcessing(true);
-    setError(null);
-    let newSpouseId: string | null = null; // track for rollback
 
-    try {
-      const newSpouseGender =
-        personGender === "male"
-          ? "female"
-          : personGender === "female"
-          ? "male"
-          : "female";
+    const result = await quickAddSpouse(
+      familyId,
+      personId,
+      newSpouseName,
+      newSpouseGender,
+      personGeneration ?? null,
+      newSpouseBirthYear ? Number(newSpouseBirthYear) : null,
+      newSpouseNote || null
+    );
 
-      const personPayload: {
-        family_id: string;
-        full_name: string;
-        gender: "male" | "female" | "other";
-        birth_year?: number;
-        is_in_law?: boolean;
-        generation?: number;
-      } = {
-        family_id: familyId,
-        full_name: newSpouseName.trim(),
-        gender: newSpouseGender,
-        is_in_law: true,
-      };
+    setProcessing(false);
 
-      if (personGeneration != null) {
-        personPayload.generation = personGeneration;
-      }
-
-      if (newSpouseBirthYear.trim() !== "") {
-        const year = parseInt(newSpouseBirthYear);
-        if (!isNaN(year)) personPayload.birth_year = year;
-      }
-
-      const { data: newPersonData, error: insertError } = await supabase
-        .from("persons")
-        .insert(personPayload)
-        .select("id")
-        .single();
-
-      if (insertError || !newPersonData) throw insertError;
-
-      newSpouseId = newPersonData.id;
-
-      const { error: relError } = await supabase.from("relationships").insert({
-        family_id: familyId,
-        person_a: personId,
-        person_b: newSpouseId,
-        type: "marriage",
-        note: newSpouseNote.trim() || null,
-      });
-
-      if (relError) {
-        await supabase.from("persons").delete().eq("id", newSpouseId);
-        throw relError;
-      }
-
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Đã thêm vợ/chồng.");
       onSuccess();
-    } catch (err: unknown) {
-      const e = err as Error;
-      setError("Không thể thêm vợ/chồng: " + e.message);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -168,14 +127,6 @@ export default function QuickAddSpouseModal({
             Hủy
           </button>
         </div>
-        {error && (
-          <div className="mt-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {error}
-          </div>
-        )}
       </div>
     </div>
   );

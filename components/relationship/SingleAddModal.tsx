@@ -1,9 +1,11 @@
 "use client";
 
-import { createClient } from "@/utils/supabase/client";
+import { addRelationship } from "@/app/actions/member";
 import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { formatDisplayDate } from "@/utils/dateHelpers";
 import { RelationshipType } from "@/types";
+import { toast } from "sonner";
 
 interface SingleAddModalProps {
   personId: string;
@@ -25,11 +27,10 @@ export default function SingleAddModal({
   const [newRelDirection, setNewRelDirection] = useState<"parent" | "child" | "spouse">("parent");
   const [newRelNote, setNewRelNote] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<{ id: string; full_name: string; gender: string; birth_year: number; birth_month: number; birth_day: number }[]>([]);
-  const [recentMembers, setRecentMembers] = useState<{ id: string; full_name: string; gender: string; birth_year: number; birth_month: number; birth_day: number }[]>([]);
-  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<{ id: string; full_name: string; gender: string; birth_year: number; birth_month: number; birth_day: number; generation: number | null }[]>([]);
+  const [recentMembers, setRecentMembers] = useState<{ id: string; full_name: string; gender: string; birth_year: number; birth_month: number; birth_day: number; generation: number | null }[]>([]);
+  const [selectedTarget, setSelectedTarget] = useState<{ id: string; full_name: string; generation: number | null } | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const searchPeople = async () => {
@@ -70,75 +71,43 @@ export default function SingleAddModal({
   }, [personId, familyId, supabase, recentMembers.length]);
 
   const handleAddRelationship = async () => {
-    if (!selectedTargetId) return;
+    if (!selectedTarget) return;
     setProcessing(true);
-    setError(null);
 
-    try {
-      let personA = personId;
-      let personB = selectedTargetId;
+    let personA = personId;
+    let personB = selectedTarget.id;
 
-      if (newRelDirection === "parent") {
-        personA = selectedTargetId;
-        personB = personId;
-      } else if (newRelDirection === "child") {
-        personA = personId;
-        personB = selectedTargetId;
-      }
+    if (newRelDirection === "parent") {
+      personA = selectedTarget.id;
+      personB = personId;
+    } else if (newRelDirection === "child") {
+      personA = personId;
+      personB = selectedTarget.id;
+    }
 
-      let type: RelationshipType = "biological_child";
-      if (newRelDirection === "spouse") type = "marriage";
-      else if (newRelType === "adopted_child") type = "adopted_child";
+    let type: RelationshipType = "biological_child";
+    if (newRelDirection === "spouse") type = "marriage";
+    else if (newRelType === "adopted_child") type = "adopted_child";
 
-      const { error: insertError } = await supabase.from("relationships").insert({
-        family_id: familyId,
-        person_a: personA,
-        person_b: personB,
-        type: type,
-        note: newRelNote ? newRelNote : null,
-      });
+    const result = await addRelationship(
+      familyId,
+      personA,
+      personB,
+      type,
+      newRelNote || null,
+      selectedTarget.id,
+      newRelDirection,
+      selectedTarget.generation ?? null,
+      personGeneration
+    );
 
-      if (insertError) throw insertError;
+    setProcessing(false);
 
-      try {
-        const { data: targetPerson } = await supabase
-          .from("persons")
-          .select("generation, is_in_law")
-          .eq("id", selectedTargetId)
-          .single();
-
-        if (targetPerson && (targetPerson.generation == null || targetPerson.is_in_law == null)) {
-          const updates: { generation?: number; is_in_law?: boolean } = {};
-
-          if (targetPerson.generation == null && personGeneration != null) {
-            if (newRelDirection === "child") updates.generation = personGeneration + 1;
-            else if (newRelDirection === "parent") updates.generation = personGeneration - 1;
-            else if (newRelDirection === "spouse") updates.generation = personGeneration;
-          }
-
-          if (targetPerson.is_in_law == null) {
-            if (newRelDirection === "child" || newRelDirection === "parent") {
-              updates.is_in_law = false;
-            } else if (newRelDirection === "spouse") {
-              updates.is_in_law = true;
-            }
-          }
-
-          if (Object.keys(updates).length > 0) {
-            await supabase.from("persons").update(updates).eq("id", selectedTargetId);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to auto-update target person properties", err);
-      }
-
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Đã thêm quan hệ.");
       onSuccess();
-    } catch (err: unknown) {
-      const e = err as Error;
-      setError("Không thể thêm mối quan hệ: " + e.message);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -206,7 +175,7 @@ export default function SingleAddModal({
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-white text-stone-900 placeholder-stone-400 block w-full text-sm rounded-lg border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 sm:p-2.5 border transition-colors"
           />
-          {(searchResults.length > 0 || (searchTerm.length === 0 && !selectedTargetId && recentMembers.length > 0)) && (
+          {(searchResults.length > 0 || (searchTerm.length === 0 && !selectedTarget && recentMembers.length > 0)) && (
             <div className="mt-2 bg-white border border-stone-200 rounded-md shadow-lg max-h-[250px] overflow-y-auto">
               <div className="px-3 py-1.5 bg-stone-100 text-[10px] font-bold text-stone-500 uppercase tracking-wide border-b border-stone-200 sticky top-0 z-10">
                 {searchResults.length > 0 ? "Kết quả tìm kiếm" : "Thành viên vừa thêm gần đây"}
@@ -215,7 +184,7 @@ export default function SingleAddModal({
                 <button
                   key={p.id}
                   onClick={() => {
-                    setSelectedTargetId(p.id);
+                    setSelectedTarget({ id: p.id, full_name: p.full_name, generation: p.generation });
                     setSearchTerm(p.full_name);
                     setSearchResults([]);
                   }}
@@ -243,15 +212,15 @@ export default function SingleAddModal({
               ))}
             </div>
           )}
-          {selectedTargetId && (
-            <p className="text-xs text-green-600 mt-1">Đã chọn: {searchTerm}</p>
+          {selectedTarget && (
+            <p className="text-xs text-green-600 mt-1">Đã chọn: {selectedTarget.full_name}</p>
           )}
         </div>
 
         <div className="flex gap-2 pt-2">
           <button
             onClick={handleAddRelationship}
-            disabled={!selectedTargetId || processing}
+            disabled={!selectedTarget || processing}
             className="flex-1 bg-amber-700 text-white py-2 sm:py-2.5 rounded-md sm:rounded-lg text-sm font-medium hover:bg-amber-800 disabled:opacity-50 transition-colors"
           >
             {processing ? "Đang lưu..." : "Lưu"}
@@ -263,12 +232,6 @@ export default function SingleAddModal({
             Hủy
           </button>
         </div>
-        
-        {error && (
-          <div className="mt-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100 flex items-center gap-2">
-            {error}
-          </div>
-        )}
       </div>
     </div>
   );
