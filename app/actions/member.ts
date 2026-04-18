@@ -115,7 +115,7 @@ export async function bulkAddChildren(
           family_id: familyId,
           person_a: spousePersonId,
           person_b: newChild.id,
-          type: "biological_child",
+          type: "biological_child" as any, // ← thêm cast
         });
         if (relSpouse) {
            // We don't delete the person if only the second relationship fails, 
