@@ -145,7 +145,6 @@ export async function addRelationship(
 
   if (insertError) return { error: insertError.message };
 
-  // Auto-update generation & is_in_law nếu target chưa có generation
   if (targetGeneration == null) {
     const updates: Record<string, unknown> = {};
     if (personGeneration != null) {
@@ -170,7 +169,6 @@ export async function deleteMemberProfile(memberId: string, familyId: string) {
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
-  // Xóa tất cả relationships liên quan trước
   const { error: relError } = await supabase
     .from("relationships")
     .delete()
@@ -179,7 +177,6 @@ export async function deleteMemberProfile(memberId: string, familyId: string) {
 
   if (relError) return { error: relError.message };
 
-  // Xóa person
   const { error: personError } = await supabase
     .from("persons")
     .delete()
@@ -190,4 +187,27 @@ export async function deleteMemberProfile(memberId: string, familyId: string) {
 
   revalidatePath(`/dashboard/${familyId}`);
   redirect(`/dashboard/${familyId}`);
+}
+
+// ─── 5. Confirm Suggested Relationship ──────────────────────────────────
+export async function confirmSuggestedRelationship(
+  familyId: string,
+  parentId: string,
+  childId: string
+) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  const { error } = await supabase.from("relationships").insert({
+    family_id: familyId,
+    person_a: parentId,
+    person_b: childId,
+    type: "biological_child",
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/${familyId}`);
+  return { success: true };
 }
