@@ -48,7 +48,7 @@ export default function FamilyTree({
     DEFAULT_AUTO_COLLAPSE_LEVEL,
   );
 
-  const { showAvatar, setMemberModalId } = useDashboard();
+  const { showAvatar, setShowCreateMember } = useDashboard();
 
   const {
     scale,
@@ -298,7 +298,7 @@ export default function FamilyTree({
         </div>
         {canEdit && (
           <button
-            onClick={() => setMemberModalId("new")}
+            onClick={() => setShowCreateMember(true)}
             className="btn-primary flex items-center gap-2"
           >
             <UserPlus className="size-4" />
