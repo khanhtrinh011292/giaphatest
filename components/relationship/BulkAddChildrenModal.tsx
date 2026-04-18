@@ -43,7 +43,10 @@ export default function BulkAddChildrenModal({
   const [processing, setProcessing] = useState(false);
 
   const handleBulkAdd = async () => {
-    const validChildren = bulkChildren.filter((c) => c.name.trim() !== "");
+    const validChildren = bulkChildren
+      .map(c => ({ ...c, name: c.name.trim() }))
+      .filter((c) => c.name !== "");
+
     if (validChildren.length === 0) {
       toast.error("Vui lòng nhập ít nhất tên của 1 người con.");
       return;

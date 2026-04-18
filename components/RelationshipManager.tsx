@@ -2,7 +2,6 @@
 
 import { DashboardContext, useDashboard } from "@/components/DashboardContext";
 import { Person, RelationshipType } from "@/types";
-import { formatDisplayDate } from "@/utils/dateHelpers";
 import { getAvatarBg } from "@/utils/styleHelprs";
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
@@ -248,7 +247,6 @@ export default function RelationshipManager({
       setLoading(false);
     }
   // FIX #2: onStatsLoaded intentionally excluded — stable ref used instead
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [personId, supabase]);
 
   useEffect(() => {
@@ -261,12 +259,16 @@ export default function RelationshipManager({
   // even if the button is somehow rendered (defense-in-depth).
   const handleDelete = async (relId: string) => {
     if (!canEdit) return; // guard
+
+    // Handle synthesized in-law IDs (e.g., "relId_inlaw")
+    const actualRelId = relId.endsWith("_inlaw") ? relId.replace("_inlaw", "") : relId;
+
     if (!confirm("Bạn có chắc chắn muốn xóa mối quan hệ này?")) return;
     try {
       const { error } = await supabase
         .from("relationships")
         .delete()
-        .eq("id", relId);
+        .eq("id", actualRelId);
       if (error) throw error;
       fetchRelationships();
       router.refresh();
@@ -363,7 +365,7 @@ export default function RelationshipManager({
                         )}
                       </div>
                     </button>
-                    {canEdit && rel.direction !== "child_in_law" && (
+                    {canEdit && (
                       <button
                         onClick={() => handleDelete(rel.id)}
                         className="text-stone-300 hover:text-red-500 hover:bg-red-50 p-2 sm:p-2.5 rounded-lg transition-colors flex items-center justify-center ml-2"

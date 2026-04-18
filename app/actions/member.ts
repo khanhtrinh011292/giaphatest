@@ -70,53 +70,71 @@ export async function bulkAddChildren(
   const supabase = await getSupabase();
 
   let successCount = 0;
+  const errors: string[] = [];
+
   for (const child of children) {
     if (!child.name.trim()) continue;
 
-    const payload: Record<string, unknown> = {
-      family_id: familyId,
-      full_name: child.name.trim(),
-      gender: child.gender,
-      is_in_law: false,
-    };
-    if (child.generation != null) payload.generation = child.generation;
-    if (child.birthYear != null) payload.birth_year = child.birthYear;
-    if (child.birthOrder != null) payload.birth_order = child.birthOrder;
-
-    const { data: newChild, error: insertError } = await supabase
-      .from("persons")
-      .insert(payload)
-      .select("id")
-      .single();
-
-    if (insertError || !newChild) continue;
-
-    const { error: relA } = await supabase.from("relationships").insert({
-      family_id: familyId,
-      person_a: personId,
-      person_b: newChild.id,
-      type: "biological_child",
-    });
-
-    if (relA) {
-      await supabase.from("persons").delete().eq("id", newChild.id);
-      continue;
-    }
-
-    if (spousePersonId) {
-      await supabase.from("relationships").insert({
+    try {
+      const payload: Record<string, unknown> = {
         family_id: familyId,
-        person_a: spousePersonId,
+        full_name: child.name.trim(),
+        gender: child.gender,
+        is_in_law: false,
+      };
+      if (child.generation != null) payload.generation = child.generation;
+      if (child.birthYear != null) payload.birth_year = child.birthYear;
+      if (child.birthOrder != null) payload.birth_order = child.birthOrder;
+
+      const { data: newChild, error: insertError } = await supabase
+        .from("persons")
+        .insert(payload)
+        .select("id")
+        .single();
+
+      if (insertError || !newChild) {
+        errors.push(`Lỗi thêm ${child.name}: ${insertError?.message}`);
+        continue;
+      }
+
+      const { error: relA } = await supabase.from("relationships").insert({
+        family_id: familyId,
+        person_a: personId,
         person_b: newChild.id,
         type: "biological_child",
       });
-    }
 
-    successCount++;
+      if (relA) {
+        await supabase.from("persons").delete().eq("id", newChild.id);
+        errors.push(`Lỗi tạo quan hệ cho ${child.name}: ${relA.message}`);
+        continue;
+      }
+
+      if (spousePersonId) {
+        const { error: relSpouse } = await supabase.from("relationships").insert({
+          family_id: familyId,
+          person_a: spousePersonId,
+          person_b: newChild.id,
+          type: "biological_child",
+        });
+        if (relSpouse) {
+           // We don't delete the person if only the second relationship fails, 
+           // but we log it. Usually this shouldn't fail if relA succeeded.
+           errors.push(`Lỗi tạo quan hệ (cha/mẹ thứ 2) cho ${child.name}: ${relSpouse.message}`);
+        }
+      }
+
+      successCount++;
+    } catch (e: any) {
+      errors.push(`Lỗi không xác định với ${child.name}: ${e.message}`);
+    }
   }
 
   revalidatePath(`/dashboard/${familyId}`);
-  return { success: true, count: successCount };
+  if (errors.length > 0 && successCount === 0) {
+    return { error: errors.join(". ") };
+  }
+  return { success: true, count: successCount, partialErrors: errors.length > 0 ? errors : undefined };
 }
 
 // ─── 3. Add Relationship (Single) ─────────────────────────────────────────
@@ -145,14 +163,22 @@ export async function addRelationship(
 
   if (insertError) return { error: insertError.message };
 
-  if (targetGeneration == null) {
+  if (targetGeneration === null) {
     const updates: Record<string, unknown> = {};
-    if (personGeneration != null) {
-      if (direction === "child")       updates.generation = personGeneration + 1;
-      else if (direction === "parent") updates.generation = personGeneration - 1;
-      else                             updates.generation = personGeneration;
+    if (personGeneration !== null) {
+      if (direction === "child") {
+        updates.generation = Number(personGeneration) + 1;
+      } else if (direction === "parent") {
+        updates.generation = Math.max(1, Number(personGeneration) - 1);
+      } else if (direction === "spouse") {
+        updates.generation = personGeneration;
+      }
     }
-    updates.is_in_law = direction === "spouse";
+    
+    // Set in-law status if it's a marriage and we're adding someone TO the tree
+    if (type === "marriage") {
+      updates.is_in_law = true;
+    }
 
     if (Object.keys(updates).length > 0) {
       await supabase.from("persons").update(updates).eq("id", targetPersonId);
