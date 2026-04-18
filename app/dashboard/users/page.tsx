@@ -20,12 +20,13 @@ export default async function AdminUsersPage() {
   if (error) console.error("Error fetching users:", error);
   const typedUsers = (users as AdminUserData[]) || [];
 
-  const [{ count: totalFamilies }, { count: totalPersons }, { count: totalRelationships }] =
-    await Promise.all([
-      supabase.from("families").select("*", { count: "exact", head: true }).then(r => r),
-      supabase.from("persons").select("*", { count: "exact", head: true }).then(r => r),
-      supabase.from("relationships").select("*", { count: "exact", head: true }).then(r => r),
-    ]);
+  // Dùng function get_admin_stats thay vì query trực tiếp từng bảng
+  const { data: adminStats, error: statsError } = await supabase.rpc("get_admin_stats");
+  if (statsError) console.error("Error fetching admin stats:", statsError);
+
+  const totalFamilies = adminStats?.total_families ?? 0;
+  const totalPersons = adminStats?.total_persons ?? 0;
+  const totalRelationships = adminStats?.total_relationships ?? 0;
 
   const totalUsers = typedUsers.length;
   const activeUsers = typedUsers.filter(u => u.is_active).length;
@@ -41,21 +42,21 @@ export default async function AdminUsersPage() {
     },
     {
       label: "Gia phả",
-      value: totalFamilies ?? 0,
+      value: totalFamilies,
       sub: "Tổng gia phả trong hệ thống",
       icon: "book",
       color: "emerald",
     },
     {
       label: "Thành viên gia phả",
-      value: totalPersons ?? 0,
+      value: totalPersons,
       sub: "Tổng hồ sơ đã tạo",
       icon: "network",
       color: "blue",
     },
     {
       label: "Mối quan hệ",
-      value: totalRelationships ?? 0,
+      value: totalRelationships,
       sub: "Kết nối giữa các thành viên",
       icon: "git",
       color: "purple",
