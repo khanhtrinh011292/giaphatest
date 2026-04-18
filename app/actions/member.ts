@@ -38,7 +38,7 @@ export async function quickAddSpouse(
   const { error: relError } = await supabase.from("relationships").insert({
     person_a: personId,
     person_b: newPerson.id,
-    type: "marriage" as any, // Explicit cast to avoid any potential TS-to-DB weirdness
+    type: "marriage", // ✅ HARDCODED: literal string
     note: note || null,
     family_id: familyId,
   });
@@ -100,7 +100,7 @@ export async function bulkAddChildren(
       const { error: relA } = await supabase.from("relationships").insert({
         person_a: personId,
         person_b: newChild.id,
-        type: "biological_child" as any,
+        type: "biological_child", // ✅ HARDCODED: literal string
         family_id: familyId,
       });
 
@@ -115,7 +115,7 @@ export async function bulkAddChildren(
           family_id: familyId,
           person_a: spousePersonId,
           person_b: newChild.id,
-          type: "biological_child" as any, // ← thêm cast
+          type: "biological_child", // ✅ HARDCODED: literal string
         });
         if (relSpouse) {
            // We don't delete the person if only the second relationship fails, 
@@ -153,10 +153,15 @@ export async function addRelationship(
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
+  // ✅ FIX: Ensure type is never empty and matches enum exactly
+  let sanitizedType: "marriage" | "biological_child" | "adopted_child" = "biological_child";
+  if (type === "marriage") sanitizedType = "marriage";
+  else if (type === "adopted_child") sanitizedType = "adopted_child";
+
   const { error: insertError } = await supabase.from("relationships").insert({
     person_a: personAId,
     person_b: personBId,
-    type: type as any,
+    type: sanitizedType,
     note: note || null,
     family_id: familyId,
   });
