@@ -2,6 +2,7 @@
 
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 // ─── 1. Quick Add Spouse ───────────────────────────────────────────────────
 export async function quickAddSpouse(
@@ -161,4 +162,32 @@ export async function addRelationship(
 
   revalidatePath(`/dashboard/${familyId}`);
   return { success: true };
+}
+
+// ─── 4. Delete Member Profile ─────────────────────────────────────────────
+export async function deleteMemberProfile(memberId: string, familyId: string) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  // Xóa tất cả relationships liên quan trước
+  const { error: relError } = await supabase
+    .from("relationships")
+    .delete()
+    .eq("family_id", familyId)
+    .or(`person_a.eq.${memberId},person_b.eq.${memberId}`);
+
+  if (relError) return { error: relError.message };
+
+  // Xóa person
+  const { error: personError } = await supabase
+    .from("persons")
+    .delete()
+    .eq("id", memberId)
+    .eq("family_id", familyId);
+
+  if (personError) return { error: personError.message };
+
+  revalidatePath(`/dashboard/${familyId}`);
+  redirect(`/dashboard/${familyId}`);
 }
