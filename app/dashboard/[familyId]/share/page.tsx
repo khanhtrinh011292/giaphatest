@@ -43,15 +43,16 @@ export default async function SharePage({
   // owner và admin mới được chia sẻ qua email; editor chỉ tạo link
   const canShareEmail = isOwner || shareRole === "admin";
 
+  // Lấy danh sách share (nếu lỗi view/RLS thì trả về mảng rỗng thay vì redirect)
   const result = await getFamilyShares(familyId);
-  if ("error" in result) redirect(`/dashboard/${familyId}/board`);
+  const initialShares = ("data" in result && Array.isArray(result.data)) ? result.data : [];
 
   return (
     <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
       <BackToBoardButton familyId={familyId} />
       <ShareManager
         familyId={familyId}
-        initialShares={result.data}
+        initialShares={initialShares as any}
         canShareEmail={canShareEmail}
       />
     </main>
