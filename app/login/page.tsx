@@ -13,7 +13,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 export default function LoginPage() {
@@ -35,6 +35,11 @@ export default function LoginPage() {
   }, []);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawReturnUrl = searchParams.get("returnUrl") || "/dashboard";
+  // Chỉ cho phép redirect nội bộ để tránh open redirect
+  const returnUrl = rawReturnUrl.startsWith("/") ? rawReturnUrl : "/dashboard";
+
   const supabase = useMemo(() => createClient(), []);
 
   const [isLogin, setIsLogin] = useState(true);
@@ -57,7 +62,7 @@ export default function LoginPage() {
         if (error) {
           setError(error.message);
         } else {
-          router.push("/dashboard");
+          router.push(returnUrl);
           router.refresh();
         }
       } else {
@@ -87,8 +92,8 @@ export default function LoginPage() {
           );
         } else {
           if (data.session) {
-            // Có session ngay (email confirm tắt) → vào dashboard
-            router.push("/dashboard");
+            // Có session ngay (email confirm tắt) → redirect về returnUrl
+            router.push(returnUrl);
             router.refresh();
           } else {
             // Thử đăng nhập ngay (trường hợp auto-confirm)
@@ -96,7 +101,7 @@ export default function LoginPage() {
               await supabase.auth.signInWithPassword({ email, password });
 
             if (!signInError && signInData.session) {
-              router.push("/dashboard");
+              router.push(returnUrl);
               router.refresh();
             } else {
               // Supabase yêu cầu xác nhận email
