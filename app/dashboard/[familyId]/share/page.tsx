@@ -1,6 +1,7 @@
 import BackToBoardButton from "@/components/BackToBoardButton";
 import ShareManager from "@/components/ShareManager";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
+import { FamilyShare } from "@/types";
 import { redirect } from "next/navigation";
 
 export default async function SharePage({
@@ -44,14 +45,14 @@ export default async function SharePage({
 
   // Lấy danh sách share trực tiếp — tránh phụ thuộc vào getFamilyShares
   // chỉ owner và admin mới thấy danh sách; editor thấy mảng rỗng
-  let initialShares: unknown[] = [];
+  let initialShares: FamilyShare[] = [];
   if (isOwner || shareRole === "admin") {
     const { data } = await supabase
       .from("family_shares_with_email")
       .select("*")
       .eq("family_id", familyId)
       .order("created_at", { ascending: true });
-    initialShares = data ?? [];
+    initialShares = (data ?? []) as FamilyShare[];
   }
 
   return (
