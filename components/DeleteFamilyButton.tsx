@@ -26,7 +26,7 @@ export default function DeleteFamilyButton({
     startTransition(async () => {
       const res = await deleteFamily(familyId);
       if (res && "error" in res) {
-        setErrorMsg(res.error);
+        setErrorMsg(res.error ?? "Đã xảy ra lỗi, vui lòng thử lại.");
         setConfirm(false);
         setTimeout(() => setErrorMsg(null), 5000);
       } else {
