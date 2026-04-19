@@ -214,7 +214,7 @@ function ShareLinkTab({
   familyId: string;
   showStatus: (type: "ok" | "err", text: string) => void;
 }) {
-  const [links, setLinks] = useState<ShareLink[]>([]);
+  const [linkRole, setLinkRole] = useState<"viewer" | "editor">("viewer");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -231,11 +231,11 @@ function ShareLinkTab({
 
   async function handleCreate() {
     setLoading(true);
-    const result = await createShareLink(familyId, "viewer");
+    const result = await createShareLink(familyId, linkRole);
     if (result.error) {
       showStatus("err", result.error);
     } else {
-      showStatus("ok", "Đã tạo link chia sẻ mới.");
+      showStatus("ok", `Đã tạo link chia sẻ ${linkRole === "editor" ? "chỉnh sửa" : "chỉ xem"} mới.`);
       await loadLinks();
     }
     setLoading(false);
@@ -270,14 +270,31 @@ function ShareLinkTab({
           Link có hiệu lực trong 7 ngày. Bất kỳ ai có link đều có thể xem gia phả{" "}
           <strong>mà không cần đăng nhập</strong>.
         </p>
-        <button
-          onClick={handleCreate}
-          disabled={loading}
-          className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
-        >
-          <LinkIcon className="w-4 h-4" />
-          {loading ? "Đang tạo..." : "+ Tạo link mới"}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="sm:w-44">
+            <label className="block text-xs font-medium text-stone-500 mb-1">Quyền</label>
+            <select
+              value={linkRole}
+              onChange={(e) => setLinkRole(e.target.value as "viewer" | "editor")}
+              className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              disabled={loading}
+            >
+              {ROLE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1 flex flex-col justify-end">
+            <button
+              onClick={handleCreate}
+              disabled={loading}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 h-[38px]"
+            >
+              <LinkIcon className="w-4 h-4" />
+              {loading ? "Đang tạo..." : "Tạo link mới"}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">

@@ -151,8 +151,21 @@ export async function shareFamily(
     .eq("id", familyId)
     .single();
 
-  if (!family || family.owner_id !== user.id)
-    return { error: "Bạn không có quyền chia sẻ gia phả này." };
+  if (!family) return { error: "Không tìm thấy gia phả." };
+
+  const isOwner = family.owner_id === user.id;
+  if (!isOwner) {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    if (!share || share.role !== "admin") {
+      return { error: "Bạn không có quyền chia sẻ gia phả này." };
+    }
+  }
+
 
   const { data: targetUserId, error: lookupError } = await supabase
     .rpc("get_user_id_by_email", { target_email: email });
@@ -196,11 +209,18 @@ export async function revokeShare(shareId: string, familyId: string) {
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
-  const { error } = await supabase
-    .from("family_shares")
-    .delete()
-    .eq("id", shareId)
-    .eq("shared_by", user.id);
+  const { data: family } = await supabase.from("families").select("owner_id").eq("id", familyId).single();
+  const isOwner = family?.owner_id === user.id;
+
+  const query = supabase.from("family_shares").delete().eq("id", shareId);
+  
+  if (!isOwner) {
+    // Nếu không phải chủ gia phả, chỉ được xoá share của chính mình (shared_by)
+    query.eq("shared_by", user.id);
+  }
+  
+  const { error } = await query;
+
 
   if (error) return { error: error.message };
   revalidatePath(`/dashboard/${familyId}/share`);
