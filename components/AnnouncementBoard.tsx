@@ -35,6 +35,18 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+// Tách storage path từ public URL
+function getStoragePath(publicUrl: string): string | null {
+  try {
+    const url = new URL(publicUrl);
+    // Format: /storage/v1/object/public/family-assets/announcements/...
+    const match = url.pathname.match(/\/storage\/v1\/object\/public\/family-assets\/(.+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 const DEFAULT_POLL: PollDraft = { question: "", options: ["", ""], expiresHours: 24, defaultOptionIndex: null };
 
 export default function AnnouncementBoard({ familyId, isOwner, userId, initialAnnouncements }: Props) {
@@ -113,7 +125,6 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
             expires_at: expiresAt,
           }).select("id").single();
 
-          // Tự động vote cho chủ sở hữu nếu chọn default option
           if (pollData && poll.defaultOptionIndex !== null) {
             const chosenOpt = validOptions[poll.defaultOptionIndex];
             if (chosenOpt) {
@@ -141,9 +152,25 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
 
   async function handleDelete(id: string) {
     setDeletingId(id);
-    const { error } = await supabase.from("announcements").delete().eq("id", id);
-    if (!error) setAnnouncements((prev) => prev.filter((a) => a.id !== id));
-    setDeletingId(null);
+    try {
+      // Lấy image_url trước khi xóa để biết cần xóa file nào
+      const target = announcements.find((a) => a.id === id);
+
+      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      if (!error) {
+        setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+
+        // Xóa ảnh trên storage nếu có
+        if (target?.image_url) {
+          const storagePath = getStoragePath(target.image_url);
+          if (storagePath) {
+            await supabase.storage.from("family-assets").remove([storagePath]);
+          }
+        }
+      }
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   const canPost = content.trim() || imageFile || (showPollForm && poll.question.trim() && poll.options.filter(Boolean).length >= 2);
@@ -199,7 +226,6 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
                 <div className="space-y-1.5">
                   {poll.options.map((opt, i) => (
                     <div key={i} className="flex items-center gap-1.5">
-                      {/* Radio chọn vote mặc định cho chủ */}
                       <button
                         type="button"
                         onClick={() => setPoll((p) => ({ ...p, defaultOptionIndex: p.defaultOptionIndex === i ? null : i }))}
@@ -285,7 +311,7 @@ export default function AnnouncementBoard({ familyId, isOwner, userId, initialAn
 
       {announcements.length === 0 ? (
         <div className="bg-white rounded-2xl border border-stone-100 py-10 text-center">
-          <p className="text-2xl mb-2">📭</p>
+          <p className="text-2xl mb-2">💭</p>
           <p className="text-sm text-stone-400">Chưa có thông báo nào</p>
         </div>
       ) : (
