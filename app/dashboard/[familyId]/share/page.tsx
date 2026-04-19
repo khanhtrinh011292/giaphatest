@@ -1,5 +1,4 @@
 import BackToBoardButton from "@/components/BackToBoardButton";
-import { getFamilyShares } from "@/app/actions/family";
 import ShareManager from "@/components/ShareManager";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
@@ -43,15 +42,24 @@ export default async function SharePage({
   // owner và admin mới được chia sẻ qua email; editor chỉ tạo link
   const canShareEmail = isOwner || shareRole === "admin";
 
-  const result = await getFamilyShares(familyId);
-  if ("error" in result) redirect(`/dashboard/${familyId}/board`);
+  // Lấy danh sách share trực tiếp — tránh phụ thuộc vào getFamilyShares
+  // chỉ owner và admin mới thấy danh sách; editor thấy mảng rỗng
+  let initialShares: unknown[] = [];
+  if (isOwner || shareRole === "admin") {
+    const { data } = await supabase
+      .from("family_shares_with_email")
+      .select("*")
+      .eq("family_id", familyId)
+      .order("created_at", { ascending: true });
+    initialShares = data ?? [];
+  }
 
   return (
     <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-10">
       <BackToBoardButton familyId={familyId} />
       <ShareManager
         familyId={familyId}
-        initialShares={result.data}
+        initialShares={initialShares}
         canShareEmail={canShareEmail}
       />
     </main>
