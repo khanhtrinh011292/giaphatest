@@ -271,3 +271,149 @@ export async function deleteRelationship(relId: string, familyId: string) {
   revalidatePath(`/dashboard/${familyId}`);
   return { success: true };
 }
+
+// ─── 7. Save Member (Create/Update) ─────────────────────────────────────────
+export async function saveMember(
+  familyId: string,
+  personData: any,
+  privateData: {
+    phone_number?: string | null;
+    occupation?: string | null;
+    current_residence?: string | null;
+  } | null,
+  personId?: string
+) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  let currentId = personId;
+
+  if (!personId) {
+    // Create
+    const { data: newPerson, error: insertError } = await supabase
+      .from("persons")
+      .insert({ ...personData, family_id: familyId })
+      .select("id")
+      .single();
+
+    if (insertError || !newPerson) return { error: insertError?.message ?? "Lỗi tạo người." };
+    currentId = newPerson.id;
+  } else {
+    // Update
+    const { error: updateError } = await supabase
+      .from("persons")
+      .update(personData)
+      .eq("id", personId)
+      .eq("family_id", familyId);
+
+    if (updateError) return { error: updateError.message };
+  }
+
+  // Handle private details
+  if (currentId && privateData) {
+    const hasData = privateData.phone_number || privateData.occupation || privateData.current_residence;
+    if (hasData) {
+      const { error: privateError } = await supabase
+        .from("person_details_private")
+        .upsert({
+          person_id: currentId,
+          ...privateData
+        });
+      if (privateError) {
+        console.warn("Private details save failed:", privateError.message);
+        // We don't return error here to let the main save succeed
+      }
+    } else {
+      await supabase.from("person_details_private").delete().eq("person_id", currentId);
+    }
+  }
+
+  revalidatePath(`/dashboard/${familyId}`);
+  return { success: true, personId: currentId };
+}
+
+// ─── 8. Update Member Avatar ───────────────────────────────────────────────
+export async function updateMemberAvatar(personId: string, familyId: string, avatarUrl: string) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  const { error } = await supabase
+    .from("persons")
+    .update({ avatar_url: avatarUrl })
+    .eq("id", personId)
+    .eq("family_id", familyId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/dashboard/${familyId}`);
+  return { success: true };
+}
+
+// ─── 9. Import Family Members ──────────────────────────────────────────────
+export async function importFamilyMembers(
+  familyId: string,
+  members: any[]
+) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  const rowIdToPersonId: Record<string, string> = {};
+  const details: { name: string; status: "ok" | "error"; message?: string }[] = [];
+  let successCount = 0;
+  let failedCount = 0;
+
+  // Phase 1: Insert Persons
+  for (const member of members) {
+    const { error, data } = await supabase
+      .from("persons")
+      .insert({
+        family_id: familyId,
+        full_name: member.ho_ten,
+        gender: member.gioi_tinh,
+        birth_year: member.nam_sinh,
+        generation: member.the_he,
+        birth_order: member.thu_tu_sinh,
+        note: member.ghi_chu,
+        is_in_law: false,
+        is_deceased: false,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      failedCount++;
+      details.push({ name: member.ho_ten, status: "error", message: error?.message });
+    } else {
+      successCount++;
+      rowIdToPersonId[member._rowId] = data.id;
+      details.push({ name: member.ho_ten, status: "ok" });
+    }
+  }
+
+  // Phase 2: Insert Relationships
+  for (const member of members) {
+    const childId = rowIdToPersonId[member._rowId];
+    if (!childId) continue;
+
+    const parents = [];
+    if (member.stt_cha) parents.push(member.stt_cha);
+    if (member.stt_me) parents.push(member.stt_me);
+
+    for (const parentStt of parents) {
+      const parentId = rowIdToPersonId[parentStt];
+      if (!parentId) continue;
+
+      await supabase.from("relationships").insert({
+        family_id: familyId,
+        person_a: parentId,
+        person_b: childId,
+        type: "biological_child",
+      });
+    }
+  }
+
+  revalidatePath(`/dashboard/${familyId}`);
+  return { success: true, count: successCount, failed: failedCount, details };
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { importFamilyMembers } from "@/app/actions/member";
 import { Gender } from "@/types";
 import { createClient } from "@/utils/supabase/client";
 import { AnimatePresence, motion } from "framer-motion";
@@ -222,86 +223,21 @@ export default function ImportMembersModal({
     if (validRows.length === 0) return;
     setImporting(true);
 
-    const details: ImportResult["details"] = [];
-    let successCount = 0;
-    let failedCount = 0;
-    const rowIdToPersonId: Record<string, string> = {};
+    const result = await importFamilyMembers(familyId, validRows);
 
-    // Phase 1: Insert persons
-    for (const row of validRows) {
-      try {
-        const payload: Record<string, unknown> = {
-          family_id: familyId,
-          full_name: row.ho_ten,
-          gender: row.gioi_tinh,
-          is_in_law: false,
-          is_deceased: false,
-        };
-        if (row.nam_sinh !== null) payload.birth_year = row.nam_sinh;
-        if (row.the_he !== null) payload.generation = row.the_he;
-        if (row.thu_tu_sinh !== null) payload.birth_order = row.thu_tu_sinh;
-        if (row.ghi_chu) payload.note = row.ghi_chu;
-
-        const { data, error } = await supabase
-          .from("persons")
-          .insert(payload)
-          .select("id")
-          .single();
-
-        if (error || !data) throw error ?? new Error("No data returned");
-
-        rowIdToPersonId[row._rowId] = data.id;
-        details.push({ name: row.ho_ten, status: "ok" });
-        successCount++;
-      } catch (err) {
-        details.push({
-          name: row.ho_ten,
-          status: "error",
-          message: (err as Error).message,
-        });
-        failedCount++;
-      }
+    if (result.error) {
+      alert("Lỗi import: " + result.error);
+    } else {
+      setResult({
+        success: result.count!,
+        failed: result.failed!,
+        skipped: errorRows.length,
+        details: result.details || [],
+      });
+      setStep("done");
+      router.refresh();
     }
-
-    // Phase 2: Insert relationships
-    for (const row of validRows) {
-      const childId = rowIdToPersonId[row._rowId];
-      if (!childId) continue;
-
-      const parents: { stt: string }[] = [];
-      if (row.stt_cha) parents.push({ stt: row.stt_cha });
-      if (row.stt_me) parents.push({ stt: row.stt_me });
-
-      for (const { stt } of parents) {
-        const parentId = rowIdToPersonId[stt];
-        if (!parentId) continue;
-
-        const { error } = await supabase.from("relationships").insert({
-          family_id: familyId,
-          person_a: parentId,
-          person_b: childId,
-          type: "biological_child",
-        });
-
-        if (error) {
-          const detail = details.find((d) => d.name === row.ho_ten);
-          if (detail) {
-            detail.message =
-              (detail.message ?? "") + " (Quan h\u1ec7 th\u1ea5t b\u1ea1i)";
-          }
-        }
-      }
-    }
-
-    setResult({
-      success: successCount,
-      failed: failedCount,
-      skipped: errorRows.length,
-      details,
-    });
-    setStep("done");
     setImporting(false);
-    router.refresh();
   };
 
   const stepIndex = STEPS.indexOf(step);

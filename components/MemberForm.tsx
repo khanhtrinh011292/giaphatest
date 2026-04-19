@@ -1,5 +1,6 @@
 "use client";
 
+import { saveMember, updateMemberAvatar } from "@/app/actions/member";
 import { Gender, Person } from "@/types";
 import { createClient } from "@/utils/supabase/client";
 import { AnimatePresence, motion, Variants } from "framer-motion";
@@ -204,9 +205,7 @@ export default function MemberForm({
     }
 
     try {
-      let currentAvatarUrl = avatarUrl;
-
-      const getPersonData = (url: string | null) => ({
+      const personData = {
         full_name: fullName,
         gender,
         birth_year: birthYear === "" ? null : Number(birthYear),
@@ -223,28 +222,20 @@ export default function MemberForm({
         birth_order: birthOrder === "" ? null : Number(birthOrder),
         generation: generation === "" ? null : Number(generation),
         other_names: otherNames || null,
-        avatar_url: url,
+        avatar_url: avatarUrl || null,
         note: note || null,
-        family_id: familyId,
-      });
+      };
 
-      let currentPersonId = initialData?.id;
+      const privateData = {
+        phone_number: phoneNumber?.trim() || null,
+        occupation: occupation?.trim() || null,
+        current_residence: currentResidence?.trim() || null,
+      };
 
-      if (!isEditing || !currentPersonId) {
-        const { data: newPerson, error: createError } = await supabase
-          .from("persons")
-          .insert(getPersonData(currentAvatarUrl || null))
-          .select()
-          .single();
-        if (createError) throw createError;
-        currentPersonId = newPerson.id;
-      } else {
-        const { error: updateError } = await supabase
-          .from("persons")
-          .update(getPersonData(currentAvatarUrl || null))
-          .eq("id", currentPersonId);
-        if (updateError) throw updateError;
-      }
+      const result = await saveMember(familyId, personData, privateData, initialData?.id);
+      
+      if (result.error) throw new Error(result.error);
+      const currentPersonId = result.personId;
 
       if (avatarFile && currentPersonId) {
         const fileExt = avatarFile.name.split(".").pop();
@@ -252,44 +243,16 @@ export default function MemberForm({
         const { error: uploadError } = await supabase.storage
           .from("avatars")
           .upload(fileName, avatarFile, { upsert: true });
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
-        currentAvatarUrl = publicUrl;
-        await supabase.from("persons").update({ avatar_url: currentAvatarUrl }).eq("id", currentPersonId);
-      }
-
-      // Save private details for all users who can edit
-      if (currentPersonId) {
-        const normalizedData = {
-          person_id: currentPersonId,
-          phone_number: phoneNumber?.trim() || null,
-          occupation: occupation?.trim() || null,
-          current_residence: currentResidence?.trim() || null,
-          // family_id: familyId, // Temporarily disabled to check if it's causing schema errors
-        };
-        const hasData = normalizedData.phone_number || normalizedData.occupation || normalizedData.current_residence;
         
-        try {
-          if (hasData) {
-            const { error: privateError } = await supabase.from("person_details_private").upsert(normalizedData);
-            if (privateError) {
-              console.warn("Private details save failed (prob RLS):", privateError.message);
-              // We don't throw here to allow the main person save to succeed, 
-              // but we notify the user.
-              toast.error("Thông tin liên hệ không lưu được (Quyền hạn hạn chế)");
-            }
-          } else {
-            await supabase.from("person_details_private").delete().eq("person_id", currentPersonId);
-          }
-        } catch (err) {
-          console.error("Private details error:", err);
-        }
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
+        const avatarResult = await updateMemberAvatar(currentPersonId, familyId, publicUrl);
+        if (avatarResult.error) throw new Error(avatarResult.error);
       }
-
-      if (!currentPersonId) throw new Error("Đồng bộ thất bại.");
 
       if (onSuccess) {
-        onSuccess(currentPersonId);
+        onSuccess(currentPersonId!);
       } else {
         router.push(`/dashboard/${familyId}/members/${currentPersonId}`);
         router.refresh();
