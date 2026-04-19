@@ -11,11 +11,12 @@ import {
 import { ShareRole } from "@/types";
 import {
   ClipboardCopyIcon,
-  LinkIcon,
+  GlobeIcon,
   MailIcon,
   ShieldIcon,
   Trash2Icon,
   UserPlusIcon,
+  UsersIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -45,18 +46,15 @@ function roleLabel(role: ShareRole) {
   return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === "admin" ? "Quản trị" : role);
 }
 
-// ── Tạo URL chia sẻ theo role ──────────────────────────────────────────────
 function buildShareUrl(token: string, role: "viewer" | "editor"): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  // viewer → /view/[token] (không cần đăng nhập)
-  // editor → /join/[token] (cần đăng nhập để join)
   return role === "viewer"
     ? `${origin}/view/${token}`
     : `${origin}/join/${token}`;
 }
 
-// ── Tab: Chia sẻ qua Email ─────────────────────────────────────────────────
-function EmailShareTab({
+// ── Tab: Chia sẻ cho thành viên ─────────────────────────────────────────────
+function MemberShareTab({
   familyId,
   initialShares,
   showStatus,
@@ -113,7 +111,7 @@ function EmailShareTab({
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm space-y-4">
         <h2 className="font-semibold text-stone-700 flex items-center gap-2">
-          <UserPlusIcon className="w-4 h-4" /> Mời người dùng
+          <UserPlusIcon className="w-4 h-4" /> Mời thành viên
         </h2>
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
@@ -162,12 +160,12 @@ function EmailShareTab({
         <div className="px-5 py-4 border-b border-stone-100">
           <h2 className="font-semibold text-stone-700 flex items-center gap-2">
             <ShieldIcon className="w-4 h-4" />
-            Đang chia sẻ ({shares.length} người)
+            Thành viên hiện tại ({shares.length} người)
           </h2>
         </div>
         {shares.length === 0 ? (
           <div className="px-5 py-8 text-center text-stone-400 text-sm">
-            Chưa chia sẻ với ai. Dùng form trên để mời người dùng.
+            Chưa chia sẻ với ai. Dùng form trên để mời thành viên.
           </div>
         ) : (
           <ul className="divide-y divide-stone-100">
@@ -206,8 +204,8 @@ function EmailShareTab({
   );
 }
 
-// ── Tab: Link chia sẻ ──────────────────────────────────────────────────────
-function ShareLinkTab({
+// ── Tab: Chia sẻ công khai ────────────────────────────────────────────────────
+function PublicShareTab({
   familyId,
   showStatus,
 }: {
@@ -235,7 +233,7 @@ function ShareLinkTab({
     if (result.error) {
       showStatus("err", result.error);
     } else {
-      showStatus("ok", "Đã tạo link chia sẻ mới.");
+      showStatus("ok", "Đã tạo link công khai mới.");
       await loadLinks();
     }
     setLoading(false);
@@ -264,7 +262,7 @@ function ShareLinkTab({
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-stone-200 p-5 shadow-sm space-y-4">
         <h2 className="font-semibold text-stone-700 flex items-center gap-2">
-          <LinkIcon className="w-4 h-4" /> Tạo link chia sẻ
+          <GlobeIcon className="w-4 h-4" /> Tạo link công khai
         </h2>
         <p className="text-xs text-stone-400">
           Link có hiệu lực trong 7 ngày. Bất kỳ ai có link đều có thể xem gia phả{" "}
@@ -275,7 +273,7 @@ function ShareLinkTab({
           disabled={loading}
           className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
         >
-          <LinkIcon className="w-4 h-4" />
+          <GlobeIcon className="w-4 h-4" />
           {loading ? "Đang tạo..." : "+ Tạo link mới"}
         </button>
       </div>
@@ -283,7 +281,7 @@ function ShareLinkTab({
       <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-stone-100">
           <h2 className="font-semibold text-stone-700 flex items-center gap-2">
-            <LinkIcon className="w-4 h-4" />
+            <GlobeIcon className="w-4 h-4" />
             Link đang hoạt động ({links.length})
           </h2>
         </div>
@@ -330,7 +328,7 @@ function ShareLinkTab({
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function ShareManager({
   familyId,
   initialShares,
@@ -380,8 +378,8 @@ export default function ShareManager({
                 : "border-transparent text-stone-500 hover:text-stone-700"
             }`}
           >
-            <MailIcon className="w-4 h-4" />
-            Chia sẻ qua Email
+            <UsersIcon className="w-4 h-4" />
+            Thành viên trong gia đình
           </button>
         )}
         <button
@@ -392,20 +390,20 @@ export default function ShareManager({
               : "border-transparent text-stone-500 hover:text-stone-700"
           }`}
         >
-          <LinkIcon className="w-4 h-4" />
-          Link chia sẻ
+          <GlobeIcon className="w-4 h-4" />
+          Chia sẻ công khai
         </button>
       </div>
 
       {activeTab === "email" && canShareEmail && (
-        <EmailShareTab
+        <MemberShareTab
           familyId={familyId}
           initialShares={initialShares}
           showStatus={showStatus}
         />
       )}
       {activeTab === "link" && (
-        <ShareLinkTab
+        <PublicShareTab
           familyId={familyId}
           showStatus={showStatus}
         />
