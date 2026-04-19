@@ -14,34 +14,47 @@ export default function DeleteFamilyButton({
 }) {
   const [confirm, setConfirm] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const router = useRouter();
 
   function handleClick() {
     if (!confirm) {
       setConfirm(true);
-      // #3: Tăng lên 5 giây để tránh nhấn nhầm trên mobile
       setTimeout(() => setConfirm(false), 5000);
       return;
     }
     startTransition(async () => {
-      await deleteFamily(familyId);
-      router.refresh();
+      const res = await deleteFamily(familyId);
+      if (res && "error" in res) {
+        setErrorMsg(res.error);
+        setConfirm(false);
+        setTimeout(() => setErrorMsg(null), 5000);
+      } else {
+        router.refresh();
+      }
     });
   }
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={isPending}
-      title={confirm ? "Nhấn lần nữa để xác nhận xóa" : `Xóa "${familyName}"`}
-      aria-label={confirm ? "Xác nhận xóa gia phả" : `Xóa gia phả ${familyName}`}
-      className={`p-1.5 rounded-lg transition-colors opacity-0 group-hover:opacity-100 ${
-        confirm
-          ? "bg-red-100 text-red-600 hover:bg-red-200 opacity-100"
-          : "text-stone-400 hover:text-red-500 hover:bg-red-50"
-      } disabled:opacity-40`}
-    >
-      <TrashIcon className="w-4 h-4" />
-    </button>
+    <div className="relative">
+      {errorMsg && (
+        <div className="absolute bottom-full right-0 mb-2 w-64 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2 shadow-md z-10 whitespace-normal">
+          ❌ {errorMsg}
+        </div>
+      )}
+      <button
+        onClick={handleClick}
+        disabled={isPending}
+        title={confirm ? "Nhấn lần nữa để xác nhận xóa" : `Xóa "${familyName}"`}
+        aria-label={confirm ? "Xác nhận xóa gia phả" : `Xóa gia phả ${familyName}`}
+        className={`p-1.5 rounded-lg transition-colors opacity-0 group-hover:opacity-100 ${
+          confirm
+            ? "bg-red-100 text-red-600 hover:bg-red-200 opacity-100"
+            : "text-stone-400 hover:text-red-500 hover:bg-red-50"
+        } disabled:opacity-40`}
+      >
+        <TrashIcon className="w-4 h-4" />
+      </button>
+    </div>
   );
 }
