@@ -148,9 +148,12 @@ export default function BulkAddChildrenModal({
                 <select
                   value={child.gender}
                   onChange={(e) => {
-                    const newBulk = [...bulkChildren];
-                    newBulk[index].gender = e.target.value;
-                    setBulkChildren(newBulk);
+                    const val = e.target.value as "male" | "female" | "other";
+                    if (val) {
+                      const newBulk = [...bulkChildren];
+                      newBulk[index].gender = val;
+                      setBulkChildren(newBulk);
+                    }
                   }}
                   className="w-[calc(50%-0.25rem)] sm:w-24 shrink-0 bg-stone-50 text-stone-900 text-sm rounded-lg border-stone-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 px-2 py-2 border transition-colors"
                 >

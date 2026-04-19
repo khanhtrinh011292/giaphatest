@@ -85,8 +85,8 @@ export default function SingleAddModal({
       personB = selectedTarget.id;
     }
 
-    // ✅ FIX: đảm bảo type luôn có giá trị hợp lệ
-    let type: RelationshipType;
+    // ✅ FIX TRUẤT: Guard chặt chẽ nhất trước khi gọi server action
+    let type: RelationshipType = "biological_child";
     if (newRelDirection === "spouse") {
       type = "marriage";
     } else if (newRelType === "adopted_child") {
@@ -164,7 +164,10 @@ export default function SingleAddModal({
             <select
               id="rel-type"
               value={newRelType}
-              onChange={(e) => setNewRelType(e.target.value as RelationshipType)}
+              onChange={(e) => {
+                const val = e.target.value as RelationshipType;
+                if (val) setNewRelType(val);
+              }}
               className="bg-white text-stone-900 block w-full max-w-full text-sm rounded-lg border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 sm:p-2.5 border transition-colors"
             >
               <option value="biological_child">Con ruột</option>
