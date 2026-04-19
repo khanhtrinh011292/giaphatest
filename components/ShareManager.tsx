@@ -214,6 +214,7 @@ function ShareLinkTab({
   familyId: string;
   showStatus: (type: "ok" | "err", text: string) => void;
 }) {
+  const [links, setLinks] = useState<ShareLink[]>([]);
   const [linkRole, setLinkRole] = useState<"viewer" | "editor">("viewer");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
