@@ -1,5 +1,6 @@
 "use client";
 
+import { deleteRelationship } from "@/app/actions/member";
 import { DashboardContext, useDashboard } from "@/components/DashboardContext";
 import { Person, RelationshipType } from "@/types";
 import { getAvatarBg } from "@/utils/styleHelprs";
@@ -265,11 +266,8 @@ export default function RelationshipManager({
 
     if (!confirm("Bạn có chắc chắn muốn xóa mối quan hệ này?")) return;
     try {
-      const { error } = await supabase
-        .from("relationships")
-        .delete()
-        .eq("id", actualRelId);
-      if (error) throw error;
+      const result = await deleteRelationship(actualRelId, familyId);
+      if (result.error) throw new Error(result.error);
       fetchRelationships();
       router.refresh();
     } catch (err: unknown) {

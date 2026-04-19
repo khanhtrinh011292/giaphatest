@@ -254,3 +254,20 @@ export async function confirmSuggestedRelationship(
   revalidatePath(`/dashboard/${familyId}`);
   return { success: true };
 }
+
+// ─── 6. Delete Relationship ─────────────────────────────────────────────────
+export async function deleteRelationship(relId: string, familyId: string) {
+  const user = await getUser();
+  if (!user) return { error: "Chưa đăng nhập." };
+  const supabase = await getSupabase();
+
+  const { error } = await supabase
+    .from("relationships")
+    .delete()
+    .eq("id", relId)
+    .eq("family_id", familyId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/dashboard/${familyId}`);
+  return { success: true };
+}

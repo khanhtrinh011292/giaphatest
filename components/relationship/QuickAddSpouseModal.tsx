@@ -24,7 +24,6 @@ export default function QuickAddSpouseModal({
   const [newSpouseName, setNewSpouseName] = useState("");
   const [newSpouseBirthYear, setNewSpouseBirthYear] = useState("");
   const [newSpouseNote, setNewSpouseNote] = useState("");
-    const [type] = useState<"marriage">("marriage");
     const [processing, setProcessing] = useState(false);
   
     const handleQuickAddSpouse = async () => {
@@ -50,7 +49,7 @@ export default function QuickAddSpouseModal({
         personGeneration ?? null,
         newSpouseBirthYear ? Number(newSpouseBirthYear) : null,
         newSpouseNote || null,
-        type
+        "marriage"
       );
 
     setProcessing(false);

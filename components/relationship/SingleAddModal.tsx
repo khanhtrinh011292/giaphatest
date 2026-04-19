@@ -149,7 +149,6 @@ export default function SingleAddModal({
             onChange={(e) => {
               const dir = e.target.value as "parent" | "child" | "spouse";
               setNewRelDirection(dir);
-              if (dir === "spouse") setNewRelType("biological_child"); // reset về default hợp lệ
             }}
             className="bg-white text-stone-900 block w-full max-w-full text-sm rounded-lg border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 sm:p-2.5 border transition-colors"
           >
