@@ -24,32 +24,34 @@ export default function QuickAddSpouseModal({
   const [newSpouseName, setNewSpouseName] = useState("");
   const [newSpouseBirthYear, setNewSpouseBirthYear] = useState("");
   const [newSpouseNote, setNewSpouseNote] = useState("");
-  const [processing, setProcessing] = useState(false);
-
-  const handleQuickAddSpouse = async () => {
-    if (!newSpouseName.trim()) {
-      toast.error("Vui lòng nhập tên Vợ/Chồng.");
-      return;
-    }
-
-    const newSpouseGender =
-      personGender === "male"
-        ? "female"
-        : personGender === "female"
-        ? "male"
-        : "female";
-
-    setProcessing(true);
-
-    const result = await quickAddSpouse(
-      familyId,
-      personId,
-      newSpouseName,
-      newSpouseGender,
-      personGeneration ?? null,
-      newSpouseBirthYear ? Number(newSpouseBirthYear) : null,
-      newSpouseNote || null
-    );
+    const [type] = useState<"marriage">("marriage");
+    const [processing, setProcessing] = useState(false);
+  
+    const handleQuickAddSpouse = async () => {
+      if (!newSpouseName.trim()) {
+        toast.error("Vui lòng nhập tên Vợ/Chồng.");
+        return;
+      }
+  
+      const newSpouseGender =
+        personGender === "male"
+          ? "female"
+          : personGender === "female"
+          ? "male"
+          : "female";
+  
+      setProcessing(true);
+  
+      const result = await quickAddSpouse(
+        familyId,
+        personId,
+        newSpouseName,
+        newSpouseGender,
+        personGeneration ?? null,
+        newSpouseBirthYear ? Number(newSpouseBirthYear) : null,
+        newSpouseNote || null,
+        type
+      );
 
     setProcessing(false);
 

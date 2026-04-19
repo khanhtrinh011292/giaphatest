@@ -40,6 +40,7 @@ export default function BulkAddChildrenModal({
       isProcessing: false,
     },
   ]);
+  const [childType, setChildType] = useState<"biological_child" | "adopted_child">("biological_child");
   const [processing, setProcessing] = useState(false);
 
   const handleBulkAdd = async () => {
@@ -64,7 +65,8 @@ export default function BulkAddChildrenModal({
         birthYear: c.birthYear ? Number(c.birthYear) : null,
         birthOrder: c.birthOrder ? Number(c.birthOrder) : null,
         generation: personGeneration != null ? personGeneration + 1 : null,
-      }))
+      })),
+      childType
     );
 
     setProcessing(false);
@@ -98,6 +100,21 @@ export default function BulkAddChildrenModal({
                 {rel.targetPerson.full_name} {rel.note ? `(${rel.note})` : ""}
               </option>
             ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="bulk-child-type" className="block text-xs font-medium text-stone-600 mb-1">
+            Loại con
+          </label>
+          <select
+            id="bulk-child-type"
+            value={childType}
+            onChange={(e) => setChildType(e.target.value as "biological_child" | "adopted_child")}
+            className="bg-white text-stone-900 block w-full max-w-full text-sm rounded-lg border-stone-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 p-2 sm:p-2.5 border transition-colors"
+          >
+            <option value="biological_child">Con ruột</option>
+            <option value="adopted_child">Con nuôi</option>
           </select>
         </div>
 

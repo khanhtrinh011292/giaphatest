@@ -23,8 +23,8 @@ export default function SingleAddModal({
   onCancel,
 }: SingleAddModalProps) {
   const supabase = createClient();
-  const [newRelType, setNewRelType] = useState<RelationshipType>("biological_child");
-  const [newRelDirection, setNewRelDirection] = useState<"parent" | "child" | "spouse">("parent");
+  const [newRelType, setNewRelType] = useState<RelationshipType>("marriage");
+  const [newRelDirection, setNewRelDirection] = useState<"parent" | "child" | "spouse">("spouse");
   const [newRelNote, setNewRelNote] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<{ id: string; full_name: string; gender: string; birth_year: number; birth_month: number; birth_day: number; generation: number | null }[]>([]);
@@ -71,7 +71,10 @@ export default function SingleAddModal({
   }, [personId, familyId, supabase, recentMembers.length]);
 
   const handleAddRelationship = async () => {
-    if (!selectedTarget) return;
+    if (!selectedTarget) {
+      toast.error("Vui lòng chọn người thân.");
+      return;
+    }
     setProcessing(true);
 
     let personA = personId;

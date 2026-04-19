@@ -4,6 +4,17 @@ import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+// ✅ Thêm helper validate ở đầu file
+const VALID_RELATIONSHIP_TYPES = ["marriage", "biological_child", "adopted_child"] as const;
+type RelationshipType = (typeof VALID_RELATIONSHIP_TYPES)[number];
+
+function assertValidRelType(type: string): RelationshipType {
+  if (!VALID_RELATIONSHIP_TYPES.includes(type as RelationshipType)) {
+    throw new Error(`Loại quan hệ không hợp lệ: "${type}"`);
+  }
+  return type as RelationshipType;
+}
+
 // ─── 1. Quick Add Spouse ───────────────────────────────────────────────────
 export async function quickAddSpouse(
   familyId: string,
@@ -12,7 +23,8 @@ export async function quickAddSpouse(
   spouseGender: "male" | "female" | "other",
   spouseGeneration: number | null,
   birthYear: number | null,
-  note: string | null
+  note: string | null,
+  type: "marriage" = "marriage"
 ) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -38,7 +50,7 @@ export async function quickAddSpouse(
   const { error: relError } = await supabase.from("relationships").insert({
     person_a: personId,
     person_b: newPerson.id,
-    type: "marriage", // ✅ HARDCODED: literal string
+    type: assertValidRelType(type),
     note: note || null,
     family_id: familyId,
   });
@@ -63,7 +75,8 @@ export async function bulkAddChildren(
     birthYear: number | null;
     birthOrder: number | null;
     generation: number | null;
-  }>
+  }>,
+  relationshipType: RelationshipType = "biological_child"
 ) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
@@ -100,7 +113,7 @@ export async function bulkAddChildren(
       const { error: relA } = await supabase.from("relationships").insert({
         person_a: personId,
         person_b: newChild.id,
-        type: "biological_child", // ✅ HARDCODED: literal string
+        type: assertValidRelType(relationshipType), // ✅ Dùng type từ params
         family_id: familyId,
       });
 
@@ -115,7 +128,7 @@ export async function bulkAddChildren(
           family_id: familyId,
           person_a: spousePersonId,
           person_b: newChild.id,
-          type: "biological_child", // ✅ HARDCODED: literal string
+          type: assertValidRelType(relationshipType), // ✅ Dùng type từ params
         });
         if (relSpouse) {
            // We don't delete the person if only the second relationship fails, 
@@ -154,12 +167,7 @@ export async function addRelationship(
   const supabase = await getSupabase();
 
   // ✅ FIX: "Guard chặt chẽ nhất" - Đảm bảo type luôn khớp enum Postgres
-  const VALID_RELATIONSHIP_TYPES = ["marriage", "biological_child", "adopted_child"] as const;
-  let sanitizedType: (typeof VALID_RELATIONSHIP_TYPES)[number] = "biological_child";
-  
-  if (type === "marriage") sanitizedType = "marriage";
-  else if (type === "adopted_child") sanitizedType = "adopted_child";
-  // fallback mặc định là biological_child nếu type bị truyền vào là "" hoặc null/undefined
+  const sanitizedType = assertValidRelType(type);
 
 
   const { error: insertError } = await supabase.from("relationships").insert({
