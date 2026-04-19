@@ -15,6 +15,36 @@ function assertValidRelType(type: string): RelationshipType {
   return type as RelationshipType;
 }
 
+/**
+ * Verifies all given person IDs belong to the given family.
+ * Returns null if valid, or an error message if not.
+ */
+async function assertPersonsBelongToFamily(
+  supabase: Awaited<ReturnType<typeof getSupabase>>,
+  familyId: string,
+  personIds: string[],
+): Promise<string | null> {
+  const uniqueIds = [...new Set(personIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return null;
+
+  const { data, error } = await supabase
+    .from("persons")
+    .select("id")
+    .eq("family_id", familyId)
+    .in("id", uniqueIds);
+
+  if (error) return `Không kiểm tra được thành viên: ${error.message}`;
+  
+  const foundIds = new Set((data ?? []).map((p) => p.id));
+  const missing = uniqueIds.filter((id) => !foundIds.has(id));
+  
+  if (missing.length > 0) {
+    return `Thành viên không thuộc gia phả này: ${missing.join(", ")}`;
+  }
+  return null;
+}
+
+
 // ─── 1. Quick Add Spouse ───────────────────────────────────────────────────
 export async function quickAddSpouse(
   familyId: string,
@@ -29,6 +59,14 @@ export async function quickAddSpouse(
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
+
+  const checkErr = await assertPersonsBelongToFamily(
+    supabase,
+    familyId,
+    [personId],
+  );
+  if (checkErr) return { error: checkErr };
+
 
   const payload: Record<string, unknown> = {
     family_id: familyId,
@@ -81,6 +119,14 @@ export async function bulkAddChildren(
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
+
+  const checkErr = await assertPersonsBelongToFamily(
+    supabase,
+    familyId,
+    [personId, spousePersonId].filter(Boolean) as string[],
+  );
+  if (checkErr) return { error: checkErr };
+
 
   let successCount = 0;
   const errors: string[] = [];
@@ -166,6 +212,14 @@ export async function addRelationship(
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
+  const checkErr = await assertPersonsBelongToFamily(
+    supabase,
+    familyId,
+    [personAId, personBId, targetPersonId].filter(Boolean) as string[],
+  );
+  if (checkErr) return { error: checkErr };
+
+
   // ✅ FIX: "Guard chặt chẽ nhất" - Đảm bảo type luôn khớp enum Postgres
   const sanitizedType = assertValidRelType(type);
 
@@ -212,6 +266,14 @@ export async function deleteMemberProfile(memberId: string, familyId: string) {
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
+  const checkErr = await assertPersonsBelongToFamily(
+    supabase,
+    familyId,
+    [memberId],
+  );
+  if (checkErr) return { error: checkErr };
+
+
   const { error: relError } = await supabase
     .from("relationships")
     .delete()
@@ -241,6 +303,14 @@ export async function confirmSuggestedRelationship(
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
+
+  const checkErr = await assertPersonsBelongToFamily(
+    supabase,
+    familyId,
+    [parentId, childId],
+  );
+  if (checkErr) return { error: checkErr };
+
 
   const { error } = await supabase.from("relationships").insert({
     family_id: familyId,

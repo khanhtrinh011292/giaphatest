@@ -1,11 +1,21 @@
 "use server";
-
+ 
 import { Relationship } from "@/types";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { revalidatePath } from "next/cache";
-
+ 
+// ═══════════════════════════════════════════════════════════════════════════
+// N1 FIX: Valid relationship types (must match Postgres enum relationship_type_enum)
+// ═══════════════════════════════════════════════════════════════════════════
+const VALID_RELATIONSHIP_TYPES = ["marriage", "biological_child", "adopted_child"] as const;
+type ValidRelType = (typeof VALID_RELATIONSHIP_TYPES)[number];
+ 
+function isValidRelType(type: unknown): type is ValidRelType {
+  return typeof type === "string" && VALID_RELATIONSHIP_TYPES.includes(type as ValidRelType);
+}
+ 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
+ 
 interface PersonExport {
   id: string;
   full_name: string;
@@ -29,7 +39,7 @@ interface PersonExport {
   created_at?: string;
   updated_at?: string;
 }
-
+ 
 interface RelationshipExport {
   id?: string;
   type: string;
@@ -39,14 +49,14 @@ interface RelationshipExport {
   created_at?: string;
   updated_at?: string;
 }
-
+ 
 interface PersonDetailsPrivateExport {
   person_id: string;
   phone_number: string | null;
   occupation: string | null;
   current_residence: string | null;
 }
-
+ 
 interface CustomEventExport {
   id: string;
   name: string;
@@ -55,7 +65,7 @@ interface CustomEventExport {
   location: string | null;
   created_by: string | null;
 }
-
+ 
 interface BackupPayload {
   version: number;
   timestamp: string;
@@ -64,24 +74,27 @@ interface BackupPayload {
   person_details_private?: PersonDetailsPrivateExport[];
   custom_events?: CustomEventExport[];
 }
-
+ 
 // ─── Sanitized insert types ───────────────────────────────────────────────────
-
+ 
 type PersonInsert = Omit<PersonExport, "created_at" | "updated_at"> & {
   family_id: string;
 };
-
-type RelationshipInsert = Omit<
-  RelationshipExport,
-  "id" | "created_at" | "updated_at"
-> & { family_id: string };
-
+ 
+type RelationshipInsert = {
+  family_id: string;
+  type: ValidRelType;
+  person_a: string;
+  person_b: string;
+  note: string | null;
+};
+ 
 type CustomEventInsert = Omit<CustomEventExport, "created_by"> & {
   family_id: string;
 };
-
+ 
 // ─── FamilyAccess return type (discriminated union) ──────────────────────────
-
+ 
 type FamilyAccessError = { error: string };
 type FamilyAccessOk = {
   supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>;
@@ -91,37 +104,37 @@ type FamilyAccessOk = {
   canImport: boolean;
 };
 type FamilyAccessResult = FamilyAccessError | FamilyAccessOk;
-
+ 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
+ 
 async function getFamilyAccess(familyId: string): Promise<FamilyAccessResult> {
   const user = await getUser();
   if (!user) return { error: "Vui lòng đăng nhập." };
-
+ 
   const supabase = await getSupabase();
-
+ 
   const { data: family, error: familyError } = await supabase
     .from("families")
     .select("id, owner_id")
     .eq("id", familyId)
     .single();
-
+ 
   if (familyError || !family)
     return { error: "Không tìm thấy gia phả." };
-
+ 
   if (family.owner_id === user.id)
     return { supabase, user, family, canRead: true, canImport: true };
-
+ 
   const { data: share } = await supabase
     .from("family_shares")
     .select("role")
     .eq("family_id", familyId)
     .eq("shared_with", user.id)
     .single();
-
+ 
   if (!share)
     return { error: "Bạn không có quyền truy cập gia phả này." };
-
+ 
   return {
     supabase,
     user,
@@ -130,7 +143,7 @@ async function getFamilyAccess(familyId: string): Promise<FamilyAccessResult> {
     canImport: share.role === "admin",
   };
 }
-
+ 
 function sanitizePerson(familyId: string, p: PersonExport): PersonInsert {
   return {
     id: p.id,
@@ -155,11 +168,17 @@ function sanitizePerson(familyId: string, p: PersonExport): PersonInsert {
     note: p.note ?? null,
   };
 }
-
+ 
 function sanitizeRelationship(
   familyId: string,
   r: RelationshipExport,
 ): RelationshipInsert {
+  // N1 FIX: Validate type BEFORE insert (throw explicit error if invalid)
+  if (!isValidRelType(r.type)) {
+    throw new Error(
+      `Loại quan hệ không hợp lệ: "${r.type}". Chỉ chấp nhận: ${VALID_RELATIONSHIP_TYPES.join(", ")}.`,
+    );
+  }
   return {
     family_id: familyId,
     type: r.type,
@@ -168,7 +187,7 @@ function sanitizeRelationship(
     note: r.note ?? null,
   };
 }
-
+ 
 function sanitizeCustomEvent(
   familyId: string,
   e: CustomEventExport,
@@ -182,18 +201,18 @@ function sanitizeCustomEvent(
     location: e.location ?? null,
   };
 }
-
+ 
 // ─── Export ───────────────────────────────────────────────────────────────────
-
+ 
 export async function exportData(
   familyId: string,
   exportRootId?: string,
 ): Promise<BackupPayload | { error: string }> {
   const access = await getFamilyAccess(familyId);
   if ("error" in access) return { error: access.error };
-
+ 
   const { supabase } = access;
-
+ 
   const { data: allPersons, error: personsError } = await supabase
     .from("persons")
     .select(
@@ -201,21 +220,21 @@ export async function exportData(
     )
     .eq("family_id", familyId)
     .order("created_at", { ascending: true });
-
+ 
   if (personsError)
     return { error: "Lỗi tải dữ liệu persons: " + personsError.message };
-
+ 
   const { data: allRels, error: relationshipsError } = await supabase
     .from("relationships")
     .select("id, type, person_a, person_b, note, created_at, updated_at")
     .eq("family_id", familyId)
     .order("created_at", { ascending: true });
-
+ 
   if (relationshipsError)
     return {
       error: "Lỗi tải dữ liệu relationships: " + relationshipsError.message,
     };
-
+ 
   const personIds = (allPersons ?? []).map((p) => p.id);
   let allPrivateDetails: PersonDetailsPrivateExport[] = [];
   if (personIds.length > 0) {
@@ -223,7 +242,7 @@ export async function exportData(
       .from("person_details_private")
       .select("person_id, phone_number, occupation, current_residence")
       .in("person_id", personIds);
-
+ 
     if (privateDetailsError)
       return {
         error:
@@ -232,26 +251,26 @@ export async function exportData(
       };
     allPrivateDetails = (data ?? []) as PersonDetailsPrivateExport[];
   }
-
+ 
   const { data: allCustomEvents, error: customEventsError } = await supabase
     .from("custom_events")
     .select("id, name, content, event_date, location, created_by")
     .eq("family_id", familyId)
     .order("event_date", { ascending: true });
-
+ 
   if (customEventsError)
     return {
       error: "Lỗi tải dữ liệu custom_events: " + customEventsError.message,
     };
-
+ 
   let exportPersons = (allPersons ?? []) as PersonExport[];
   let exportRels = (allRels ?? []) as RelationshipExport[];
   let exportPrivateDetails = allPrivateDetails;
   const exportCustomEvents = (allCustomEvents ?? []) as CustomEventExport[];
-
+ 
   if (exportRootId && exportPersons.some((p) => p.id === exportRootId)) {
     const includedPersonIds = new Set<string>([exportRootId]);
-
+ 
     const findDescendants = (parentId: string) => {
       exportRels
         .filter(
@@ -267,7 +286,7 @@ export async function exportData(
         });
     };
     findDescendants(exportRootId);
-
+ 
     const descendantsArray = Array.from(includedPersonIds);
     descendantsArray.forEach((personId) => {
       exportRels
@@ -281,7 +300,7 @@ export async function exportData(
           includedPersonIds.add(spouseId);
         });
     });
-
+ 
     exportPersons = exportPersons.filter((p) => includedPersonIds.has(p.id));
     exportRels = exportRels.filter(
       (r) =>
@@ -291,7 +310,7 @@ export async function exportData(
       includedPersonIds.has(d.person_id),
     );
   }
-
+ 
   return {
     version: 4,
     timestamp: new Date().toISOString(),
@@ -301,9 +320,9 @@ export async function exportData(
     custom_events: exportCustomEvents,
   };
 }
-
+ 
 // ─── Import ───────────────────────────────────────────────────────────────────
-
+ 
 export async function importData(
   familyId: string,
   importPayload:
@@ -317,46 +336,116 @@ export async function importData(
 ) {
   const access = await getFamilyAccess(familyId);
   if ("error" in access) return { error: access.error };
-
+ 
   if (!access.canImport)
     return { error: "Bạn không có quyền import dữ liệu cho gia phả này." };
-
+ 
   const { supabase } = access;
-
+ 
   if (!importPayload?.persons || !importPayload?.relationships)
     return { error: "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại file JSON." };
-
+ 
   if (importPayload.persons.length === 0)
     return { error: "File backup trống — không có thành viên nào để phục hồi." };
-
+ 
+  // ═════════════════════════════════════════════════════════════════════════
+  // N1 FIX: VALIDATE PAYLOAD BEFORE ANY DESTRUCTIVE OPERATION
+  // Previously: DELETE → INSERT, so a bad chunk mid-way = data corruption
+  //             with no rollback possible.
+  // Now: Pre-validate everything, only then run DELETE → INSERT.
+  // ═════════════════════════════════════════════════════════════════════════
+ 
+  // Validate all relationship types
+  const invalidRels = importPayload.relationships
+    .map((r, idx) => ({ idx, type: r.type }))
+    .filter(({ type }) => !isValidRelType(type));
+ 
+  if (invalidRels.length > 0) {
+    const preview = invalidRels
+      .slice(0, 3)
+      .map((r) => `dòng ${r.idx + 1}: "${r.type}"`)
+      .join(", ");
+    return {
+      error: `File chứa ${invalidRels.length} quan hệ có loại không hợp lệ (${preview}${invalidRels.length > 3 ? "..." : ""}). Chỉ chấp nhận: ${VALID_RELATIONSHIP_TYPES.join(", ")}.`,
+    };
+  }
+ 
+  // Validate all persons have required fields
+  const invalidPersons = importPayload.persons
+    .map((p, idx) => ({ idx, id: p.id, full_name: p.full_name, gender: p.gender }))
+    .filter((p) => !p.id || !p.full_name || !["male", "female", "other"].includes(p.gender));
+ 
+  if (invalidPersons.length > 0) {
+    const preview = invalidPersons
+      .slice(0, 3)
+      .map((p) => `dòng ${p.idx + 1}: "${p.full_name ?? "(rỗng)"}"`)
+      .join(", ");
+    return {
+      error: `File chứa ${invalidPersons.length} thành viên thiếu thông tin bắt buộc (${preview}${invalidPersons.length > 3 ? "..." : ""}).`,
+    };
+  }
+ 
+  // Validate relationships reference existing persons in this payload
+  const payloadPersonIds = new Set(importPayload.persons.map((p) => p.id));
+  const danglingRels = importPayload.relationships.filter(
+    (r) => !payloadPersonIds.has(r.person_a) || !payloadPersonIds.has(r.person_b),
+  );
+ 
+  if (danglingRels.length > 0) {
+    return {
+      error: `File chứa ${danglingRels.length} quan hệ tham chiếu đến thành viên không có trong file. Dữ liệu backup không nhất quán.`,
+    };
+  }
+ 
+  // Pre-sanitize everything NOW — catches any errors before DELETE
+  let sanitizedPersons: PersonInsert[];
+  let sanitizedRels: RelationshipInsert[];
+  let sanitizedEvents: CustomEventInsert[];
+  try {
+    sanitizedPersons = importPayload.persons.map((p) => sanitizePerson(familyId, p));
+    sanitizedRels = importPayload.relationships
+      .filter((r) => r.person_a !== r.person_b)
+      .map((r) => sanitizeRelationship(familyId, r));
+    sanitizedEvents = (importPayload.custom_events ?? []).map((e) =>
+      sanitizeCustomEvent(familyId, e),
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { error: `Lỗi khi xử lý dữ liệu: ${msg}` };
+  }
+ 
+  // ═════════════════════════════════════════════════════════════════════════
+  // Validation passed — now safe to DELETE existing data and INSERT new
+  // ═════════════════════════════════════════════════════════════════════════
+ 
   const { data: currentPersons, error: currentPersonsError } = await supabase
     .from("persons")
     .select("id")
     .eq("family_id", familyId);
-
+ 
   if (currentPersonsError)
     return {
       error:
         "Lỗi tải danh sách thành viên hiện tại: " + currentPersonsError.message,
     };
-
+ 
   const existingPersonIds = (currentPersons ?? []).map((p) => p.id);
   const CHUNK = 200;
-
+ 
   const { error: delEventsError } = await supabase
     .from("custom_events")
     .delete()
     .eq("family_id", familyId);
   if (delEventsError)
     return { error: "Lỗi khi xoá custom_events cũ: " + delEventsError.message };
-
+ 
   const { error: delRelError } = await supabase
     .from("relationships")
     .delete()
     .eq("family_id", familyId);
   if (delRelError)
     return { error: "Lỗi khi xoá relationships cũ: " + delRelError.message };
-
+ 
   if (existingPersonIds.length > 0) {
     const { error: delPrivateError } = await supabase
       .from("person_details_private")
@@ -368,38 +457,34 @@ export async function importData(
           "Lỗi khi xoá person_details_private cũ: " + delPrivateError.message,
       };
   }
-
+ 
   const { error: delPersonsError } = await supabase
     .from("persons")
     .delete()
     .eq("family_id", familyId);
   if (delPersonsError)
     return { error: "Lỗi khi xoá persons cũ: " + delPersonsError.message };
-
-  const persons = importPayload.persons.map((p) => sanitizePerson(familyId, p));
-  for (let i = 0; i < persons.length; i += CHUNK) {
+ 
+  for (let i = 0; i < sanitizedPersons.length; i += CHUNK) {
     const { error } = await supabase
       .from("persons")
-      .insert(persons.slice(i, i + CHUNK));
+      .insert(sanitizedPersons.slice(i, i + CHUNK));
     if (error)
       return {
         error: `Lỗi khi import persons (chunk ${i / CHUNK + 1}): ${error.message}`,
       };
   }
-
-  const relationships = importPayload.relationships
-    .filter((r) => r.person_a !== r.person_b)
-    .map((r) => sanitizeRelationship(familyId, r));
-  for (let i = 0; i < relationships.length; i += CHUNK) {
+ 
+  for (let i = 0; i < sanitizedRels.length; i += CHUNK) {
     const { error } = await supabase
       .from("relationships")
-      .insert(relationships.slice(i, i + CHUNK));
+      .insert(sanitizedRels.slice(i, i + CHUNK));
     if (error)
       return {
         error: `Lỗi khi import relationships (chunk ${i / CHUNK + 1}): ${error.message}`,
       };
   }
-
+ 
   let privateDetailsCount = 0;
   const privateDetails = importPayload.person_details_private ?? [];
   if (privateDetails.length > 0) {
@@ -414,36 +499,33 @@ export async function importData(
     }
     privateDetailsCount = privateDetails.length;
   }
-
+ 
   let customEventsCount = 0;
-  const customEvents = (importPayload.custom_events ?? []).map((e) =>
-    sanitizeCustomEvent(familyId, e),
-  );
-  if (customEvents.length > 0) {
-    for (let i = 0; i < customEvents.length; i += CHUNK) {
+  if (sanitizedEvents.length > 0) {
+    for (let i = 0; i < sanitizedEvents.length; i += CHUNK) {
       const { error } = await supabase
         .from("custom_events")
-        .insert(customEvents.slice(i, i + CHUNK));
+        .insert(sanitizedEvents.slice(i, i + CHUNK));
       if (error)
         return {
           error: `Lỗi khi import custom_events (chunk ${i / CHUNK + 1}): ${error.message}`,
         };
     }
-    customEventsCount = customEvents.length;
+    customEventsCount = sanitizedEvents.length;
   }
-
+ 
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/${familyId}`);
   revalidatePath(`/dashboard/${familyId}/members`);
   revalidatePath(`/dashboard/${familyId}/events`);
   revalidatePath(`/dashboard/${familyId}/data`);
   revalidatePath(`/dashboard/${familyId}/stats`);
-
+ 
   return {
     success: true,
     imported: {
-      persons: persons.length,
-      relationships: relationships.length,
+      persons: sanitizedPersons.length,
+      relationships: sanitizedRels.length,
       person_details_private: privateDetailsCount,
       custom_events: customEventsCount,
     },
