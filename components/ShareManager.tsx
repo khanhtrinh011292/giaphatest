@@ -2,6 +2,7 @@
 
 import {
   createShareLink,
+  getFamilyShares,
   getShareLinks,
   revokeShare,
   revokeShareLink,
@@ -69,6 +70,11 @@ function MemberShareTab({
   const [role, setRole] = useState<"viewer" | "editor">("viewer");
   const [isPending, startTransition] = useTransition();
 
+  async function reloadShares() {
+    const res = await getFamilyShares(familyId);
+    if ("data" in res) setShares(res.data as ShareRow[]);
+  }
+
   function handleShare() {
     if (!email.trim()) { showStatus("err", "Vui lòng nhập email."); return; }
     startTransition(async () => {
@@ -78,6 +84,7 @@ function MemberShareTab({
       } else {
         showStatus("ok", `Đã chia sẻ tới ${email} với quyền ${roleLabel(role)}.`);
         setEmail("");
+        await reloadShares();
         router.refresh();
       }
     });
