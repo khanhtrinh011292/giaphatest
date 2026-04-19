@@ -14,9 +14,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -364,5 +364,17 @@ export default function LoginPage() {
 
       <Footer className="bg-transparent relative z-10 border-none mt-auto" />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#fafaf9]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
