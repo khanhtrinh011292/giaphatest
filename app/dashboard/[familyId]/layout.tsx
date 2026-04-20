@@ -3,7 +3,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { FamilyContextProvider } from "@/components/FamilyContextProvider";
 import Footer from "@/components/Footer";
 import LogoutButton from "@/components/LogoutButton";
-import { FamilyContext } from "@/types";
+import { FamilyContext, FamilyRole } from "@/types";
 import { getProfile, getSupabase, getUser } from "@/utils/supabase/queries";
 import Link from "next/link";
 import type { Metadata } from "next";
