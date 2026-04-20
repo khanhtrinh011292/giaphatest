@@ -4,7 +4,7 @@ export type RelationshipType =
   | "biological_child"
   | "adopted_child";
 export type UserRole = "superadmin" | "admin" | "editor" | "member";
-export type ShareRole = "viewer" | "editor" | "admin";
+export type ShareRole = "viewer" | "editor";
 export type FamilyRole = ShareRole | "owner";
 
 export interface Profile {
@@ -48,8 +48,8 @@ export interface FamilyShare {
 export interface FamilyContext {
   family: Family;
   myRole: FamilyRole;
-  canWrite: boolean; // editor | admin | owner
-  canAdmin: boolean; // admin | owner
+  canWrite: boolean; // editor | owner
+  canAdmin: boolean; // owner
   isOwner: boolean;
 }
 
