@@ -152,9 +152,9 @@ export default function SingleAddModal({
             }}
             className="bg-white text-stone-900 block w-full max-w-full text-sm rounded-lg border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 sm:p-2.5 border transition-colors"
           >
-            <option value="parent">Người này là Con của...</option>
-            <option value="spouse">Người này là Vợ/Chồng của...</option>
-            <option value="child">Người này là Bố/Mẹ của...</option>
+            <option value="child">Thêm Con (người kia là con của người này)</option>
+            <option value="parent">Thêm Cha/Mẹ (người kia là cha/mẹ của người này)</option>
+            <option value="spouse">Thêm Vợ/Chồng</option>
           </select>
         </div>
 

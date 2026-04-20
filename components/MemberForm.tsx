@@ -238,17 +238,22 @@ export default function MemberForm({
       const currentPersonId = result.personId;
 
       if (avatarFile && currentPersonId) {
-        const fileExt = avatarFile.name.split(".").pop();
-        const fileName = `${currentPersonId}_${slugify(fullName)}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(fileName, avatarFile, { upsert: true });
-        
-        if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
-        const avatarResult = await updateMemberAvatar(currentPersonId, familyId, publicUrl);
-        if (avatarResult.error) throw new Error(avatarResult.error);
+        try {
+          const fileExt = avatarFile.name.split(".").pop();
+          const fileName = `${currentPersonId}_${slugify(fullName)}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from("avatars")
+            .upload(fileName, avatarFile, { upsert: true });
+          
+          if (uploadError) throw uploadError;
+          
+          const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
+          const avatarResult = await updateMemberAvatar(currentPersonId, familyId, publicUrl);
+          if (avatarResult.error) throw new Error(avatarResult.error);
+        } catch (uploadErr) {
+          console.warn("Avatar upload failed:", uploadErr);
+          toast.warning("Thành viên đã lưu nhưng ảnh chưa upload được.");
+        }
       }
 
       if (onSuccess) {

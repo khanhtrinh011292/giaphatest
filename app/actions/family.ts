@@ -123,13 +123,23 @@ export async function getFamilyShares(familyId: string) {
   }
 
   const { data, error } = await supabase
-    .from("family_shares_with_email")
-    .select("*")
+    .from("family_shares")
+    .select("*, profile:profiles!family_shares_shared_with_fkey(email)")
     .eq("family_id", familyId)
     .order("created_at", { ascending: true });
 
   if (error) return { error: error.message };
-  return { data: data ?? [] };
+  
+  // Chuyển đổi data sang format ShareRow
+  const mappedData = (data || []).map((s: any) => ({
+    id: s.id,
+    shared_with: s.shared_with,
+    shared_with_email: s.profile?.email || "N/A",
+    role: s.role,
+    created_at: s.created_at,
+  }));
+
+  return { data: mappedData };
 }
 
 // ── Chia sẻ gia phả theo email ─────────────────────────────────────────────────────────────────────────────

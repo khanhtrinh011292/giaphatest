@@ -128,7 +128,7 @@ export default function BulkAddChildrenModal({
                   onClick={() => {
                     const newBulk = bulkChildren.filter((_, i) => i !== index);
                     if (newBulk.length === 0) {
-                      newBulk.push({ name: "", gender: "male", birthYear: "", birthOrder: "1", isProcessing: false });
+                      newBulk.push({ name: "", gender: "male", birthYear: "", birthOrder: String(bulkChildren.length), isProcessing: false });
                     }
                     setBulkChildren(newBulk);
                   }}
