@@ -38,7 +38,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
       const { data: personData, error: personError } = await supabase.from("persons").select("*").eq("id", id).single();
       if (personError || !personData) throw new Error("Không thể tải thông tin thành viên.");
       setPerson(personData);
-      if (isAdmin) {
+      if (canEdit) {
         const { data: privData } = await supabase.from("person_details_private").select("*").eq("person_id", id).single();
         setPrivateData(privData || {});
       } else {
@@ -49,7 +49,7 @@ export default function MemberDetailModal({ familyId }: { familyId?: string }) {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, supabase]);
+  }, [canEdit, supabase]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout | null = null;
