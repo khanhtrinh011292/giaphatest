@@ -280,6 +280,24 @@ export async function saveMember(
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
+  // 🛡️ Kiểm tra quyền: Owner, Admin hoặc Editor
+  const { data: family } = await supabase.from("families").select("owner_id").eq("id", familyId).single();
+  const isOwner = family?.owner_id === user.id;
+  let hasPermission = isOwner;
+
+  if (!isOwner) {
+    const { data: share } = await supabase
+      .from("family_shares")
+      .select("role")
+      .eq("family_id", familyId)
+      .eq("shared_with", user.id)
+      .single();
+    const role = share?.role;
+    hasPermission = role === "admin" || role === "editor";
+  }
+
+  if (!hasPermission) return { error: "Bạn không có quyền chỉnh sửa gia phả này." };
+
   let currentId = personId;
 
   if (!personId) {

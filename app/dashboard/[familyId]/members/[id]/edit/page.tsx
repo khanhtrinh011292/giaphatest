@@ -72,7 +72,7 @@ export default async function EditMemberPage({ params }: PageProps) {
   if (error || !person) notFound();
 
   let privateData: Record<string, unknown> | null = null;
-  if (isAdmin) {
+  if (canEdit) {
     const { data } = await supabase
       .from("person_details_private")
       .select("*")
@@ -86,7 +86,7 @@ export default async function EditMemberPage({ params }: PageProps) {
   const { person_id: _pid, family_id: _fid, ...safePrivate } =
     (privateData as Record<string, unknown> & { person_id?: unknown; family_id?: unknown }) ?? {};
 
-  const initialData = isAdmin
+  const initialData = canEdit
     ? { ...person, ...safePrivate }
     : { ...person };
 

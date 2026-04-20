@@ -53,7 +53,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
   if (error || !person) notFound();
 
   let privateData = null;
-  if (isAdmin) {
+  if (canEdit) {
     const { data } = await supabase
       .from("person_details_private")
       .select("*")
