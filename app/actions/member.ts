@@ -310,19 +310,19 @@ export async function saveMember(
     if (updateError) return { error: updateError.message };
   }
 
-  // Handle private details
+  // ✅ FIX: Luôn upsert privateData với onConflict để đảm bảo cập nhật đúng row
   if (currentId && privateData) {
-    const hasData = privateData.phone_number || privateData.occupation || privateData.current_residence;
+    const hasData =
+      privateData.phone_number || privateData.occupation || privateData.current_residence;
     if (hasData) {
       const { error: privateError } = await supabase
         .from("person_details_private")
-        .upsert({
-          person_id: currentId,
-          ...privateData
-        });
+        .upsert(
+          { person_id: currentId, ...privateData },
+          { onConflict: "person_id" }
+        );
       if (privateError) {
         console.warn("Private details save failed:", privateError.message);
-        // We don't return error here to let the main save succeed
       }
     } else {
       await supabase.from("person_details_private").delete().eq("person_id", currentId);
