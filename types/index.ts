@@ -3,7 +3,7 @@ export type RelationshipType =
   | "marriage"
   | "biological_child"
   | "adopted_child";
-export type UserRole = "superadmin" | "admin" | "editor" | "member";
+export type UserRole = "superadmin" | "admin" | "member";
 export type ShareRole = "viewer" | "editor";
 export type FamilyRole = ShareRole | "owner";
 

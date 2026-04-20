@@ -88,9 +88,12 @@ export default async function FamilyLayout({
     shareRole = share.role;
   }
 
-  const myRole = isOwner ? "owner" : (shareRole as "viewer" | "editor" | "admin");
-  const canWrite = isOwner || shareRole === "editor" || shareRole === "admin";
-  const canAdmin = isOwner || shareRole === "admin";
+  // Map existing "admin" role from DB to "editor" for safety during migration
+  const effectiveShareRole = shareRole === "admin" ? "editor" : (shareRole as "viewer" | "editor");
+
+  const myRole: FamilyRole = isOwner ? "owner" : effectiveShareRole;
+  const canWrite = isOwner || effectiveShareRole === "editor";
+  const canAdmin = isOwner;
 
   const context: FamilyContext = {
     family,

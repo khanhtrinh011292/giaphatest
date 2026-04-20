@@ -38,10 +38,13 @@ export default async function MemberDetailPage({ params }: PageProps) {
     shareRole = share?.role ?? null;
   }
 
-  // isAdmin: owner hoặc family-admin (có quyền xem private data + xóa)
-  const isAdmin = isOwner || shareRole === "admin";
-  // canEdit: owner, admin, hoặc editor
-  const canEdit = isOwner || shareRole === "admin" || shareRole === "editor";
+  // Map legacy "admin" role to "editor" for safety
+  const effectiveShareRole = shareRole === "admin" ? "editor" : (shareRole as "viewer" | "editor");
+
+  // isAdmin (xem private + xóa) -> Chỉ dành cho Owner
+  const isAdmin = isOwner; 
+  // canEdit (ghi dữ liệu) -> Owner hoặc Editor
+  const canEdit = isOwner || effectiveShareRole === "editor";
 
   const { data: person, error } = await supabase
     .from("persons")

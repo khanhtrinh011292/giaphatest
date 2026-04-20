@@ -109,18 +109,7 @@ export async function getFamilyShares(familyId: string) {
 
   const isOwner = family.owner_id === user.id;
 
-  if (!isOwner) {
-    // Kiểm tra có phải admin không
-    const { data: share } = await supabase
-      .from("family_shares")
-      .select("role")
-      .eq("family_id", familyId)
-      .eq("shared_with", user.id)
-      .single();
-
-    // Editor chỉ được tạo link, không xem danh sách share → trả về mảng rỗng
-    if (!share || share.role !== "admin") return { data: [] };
-  }
+  if (!isOwner) return { data: [] };
 
   const { data, error } = await supabase
     .from("family_shares")
@@ -251,17 +240,7 @@ export async function createShareLink(
   if (!family) return { error: "Không tìm thấy gia phả." };
 
   const isOwner = family.owner_id === user.id;
-  if (!isOwner) {
-    // Kiểm tra editor hoặc admin
-    const { data: share } = await supabase
-      .from("family_shares")
-      .select("role")
-      .eq("family_id", familyId)
-      .eq("shared_with", user.id)
-      .single();
-    if (!share || (share.role !== "editor" && share.role !== "admin"))
-      return { error: "Bạn không có quyền tạo link chia sẻ." };
-  }
+  if (!isOwner) return { error: "Bạn không có quyền tạo link chia sẻ." };
 
   const array = new Uint8Array(24);
   crypto.getRandomValues(array);

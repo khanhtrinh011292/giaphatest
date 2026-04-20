@@ -44,7 +44,7 @@ const ROLE_OPTIONS: { value: "viewer" | "editor"; label: string; desc: string }[
 ];
 
 function roleLabel(role: ShareRole) {
-  return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === "admin" ? "Quản trị" : role);
+  return ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role as string === "admin" ? "Chỉnh sửa (Admin cũ)" : role);
 }
 
 function buildShareUrl(token: string, role: "viewer" | "editor"): string {

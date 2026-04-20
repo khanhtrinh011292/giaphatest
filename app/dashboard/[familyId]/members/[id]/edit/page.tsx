@@ -38,8 +38,13 @@ export default async function EditMemberPage({ params }: PageProps) {
     shareRole = share?.role ?? null;
   }
 
-  const isAdmin = isOwner || shareRole === "admin";
-  const canEdit = isOwner || shareRole === "admin" || shareRole === "editor";
+  // Map legacy "admin" role to "editor" for safety
+  const effectiveShareRole = shareRole === "admin" ? "editor" : (shareRole as "viewer" | "editor");
+
+  // isAdmin (quyền xóa trong form) -> Chỉ Owner
+  const isAdmin = isOwner; 
+  // canEdit (vào trang này) -> Owner hoặc Editor
+  const canEdit = isOwner || effectiveShareRole === "editor";
 
   if (!canEdit) {
     return (

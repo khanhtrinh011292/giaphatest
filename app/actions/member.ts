@@ -293,7 +293,7 @@ export async function saveMember(
       .eq("shared_with", user.id)
       .single();
     const role = share?.role;
-    hasPermission = role === "admin" || role === "editor";
+    hasPermission = role === "admin" || role === "editor"; // Giữ "admin" cho đến khi DB được migrate
   }
 
   if (!hasPermission) return { error: "Bạn không có quyền chỉnh sửa gia phả này." };
