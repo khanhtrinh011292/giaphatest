@@ -113,7 +113,7 @@ export async function bulkAddChildren(
       const { error: relA } = await supabase.from("relationships").insert({
         person_a: personId,
         person_b: newChild.id,
-        type: assertValidRelType(relationshipType), // ✅ Dùng type từ params
+        type: assertValidRelType(relationshipType),
         family_id: familyId,
       });
 
@@ -128,12 +128,10 @@ export async function bulkAddChildren(
           family_id: familyId,
           person_a: spousePersonId,
           person_b: newChild.id,
-          type: assertValidRelType(relationshipType), // ✅ Dùng type từ params
+          type: assertValidRelType(relationshipType),
         });
         if (relSpouse) {
-           // We don't delete the person if only the second relationship fails, 
-           // but we log it. Usually this shouldn't fail if relA succeeded.
-           errors.push(`Lỗi tạo quan hệ (cha/mẹ thứ 2) cho ${child.name}: ${relSpouse.message}`);
+          errors.push(`Lỗi tạo quan hệ (cha/mẹ thứ 2) cho ${child.name}: ${relSpouse.message}`);
         }
       }
 
@@ -166,9 +164,7 @@ export async function addRelationship(
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
-  // ✅ FIX: "Guard chặt chẽ nhất" - Đảm bảo type luôn khớp enum Postgres
   const sanitizedType = assertValidRelType(type);
-
 
   const { error: insertError } = await supabase.from("relationships").insert({
     person_a: personAId,
@@ -191,12 +187,9 @@ export async function addRelationship(
         updates.generation = personGeneration;
       }
     }
-    
-    // Set in-law status if it's a marriage and we're adding someone TO the tree
     if (type === "marriage") {
       updates.is_in_law = true;
     }
-
     if (Object.keys(updates).length > 0) {
       await supabase.from("persons").update(updates).eq("id", targetPersonId);
     }
@@ -310,22 +303,22 @@ export async function saveMember(
     if (updateError) return { error: updateError.message };
   }
 
-  // ✅ FIX: Luôn upsert privateData với onConflict để đảm bảo cập nhật đúng row
+  // ✅ FIX: Dùng delete + insert để đảm bảo luôn ghi đúng, không phụ thuộc unique constraint
   if (currentId && privateData) {
     const hasData =
       privateData.phone_number || privateData.occupation || privateData.current_residence;
+
+    // Xóa row cũ trước (nếu có)
+    await supabase.from("person_details_private").delete().eq("person_id", currentId);
+
+    // Chỉ insert mới nếu có dữ liệu
     if (hasData) {
       const { error: privateError } = await supabase
         .from("person_details_private")
-        .upsert(
-          { person_id: currentId, ...privateData },
-          { onConflict: "person_id" }
-        );
+        .insert({ person_id: currentId, ...privateData });
       if (privateError) {
         console.warn("Private details save failed:", privateError.message);
       }
-    } else {
-      await supabase.from("person_details_private").delete().eq("person_id", currentId);
     }
   }
 
