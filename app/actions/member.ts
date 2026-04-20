@@ -333,7 +333,7 @@ export async function saveMember(
     if (hasData) {
       const { error: privateError } = await supabase
         .from("person_details_private")
-        .insert({ person_id: currentId, ...privateData });
+        .insert({ person_id: currentId, family_id, ...privateData });
       if (privateError) {
         console.warn("Private details save failed:", privateError.message);
       }
