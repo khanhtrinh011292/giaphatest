@@ -2,13 +2,13 @@
 
 import {
   createShareLink,
-  getFamilyShares,
   getShareLinks,
   revokeShare,
   revokeShareLink,
   shareFamily,
   updateShareRole,
 } from "@/app/actions/family";
+import { createClient } from "@/utils/supabase/client";
 import { ShareRole } from "@/types";
 import {
   ClipboardCopyIcon,
@@ -71,8 +71,13 @@ function MemberShareTab({
   const [isPending, startTransition] = useTransition();
 
   async function reloadShares() {
-    const res = await getFamilyShares(familyId);
-    if ("data" in res) setShares(res.data as ShareRow[]);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("family_shares_with_email")
+      .select("id, shared_with, shared_with_email, role, created_at")
+      .eq("family_id", familyId)
+      .order("created_at", { ascending: true });
+    if (data) setShares(data as ShareRow[]);
   }
 
   function handleShare() {
