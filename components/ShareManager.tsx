@@ -190,7 +190,7 @@ function MemberShareTab({
                   </p>
                 </div>
                 <select
-                  value={s.role === "admin" ? "editor" : s.role}
+                  value={(s.role as string) === "admin" ? "editor" : s.role}
                   onChange={(e) => handleRoleChange(s.id, e.target.value as "viewer" | "editor")}
                   disabled={isPending}
                   className="border border-stone-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-60"

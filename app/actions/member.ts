@@ -292,7 +292,7 @@ export async function saveMember(
       .eq("family_id", familyId)
       .eq("shared_with", user.id)
       .single();
-    const role = share?.role;
+    const role = share?.role as string;
     hasPermission = role === "admin" || role === "editor"; // Giữ "admin" cho đến khi DB được migrate
   }
 

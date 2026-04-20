@@ -39,7 +39,7 @@ export default async function FamilyDashboardPage({ params, searchParams }: Page
         .eq("family_id", familyId)
         .eq("shared_with", user.id)
         .single();
-      const role = share?.role;
+      const role = share?.role as string;
       canEdit = role === "editor" || role === "admin";
     }
   }
