@@ -44,7 +44,6 @@ export default function RelationshipManager({
 }: RelationshipManagerProps) {
   const supabase = createClient();
   const dashboardContext = useContext(DashboardContext);
-  const { setMemberModalId } = useDashboard();
   const router = useRouter();
 
   const personId = person.id;
@@ -60,9 +59,9 @@ export default function RelationshipManager({
 
   const handlePersonClick = (id: string) => {
     if (dashboardContext !== undefined) {
-      setMemberModalId(id);
+      dashboardContext.setMemberModalId(id);
     } else {
-      router.push(`/dashboard/members/${id}`);
+      router.push(`/dashboard/${familyId}/members/${id}`);
     }
   };
 
