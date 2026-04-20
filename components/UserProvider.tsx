@@ -10,7 +10,6 @@ interface UserState {
   profile: Profile | null;
   isSuperAdmin: boolean;
   isAdmin: boolean;
-  isEditor: boolean;
   supabase: SupabaseClient;
 }
 
@@ -28,10 +27,9 @@ export function UserProvider({
   const supabase = useMemo(() => createClient(), []);
   const isSuperAdmin = profile?.role === "superadmin";
   const isAdmin = profile?.role === "admin" || isSuperAdmin;
-  const isEditor = profile?.role === "editor" || isAdmin;
 
   return (
-    <UserContext.Provider value={{ user, profile, isSuperAdmin, isAdmin, isEditor, supabase }}>
+    <UserContext.Provider value={{ user, profile, isSuperAdmin, isAdmin, supabase }}>
       {children}
     </UserContext.Provider>
   );
