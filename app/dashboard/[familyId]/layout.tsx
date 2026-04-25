@@ -15,16 +15,21 @@ export async function generateMetadata({
 }: {
   params: Promise<{ familyId: string }>;
 }): Promise<Metadata> {
-  const { familyId } = await params;
-  const supabase = await getSupabase();
-  const { data: family } = await supabase
-    .from("families")
-    .select("name")
-    .eq("id", familyId)
-    .single();
-  return {
-    title: family?.name ? `${family.name} | ${config.siteName}` : config.siteName,
-  };
+  try {
+    const { familyId } = await params;
+    const supabase = await getSupabase();
+    if (!supabase) return { title: config.siteName };
+    const { data: family } = await supabase
+      .from("families")
+      .select("name")
+      .eq("id", familyId)
+      .single();
+    return {
+      title: family?.name ? `${family.name} | ${config.siteName}` : config.siteName,
+    };
+  } catch {
+    return { title: config.siteName };
+  }
 }
 
 export default async function FamilyLayout({
@@ -64,6 +69,7 @@ export default async function FamilyLayout({
 
   // Dùng lại supabase client từ getSupabase() — được cache() nên chỉ tạo 1 lần/request
   const supabase = await getSupabase();
+  if (!supabase) redirect("/login");
 
   const { data: family, error: familyError } = await supabase
     .from("families")
