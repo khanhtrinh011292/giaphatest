@@ -11,10 +11,10 @@ export const getSupabase = cache(async () => {
 
 export const getUser = cache(async () => {
   const supabase = await getSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  const { data, error } = await supabase.auth.getUser();
+  // Guard: data có thể null khi session hết hạn hoặc cookie bị mất trong quá trình SSR navigate
+  if (error || !data) return null;
+  return data.user ?? null;
 });
 
 export const getProfile = cache(async (userId?: string) => {
