@@ -83,9 +83,28 @@ export async function deleteFamily(familyId: string) {
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
 
-  // Xóa tuần tự các bảng con trước để tránh foreign key constraint
-  // (nếu chưa có ON DELETE CASCADE trên DB)
+  // Bước 1: Lấy tất cả person_id thuộc family này để xóa person_details_private
+  const { data: persons, error: personsError } = await supabase
+    .from("persons")
+    .select("id")
+    .eq("family_id", familyId);
+
+  if (personsError) return { error: `Lỗi lấy danh sách thành viên: ${personsError.message}` };
+
+  // Bước 2: Xóa person_details_private trước (FK -> persons.id, không có family_id)
+  if (persons && persons.length > 0) {
+    const personIds = persons.map((p: { id: string }) => p.id);
+    const { error: privateErr } = await supabase
+      .from("person_details_private")
+      .delete()
+      .in("person_id", personIds);
+    if (privateErr) return { error: `Lỗi xóa thông tin liên hệ: ${privateErr.message}` };
+  }
+
+  // Bước 3: Xóa tuần tự các bảng con có family_id
   const tables = [
+    "poll_votes",
+    "polls",
     "audit_logs",
     "family_fund_transactions",
     "announcements",
@@ -104,6 +123,7 @@ export async function deleteFamily(familyId: string) {
     if (delErr) return { error: `Lỗi xóa ${table}: ${delErr.message}` };
   }
 
+  // Bước 4: Xóa gia phả
   const { error } = await supabase
     .from("families")
     .delete()
