@@ -293,7 +293,7 @@ export async function saveMember(
       .eq("shared_with", user.id)
       .single();
     const role = share?.role as string;
-    hasPermission = role === "admin" || role === "editor"; // Giữ "admin" cho đến khi DB được migrate
+    hasPermission = role === "admin" || role === "editor";
   }
 
   if (!hasPermission) return { error: "Bạn không có quyền chỉnh sửa gia phả này." };
@@ -321,7 +321,7 @@ export async function saveMember(
     if (updateError) return { error: updateError.message };
   }
 
-  // ✅ FIX: Dùng delete + insert để đảm bảo luôn ghi đúng, không phụ thuộc unique constraint
+  // Lưu thông tin liên hệ (person_details_private không có cột family_id)
   if (currentId && privateData) {
     const hasData =
       privateData.phone_number || privateData.occupation || privateData.current_residence;
@@ -333,7 +333,7 @@ export async function saveMember(
     if (hasData) {
       const { error: privateError } = await supabase
         .from("person_details_private")
-        .insert({ person_id: currentId, family_id: familyId, ...privateData });
+        .insert({ person_id: currentId, ...privateData });
       if (privateError) {
         console.warn("Private details save failed:", privateError.message);
       }

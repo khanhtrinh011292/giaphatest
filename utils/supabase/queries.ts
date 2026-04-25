@@ -101,17 +101,16 @@ export const getEvents = cache(async (familyId: string) => {
 
 /**
  * Lấy chi tiết private của 1 thành viên (phone, occupation, address).
- * Chỉ có thành viên có quyền write mới xem được (RLS).
+ * Chỉ Owner và Editor mới xem được (RLS kiểm soát qua can_view_person_private).
  */
 export const getPersonPrivateDetails = cache(
-  async (personId: string, familyId: string) => {
+  async (personId: string) => {
     const supabase = await getSupabase();
     const { data } = await supabase
       .from("person_details_private")
       .select("*")
       .eq("person_id", personId)
-      .eq("family_id", familyId)
-      .single();
+      .maybeSingle();
     return data ?? null;
   }
 );
