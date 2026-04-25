@@ -43,9 +43,9 @@ export async function updateSession(request: NextRequest) {
   // issues with cross-browser cookies across mobile browsers.
   // https://supabase.com/docs/guides/auth/server-side/nextjs
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Guard: data có thể null khi session hết hạn hoặc cookie bị mất trong quá trình navigate
+  const { data, error } = await supabase.auth.getUser();
+  const user = (!error && data) ? (data.user ?? null) : null;
 
   // Protected routes
   const protectedPaths = ["/dashboard"];
