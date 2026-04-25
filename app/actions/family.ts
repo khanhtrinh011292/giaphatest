@@ -48,6 +48,9 @@ export async function createFamily(name: string, description?: string) {
     .single();
 
   if (error) return { error: error.message };
+  // Guard: nếu data null dù không có error (edge case RLS / race condition)
+  if (!data) return { error: "Không thể tạo gia phả, vui lòng thử lại." };
+
   revalidatePath("/dashboard");
   return { data: data as Family };
 }
@@ -79,6 +82,27 @@ export async function deleteFamily(familyId: string) {
   const user = await getUser();
   if (!user) return { error: "Chưa đăng nhập." };
   const supabase = await getSupabase();
+
+  // Xóa tuần tự các bảng con trước để tránh foreign key constraint
+  // (nếu chưa có ON DELETE CASCADE trên DB)
+  const tables = [
+    "audit_logs",
+    "family_fund_transactions",
+    "announcements",
+    "family_share_links",
+    "family_shares",
+    "custom_events",
+    "relationships",
+    "persons",
+  ] as const;
+
+  for (const table of tables) {
+    const { error: delErr } = await supabase
+      .from(table as any)
+      .delete()
+      .eq("family_id", familyId);
+    if (delErr) return { error: `Lỗi xóa ${table}: ${delErr.message}` };
+  }
 
   const { error } = await supabase
     .from("families")
@@ -279,7 +303,6 @@ export async function getShareLinks(familyId: string) {
     .select("*")
     .eq("family_id", familyId)
     .eq("is_active", true)
-    // FIX: lọc bỏ link đã hết hạn (xử lý đúng cả trường hợp expires_at NULL = không hết hạn)
     .or(`expires_at.is.null,expires_at.gt.${now}`)
     .order("created_at", { ascending: false });
 
@@ -311,7 +334,6 @@ export async function joinByShareLink(token: string) {
   const supabase = await getSupabase();
 
   const now = new Date().toISOString();
-  // FIX: dùng .or() để xử lý đúng expires_at NULL (link không hết hạn) và expires_at > now
   const { data: link, error: linkError } = await supabase
     .from("family_share_links")
     .select("*")
