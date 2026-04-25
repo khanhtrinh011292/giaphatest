@@ -3,7 +3,7 @@ import MemberDetailContent from "@/components/MemberDetailContent";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ familyId: string; id: string }>;
@@ -13,9 +13,10 @@ export default async function MemberDetailPage({ params }: PageProps) {
   const { familyId, id } = await params;
 
   const user = await getUser();
+  if (!user) redirect("/login");
+
   const supabase = await getSupabase();
 
-  // Lấy family để biết owner
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -24,11 +25,10 @@ export default async function MemberDetailPage({ params }: PageProps) {
 
   if (!family) notFound();
 
-  const isOwner = family.owner_id === user?.id;
+  const isOwner = family.owner_id === user.id;
 
-  // Lấy family-level role của user hiện tại
   let shareRole: string | null = null;
-  if (!isOwner && user) {
+  if (!isOwner) {
     const { data: share } = await supabase
       .from("family_shares")
       .select("role")
@@ -38,12 +38,8 @@ export default async function MemberDetailPage({ params }: PageProps) {
     shareRole = share?.role ?? null;
   }
 
-  // Map legacy "admin" role to "editor" for safety
   const effectiveShareRole = shareRole === "admin" ? "editor" : (shareRole as "viewer" | "editor");
-
-  // isAdmin (xem private + xóa) -> Chỉ dành cho Owner
   const isAdmin = isOwner;
-  // canEdit (ghi dữ liệu) -> Owner hoặc Editor
   const canEdit = isOwner || effectiveShareRole === "editor";
 
   const { data: person, error } = await supabase
@@ -55,7 +51,6 @@ export default async function MemberDetailPage({ params }: PageProps) {
 
   if (error || !person) notFound();
 
-  // Chỉ Owner và Editor mới xem được thông tin liên hệ
   let privateData = null;
   if (canEdit) {
     const { data } = await supabase

@@ -3,6 +3,8 @@ import ShareManager from "@/components/ShareManager";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { ShareRole } from "@/types";
 import { redirect } from "next/navigation";
+import config from "@/app/config";
+import type { Metadata } from "next";
 
 type ShareRow = {
   id: string;
@@ -11,6 +13,10 @@ type ShareRow = {
   role: ShareRole;
   created_at: string;
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: `Chia sẻ gia phả | ${config.siteName}` };
+}
 
 export default async function SharePage({
   params,
@@ -41,18 +47,14 @@ export default async function SharePage({
       .eq("family_id", familyId)
       .eq("shared_with", user.id)
       .single();
-    // viewer và member không được vào
     if (!share || share.role === "viewer" || share.role === "member") {
       redirect(`/dashboard/${familyId}/board`);
     }
     shareRole = share.role;
   }
 
-  // owner và admin mới được chia sẻ qua email; editor chỉ tạo link
   const canShareEmail = isOwner || shareRole === "admin";
 
-  // Lấy danh sách share trực tiếp — tránh phụ thuộc vào getFamilyShares
-  // chỉ owner và admin mới thấy danh sách; editor thấy mảng rỗng
   let initialShares: ShareRow[] = [];
   if (isOwner || shareRole === "admin") {
     const { data } = await supabase

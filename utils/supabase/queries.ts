@@ -1,26 +1,29 @@
 import { Family, Person, Profile, Relationship } from "@/types";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 
-// Hàm này được cache lại để đảm bảo chỉ tạo 1 Supabase Client duy nhất cho mỗi request
+/**
+ * Trả về Supabase client cho server-side.
+ * KHÔNG BAO GIỜ trả về null — nếu cookies() throw (xảy ra khi SSR navigate),
+ * sẽ redirect về /login ngay lập tức để tránh crash .from() ở mọi page.
+ */
 export const getSupabase = cache(async () => {
   try {
     const cookieStore = await cookies();
     return createClient(cookieStore);
   } catch {
-    return null as never;
+    redirect("/login");
   }
 });
 
 export const getUser = cache(async () => {
   try {
     const supabase = await getSupabase();
-    if (!supabase) return null;
     const { data, error } = await supabase.auth.getUser();
-    // Guard: data có thể null khi session hết hạn hoặc cookie bị mất trong quá trình SSR navigate
-    if (error || !data) return null;
-    return data.user ?? null;
+    if (error || !data?.user) return null;
+    return data.user;
   } catch {
     return null;
   }
@@ -35,7 +38,6 @@ export const getProfile = cache(async (userId?: string) => {
       id = user.id;
     }
     const supabase = await getSupabase();
-    if (!supabase) return null;
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
@@ -56,15 +58,11 @@ export const getIsAdmin = cache(async () => {
   }
 });
 
-// ── Family queries ───────────────────────────────────────────────────────────────────
+// ── Family queries ────────────────────────────────────────────────────────────
 
-/**
- * Lấy thông tin 1 family. RLS sẽ tự động kiểm tra quyền truy cập.
- */
 export const getFamily = cache(async (familyId: string) => {
   try {
     const supabase = await getSupabase();
-    if (!supabase) return null;
     const { data, error } = await supabase
       .from("families")
       .select("*")
@@ -77,13 +75,9 @@ export const getFamily = cache(async (familyId: string) => {
   }
 });
 
-/**
- * Lấy danh sách thành viên thuộc 1 family. Sắp xếp theo generation rồi birth_order.
- */
 export const getPersons = cache(async (familyId: string) => {
   try {
     const supabase = await getSupabase();
-    if (!supabase) return [];
     const { data, error } = await supabase
       .from("persons")
       .select("*")
@@ -99,13 +93,9 @@ export const getPersons = cache(async (familyId: string) => {
   }
 });
 
-/**
- * Lấy danh sách quan hệ thuộc 1 family.
- */
 export const getRelationships = cache(async (familyId: string) => {
   try {
     const supabase = await getSupabase();
-    if (!supabase) return [];
     const { data, error } = await supabase
       .from("relationships")
       .select("*")
@@ -118,13 +108,9 @@ export const getRelationships = cache(async (familyId: string) => {
   }
 });
 
-/**
- * Lấy tất cả sự kiện của 1 family.
- */
 export const getEvents = cache(async (familyId: string) => {
   try {
     const supabase = await getSupabase();
-    if (!supabase) return [];
     const { data, error } = await supabase
       .from("custom_events")
       .select("*")
@@ -137,23 +123,16 @@ export const getEvents = cache(async (familyId: string) => {
   }
 });
 
-/**
- * Lấy chi tiết private của 1 thành viên (phone, occupation, address).
- * Chỉ Owner và Editor mới xem được (RLS kiểm soát qua can_view_person_private).
- */
-export const getPersonPrivateDetails = cache(
-  async (personId: string) => {
-    try {
-      const supabase = await getSupabase();
-      if (!supabase) return null;
-      const { data } = await supabase
-        .from("person_details_private")
-        .select("*")
-        .eq("person_id", personId)
-        .maybeSingle();
-      return data ?? null;
-    } catch {
-      return null;
-    }
+export const getPersonPrivateDetails = cache(async (personId: string) => {
+  try {
+    const supabase = await getSupabase();
+    const { data } = await supabase
+      .from("person_details_private")
+      .select("*")
+      .eq("person_id", personId)
+      .maybeSingle();
+    return data ?? null;
+  } catch {
+    return null;
   }
-);
+});

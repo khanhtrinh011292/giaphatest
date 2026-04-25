@@ -3,14 +3,15 @@ import { getSupabase, getUser } from "@/utils/supabase/queries";
 import BackToBoardButton from "@/components/BackToBoardButton";
 import FamilyFund from "@/components/FamilyFund";
 import type { FundTransaction, FundPerson } from "@/components/FamilyFund";
+import config from "@/app/config";
 import type { Metadata } from "next";
 
 interface PageProps {
   params: Promise<{ familyId: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  return { title: "Quỹ gia phả" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: `Quỹ gia phả | ${config.siteName}` };
 }
 
 export default async function FundPage({ params }: PageProps) {
@@ -30,7 +31,6 @@ export default async function FundPage({ params }: PageProps) {
 
   const isOwner = family.owner_id === user.id;
 
-  // Kiểm tra member/editor nếu không phải owner
   let canView = isOwner;
   if (!isOwner) {
     const { data: share } = await supabase

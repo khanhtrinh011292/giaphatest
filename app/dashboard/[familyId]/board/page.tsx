@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSupabase, getUser } from "@/utils/supabase/queries";
 import AnnouncementBoard from "@/components/AnnouncementBoard";
 import FamilyQuickLinks from "@/components/FamilyQuickLinks";
+import config from "@/app/config";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -9,14 +10,18 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { familyId } = await params;
-  const supabase = await getSupabase();
-  const { data: family } = await supabase
-    .from("families")
-    .select("name")
-    .eq("id", familyId)
-    .single();
-  return { title: family?.name ? `${family.name} — Bảng tin` : "Bảng tin" };
+  try {
+    const { familyId } = await params;
+    const supabase = await getSupabase();
+    const { data: family } = await supabase
+      .from("families")
+      .select("name")
+      .eq("id", familyId)
+      .single();
+    return { title: family?.name ? `${family.name} — Bảng tin | ${config.siteName}` : config.siteName };
+  } catch {
+    return { title: config.siteName };
+  }
 }
 
 export default async function BoardPage({ params }: PageProps) {
@@ -46,7 +51,7 @@ export default async function BoardPage({ params }: PageProps) {
       .eq("family_id", familyId)
       .eq("shared_with", user.id)
       .single();
-    canPost = share?.role === "admin";
+    canPost = share?.role === "editor";
     isMemberOrEditor = !!share;
     shareRole = share?.role ?? null;
   }
