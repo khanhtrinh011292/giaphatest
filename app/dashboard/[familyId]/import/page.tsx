@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
 import ImportPageClient from "./ImportPageClient";
 
@@ -9,13 +8,11 @@ export default async function ImportPage({
   params: Promise<{ familyId: string }>;
 }) {
   const { familyId } = await params;
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) redirect("/login");
+
+  const supabase = await getSupabase();
 
   const { data: share } = await supabase
     .from("family_shares")

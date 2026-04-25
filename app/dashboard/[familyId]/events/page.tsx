@@ -28,7 +28,6 @@ export default async function EventsPage({ params }: PageProps) {
 
   const isOwner = family.owner_id === user.id;
 
-  // Xác định role từ family_shares nếu không phải owner
   let shareRole: string | null = null;
   if (!isOwner) {
     const { data: share } = await supabase
@@ -38,7 +37,6 @@ export default async function EventsPage({ params }: PageProps) {
       .eq("shared_with", user.id)
       .single();
     shareRole = share?.role ?? null;
-    // Không phải owner và không có share → redirect
     if (!shareRole) redirect("/dashboard");
   }
 
@@ -65,8 +63,6 @@ export default async function EventsPage({ params }: PageProps) {
     avatar_url: p.avatar_url,
   }));
 
-
-
   return (
     <DashboardProvider>
       <div className="flex-1 w-full flex flex-col pb-12">
@@ -78,7 +74,6 @@ export default async function EventsPage({ params }: PageProps) {
           </p>
         </div>
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1">
-
           <EventsList
             persons={persons}
             customEvents={customEvents}

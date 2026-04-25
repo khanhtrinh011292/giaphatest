@@ -16,7 +16,6 @@ export default async function NewMemberPage({ params }: PageProps) {
 
   const supabase = await getSupabase();
 
-  // Lấy family để biết owner
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -38,8 +37,9 @@ export default async function NewMemberPage({ params }: PageProps) {
     shareRole = share?.role ?? null;
   }
 
-  const isAdmin = isOwner || shareRole === "admin";
-  const canEdit = isOwner || shareRole === "admin" || shareRole === "editor";
+  const effectiveRole = shareRole === "admin" ? "editor" : shareRole;
+  const isAdmin = isOwner;
+  const canEdit = isOwner || effectiveRole === "editor";
 
   if (!canEdit) {
     return (

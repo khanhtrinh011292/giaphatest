@@ -1,6 +1,6 @@
 import AuditLogList from "@/components/AuditLogList";
 import BackToBoardButton from "@/components/BackToBoardButton";
-import { getSupabase } from "@/utils/supabase/queries";
+import { getSupabase, getUser } from "@/utils/supabase/queries";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "Nhật ký thay đổi" };
@@ -11,6 +11,10 @@ export default async function AuditPage({
   params: Promise<{ familyId: string }>;
 }) {
   const { familyId } = await params;
+
+  const user = await getUser();
+  if (!user) redirect("/login");
+
   const supabase = await getSupabase();
 
   const { data: logs, error } = await supabase

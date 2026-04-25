@@ -16,7 +16,6 @@ export default async function EditMemberPage({ params }: PageProps) {
 
   const supabase = await getSupabase();
 
-  // Lấy family để biết owner
   const { data: family } = await supabase
     .from("families")
     .select("owner_id")
@@ -38,28 +37,17 @@ export default async function EditMemberPage({ params }: PageProps) {
     shareRole = share?.role ?? null;
   }
 
-  // Map legacy "admin" role to "editor" for safety
   const effectiveShareRole = shareRole === "admin" ? "editor" : (shareRole as "viewer" | "editor");
-
-  // isAdmin (quyền xóa trong form) -> Chỉ Owner
   const isAdmin = isOwner;
-  // canEdit (vào trang này) -> Owner hoặc Editor
   const canEdit = isOwner || effectiveShareRole === "editor";
 
   if (!canEdit) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-stone-800">
-            Truy cập bị từ chối
-          </h1>
-          <p className="text-stone-600 mt-2">
-            Bạn không có quyền chỉnh sửa thành viên.
-          </p>
-          <Link
-            href={`/dashboard/${familyId}`}
-            className="mt-4 inline-block text-amber-600 hover:underline"
-          >
+          <h1 className="text-2xl font-bold text-stone-800">Truy cập bị từ chối</h1>
+          <p className="text-stone-600 mt-2">Bạn không có quyền chỉnh sửa thành viên.</p>
+          <Link href={`/dashboard/${familyId}`} className="mt-4 inline-block text-amber-600 hover:underline">
             ← Quay lại
           </Link>
         </div>
@@ -76,8 +64,6 @@ export default async function EditMemberPage({ params }: PageProps) {
 
   if (error || !person) notFound();
 
-  // Chỉ Owner và Editor mới xem được thông tin liên hệ
-  // Dùng maybeSingle() để tránh crash khi chưa có row nào
   let privateData: Record<string, unknown> | null = null;
   if (canEdit) {
     const { data } = await supabase
@@ -88,13 +74,10 @@ export default async function EditMemberPage({ params }: PageProps) {
     privateData = data ?? null;
   }
 
-  // Chỉ strip person_id (không có family_id trong bảng này)
   const { person_id: _pid, ...safePrivate } =
     (privateData as Record<string, unknown> & { person_id?: unknown }) ?? {};
 
-  const initialData = canEdit
-    ? { ...person, ...safePrivate }
-    : { ...person };
+  const initialData = canEdit ? { ...person, ...safePrivate } : { ...person };
 
   return (
     <div className="flex-1 w-full flex flex-col pb-8">
