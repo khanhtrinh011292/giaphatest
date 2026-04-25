@@ -42,7 +42,7 @@ export default async function EditMemberPage({ params }: PageProps) {
   const effectiveShareRole = shareRole === "admin" ? "editor" : (shareRole as "viewer" | "editor");
 
   // isAdmin (quyền xóa trong form) -> Chỉ Owner
-  const isAdmin = isOwner; 
+  const isAdmin = isOwner;
   // canEdit (vào trang này) -> Owner hoặc Editor
   const canEdit = isOwner || effectiveShareRole === "editor";
 
@@ -76,20 +76,21 @@ export default async function EditMemberPage({ params }: PageProps) {
 
   if (error || !person) notFound();
 
+  // Chỉ Owner và Editor mới xem được thông tin liên hệ
+  // Dùng maybeSingle() để tránh crash khi chưa có row nào
   let privateData: Record<string, unknown> | null = null;
   if (canEdit) {
     const { data } = await supabase
       .from("person_details_private")
       .select("*")
       .eq("person_id", id)
-      .single();
-    privateData = data;
+      .maybeSingle();
+    privateData = data ?? null;
   }
 
-  // Strip DB-only keys (person_id, family_id) from privateData before merging
-  // to prevent overwriting the person's own family_id
-  const { person_id: _pid, family_id: _fid, ...safePrivate } =
-    (privateData as Record<string, unknown> & { person_id?: unknown; family_id?: unknown }) ?? {};
+  // Chỉ strip person_id (không có family_id trong bảng này)
+  const { person_id: _pid, ...safePrivate } =
+    (privateData as Record<string, unknown> & { person_id?: unknown }) ?? {};
 
   const initialData = canEdit
     ? { ...person, ...safePrivate }

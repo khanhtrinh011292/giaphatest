@@ -42,7 +42,7 @@ export default async function MemberDetailPage({ params }: PageProps) {
   const effectiveShareRole = shareRole === "admin" ? "editor" : (shareRole as "viewer" | "editor");
 
   // isAdmin (xem private + xóa) -> Chỉ dành cho Owner
-  const isAdmin = isOwner; 
+  const isAdmin = isOwner;
   // canEdit (ghi dữ liệu) -> Owner hoặc Editor
   const canEdit = isOwner || effectiveShareRole === "editor";
 
@@ -55,14 +55,15 @@ export default async function MemberDetailPage({ params }: PageProps) {
 
   if (error || !person) notFound();
 
+  // Chỉ Owner và Editor mới xem được thông tin liên hệ
   let privateData = null;
   if (canEdit) {
     const { data } = await supabase
       .from("person_details_private")
       .select("*")
       .eq("person_id", id)
-      .single();
-    privateData = data;
+      .maybeSingle();
+    privateData = data ?? null;
   }
 
   return (
