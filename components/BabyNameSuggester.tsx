@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { RefreshCw, AlertTriangle, CheckCircle, Baby } from "lucide-react";
+import { RefreshCw, AlertTriangle, CheckCircle, Baby, Sparkles } from "lucide-react";
 
 interface Suggestion {
   name: string;
@@ -20,23 +20,25 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
   const [motherName, setMotherName] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [surnameMode, setSurnameMode] = useState<SurnameMode>("father");
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [current, setCurrent] = useState<Suggestion | null>(null);
+  const [shownNames, setShownNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const fatherSurname = fatherName.trim().split(/\s+/)[0] || "";
   const motherSurname = motherName.trim().split(/\s+/)[0] || "";
 
-  // Preview tên mẫu
+  // Preview tên mẫu — luôn 3-4 từ
   const previewExample =
     surnameMode === "combined" && fatherSurname && motherSurname
-      ? `${fatherSurname} ${motherSurname} Thanh Ngân`
+      ? `${fatherSurname} ${motherSurname} Thanh Ngân` // 4 từ
       : fatherSurname
-      ? `${fatherSurname} Thanh Ngân`
+      ? `${fatherSurname} Thanh Ngân` // 3 từ
       : null;
 
-  const fetchSuggestions = useCallback(async () => {
+  const fetchNextName = useCallback(async (currentShown: string[]) => {
     if (!fatherName.trim() && !motherName.trim()) {
       setError("Vui lòng nhập ít nhất tên bố hoặc mẹ");
       return;
@@ -55,13 +57,29 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
             mother_name: motherName,
             gender,
             surname_mode: surnameMode,
+            exclude_names: currentShown,
           }),
         }
       );
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setSuggestions(data.suggestions);
-      setHasSearched(true);
+
+      const suggestion: Suggestion = data.suggestion;
+
+      // Animation flip
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrent(suggestion);
+        setIsAnimating(false);
+        setHasSearched(true);
+
+        // Nếu server reset (xem hết), xóa lịch sử và bắt đầu lại
+        if (data.reset) {
+          setShownNames([suggestion.name]);
+        } else {
+          setShownNames((prev) => [...prev, suggestion.name]);
+        }
+      }, 200);
     } catch {
       setError("Không thể tải gợi ý tên. Thử lại sau.");
     } finally {
@@ -69,11 +87,27 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
     }
   }, [familyId, fatherName, motherName, gender, surnameMode]);
 
-  const duplicateCount = suggestions.filter((s) => s.duplicate).length;
-  const safeCount = suggestions.filter((s) => !s.duplicate).length;
+  const handleReroll = () => {
+    fetchNextName(shownNames);
+  };
+
+  // Reset khi đổi giới tính hoặc chế độ họ
+  const handleGenderChange = (g: "male" | "female") => {
+    setGender(g);
+    setCurrent(null);
+    setShownNames([]);
+    setHasSearched(false);
+  };
+
+  const handleSurnameModeChange = (m: SurnameMode) => {
+    setSurnameMode(m);
+    setCurrent(null);
+    setShownNames([]);
+    setHasSearched(false);
+  };
 
   return (
-    <div className="bg-white rounded-2xl shadow-md p-6 max-w-2xl mx-auto">
+    <div className="bg-white rounded-2xl shadow-md p-6 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 bg-pink-100 rounded-xl">
@@ -92,7 +126,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
           <input
             type="text"
             value={fatherName}
-            onChange={(e) => setFatherName(e.target.value)}
+            onChange={(e) => { setFatherName(e.target.value); setCurrent(null); setShownNames([]); setHasSearched(false); }}
             placeholder="VD: Nguyễn Văn An"
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
@@ -102,7 +136,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
           <input
             type="text"
             value={motherName}
-            onChange={(e) => setMotherName(e.target.value)}
+            onChange={(e) => { setMotherName(e.target.value); setCurrent(null); setShownNames([]); setHasSearched(false); }}
             placeholder="VD: Trần Thị Bình"
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
           />
@@ -113,16 +147,16 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
       <div className="mb-5">
         <label className="block text-sm font-medium text-gray-700 mb-2">Họ của con</label>
         <div className="grid grid-cols-2 gap-3">
-          {/* Họ bố */}
+          {/* Họ bố — 3 từ */}
           <button
-            onClick={() => setSurnameMode("father")}
+            onClick={() => handleSurnameModeChange("father")}
             className={`py-3 px-4 rounded-xl border text-left transition-all ${
               surnameMode === "father"
                 ? "bg-amber-500 text-white border-amber-500 shadow-md"
                 : "bg-gray-50 text-gray-600 border-gray-200 hover:border-amber-300 hover:bg-amber-50"
             }`}
           >
-            <span className="block text-sm font-semibold">Họ bố</span>
+            <span className="block text-sm font-semibold">Họ bố · 3 từ</span>
             <span className={`block text-xs mt-0.5 ${
               surnameMode === "father" ? "text-amber-100" : "text-gray-400"
             }`}>
@@ -130,31 +164,32 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
             </span>
           </button>
 
-          {/* Kết hợp họ bố + họ mẹ */}
+          {/* Kết hợp họ bố + họ mẹ — 4 từ */}
           <button
-            onClick={() => setSurnameMode("combined")}
+            onClick={() => handleSurnameModeChange("combined")}
             className={`py-3 px-4 rounded-xl border text-left transition-all ${
               surnameMode === "combined"
                 ? "bg-purple-500 text-white border-purple-500 shadow-md"
                 : "bg-gray-50 text-gray-600 border-gray-200 hover:border-purple-300 hover:bg-purple-50"
             }`}
           >
-            <span className="block text-sm font-semibold">Họ bố + Họ mẹ</span>
+            <span className="block text-sm font-semibold">Họ bố + Mẹ · 4 từ</span>
             <span className={`block text-xs mt-0.5 ${
               surnameMode === "combined" ? "text-purple-100" : "text-gray-400"
             }`}>
               {fatherSurname && motherSurname
-                ? `VD: ${fatherSurname} ${motherSurname} Thanh Ngân`
-                : "VD: Phạm Trần Thanh Ngân"}
+                ? `VD: ${fatherSurname} ${motherSurname} Ngọc Hân`
+                : "VD: Phạm Trần Ngọc Hân"}
             </span>
           </button>
         </div>
 
-        {/* Preview tên đầy đủ */}
+        {/* Preview cấu trúc tên */}
         {previewExample && (
           <p className="mt-2 text-xs text-gray-500">
-            Cấu trúc tên:
-            <span className="ml-1 font-semibold text-gray-700">{previewExample}</span>
+            Cấu trúc tên:{" "}
+            <span className="font-semibold text-gray-700">{previewExample}</span>
+            <span className="ml-1 text-gray-400">({surnameMode === "combined" ? "4 từ" : "3 từ"})</span>
           </p>
         )}
       </div>
@@ -162,7 +197,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
       {/* Gender Toggle */}
       <div className="flex gap-3 mb-5">
         <button
-          onClick={() => setGender("male")}
+          onClick={() => handleGenderChange("male")}
           className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
             gender === "male"
               ? "bg-blue-500 text-white shadow-md"
@@ -172,7 +207,7 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
           Con trai
         </button>
         <button
-          onClick={() => setGender("female")}
+          onClick={() => handleGenderChange("female")}
           className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
             gender === "female"
               ? "bg-pink-500 text-white shadow-md"
@@ -183,76 +218,82 @@ export default function BabyNameSuggester({ familyId }: BabyNameSuggesterProps) 
         </button>
       </div>
 
+      {/* Hiển thị tên được gợi ý — 1 tên duy nhất */}
+      {hasSearched && current && (
+        <div
+          className={`mb-5 transition-all duration-200 ${
+            isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"
+          }`}
+        >
+          <div
+            className={`relative flex flex-col items-center justify-center rounded-2xl py-8 px-6 border-2 ${
+              current.duplicate
+                ? "bg-orange-50 border-orange-300"
+                : "bg-gradient-to-br from-green-50 to-emerald-50 border-green-300"
+            }`}
+          >
+            {/* Sparkle icon */}
+            {!current.duplicate && (
+              <Sparkles className="absolute top-3 right-3 w-5 h-5 text-green-400 opacity-60" />
+            )}
+
+            {/* Badge số thứ tự */}
+            <span className="text-xs font-medium text-gray-400 mb-2">
+              #{shownNames.length}
+            </span>
+
+            {/* Tên chính */}
+            <p
+              className={`text-3xl font-bold tracking-wide text-center ${
+                current.duplicate ? "text-orange-700" : "text-gray-800"
+              }`}
+            >
+              {current.name}
+            </p>
+
+            {/* Trạng thái */}
+            <div className="mt-3 flex items-center gap-1.5">
+              {current.duplicate ? (
+                <>
+                  <AlertTriangle className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm text-orange-600 font-medium">
+                    Trùng với: <span className="font-bold">{current.duplicateWith}</span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-green-600 font-medium">Chưa trùng trong dòng họ</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Generate / Reroll Button */}
       <button
-        onClick={fetchSuggestions}
+        onClick={handleReroll}
         disabled={loading}
         className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 transition flex items-center justify-center gap-2 disabled:opacity-60"
       >
         <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-        {loading ? "Đang tạo gợi ý..." : hasSearched ? "Reroll — Đổi tên khác" : "Gợi ý tên"}
+        {loading
+          ? "Đang tìm tên..."
+          : hasSearched
+          ? "Reroll — Đổi tên khác"
+          : "Gợi ý tên"}
       </button>
 
       {error && (
         <p className="mt-3 text-sm text-red-500 text-center">{error}</p>
       )}
 
-      {/* Stats */}
-      {hasSearched && suggestions.length > 0 && (
-        <div className="flex gap-3 mt-5">
-          <div className="flex-1 bg-green-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-green-600">{safeCount}</p>
-            <p className="text-xs text-green-700">Tên chưa trùng</p>
-          </div>
-          <div className="flex-1 bg-orange-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-orange-500">{duplicateCount}</p>
-            <p className="text-xs text-orange-600">Tên đã trùng</p>
-          </div>
-          <div className="flex-1 bg-blue-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-blue-600">20</p>
-            <p className="text-xs text-blue-700">Tổng gợi ý</p>
-          </div>
-        </div>
-      )}
-
-      {/* Suggestions List */}
-      {suggestions.length > 0 && (
-        <div className="mt-5">
-          <p className="text-sm font-semibold text-gray-600 mb-3">
-            {gender === "male" ? "Gợi ý tên con trai:" : "Gợi ý tên con gái:"}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {suggestions.map((s, i) => (
-              <div
-                key={i}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition ${
-                  s.duplicate
-                    ? "bg-orange-50 border-orange-200"
-                    : "bg-green-50 border-green-200 hover:shadow-sm"
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs text-gray-400 w-5 shrink-0">{i + 1}.</span>
-                  <span className={`text-sm font-medium truncate ${
-                    s.duplicate ? "text-orange-700" : "text-gray-800"
-                  }`}>
-                    {s.name}
-                  </span>
-                </div>
-                {s.duplicate ? (
-                  <div className="group relative shrink-0 ml-1">
-                    <AlertTriangle className="w-4 h-4 text-orange-400 cursor-help" />
-                    <div className="absolute right-0 bottom-6 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition z-10 pointer-events-none">
-                      Trùng với: {s.duplicateWith}
-                    </div>
-                  </div>
-                ) : (
-                  <CheckCircle className="w-4 h-4 text-green-400 shrink-0 ml-1" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Đếm số tên đã xem */}
+      {hasSearched && shownNames.length > 0 && (
+        <p className="mt-3 text-xs text-gray-400 text-center">
+          Đã xem {shownNames.length} tên • Bấm Reroll để xem tên tiếp theo
+        </p>
       )}
     </div>
   );
