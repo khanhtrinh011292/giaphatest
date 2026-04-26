@@ -48,7 +48,6 @@ export async function createFamily(name: string, description?: string) {
     .single();
 
   if (error) return { error: error.message };
-  // Guard: nếu data null dù không có error (edge case RLS / race condition)
   if (!data) return { error: "Không thể tạo gia phả, vui lòng thử lại." };
 
   revalidatePath("/dashboard");
@@ -91,7 +90,7 @@ export async function deleteFamily(familyId: string) {
 
   if (personsError) return { error: `Lỗi lấy danh sách thành viên: ${personsError.message}` };
 
-  // Bước 2: Xóa person_details_private trước (FK -> persons.id, không có family_id)
+  // Bước 2: Xóa person_details_private (FK -> persons.id, không có family_id)
   if (persons && persons.length > 0) {
     const personIds = persons.map((p: { id: string }) => p.id);
     const { error: privateErr } = await supabase
@@ -101,9 +100,26 @@ export async function deleteFamily(familyId: string) {
     if (privateErr) return { error: `Lỗi xóa thông tin liên hệ: ${privateErr.message}` };
   }
 
-  // Bước 3: Xóa tuần tự các bảng con có family_id
+  // Bước 3: Lấy tất cả poll_id thuộc family để xóa poll_votes
+  // (poll_votes không có family_id, chỉ có poll_id)
+  const { data: polls, error: pollsErr } = await supabase
+    .from("polls")
+    .select("id")
+    .eq("family_id", familyId);
+
+  if (pollsErr) return { error: `Lỗi lấy danh sách polls: ${pollsErr.message}` };
+
+  if (polls && polls.length > 0) {
+    const pollIds = polls.map((p: { id: string }) => p.id);
+    const { error: votesErr } = await supabase
+      .from("poll_votes")
+      .delete()
+      .in("poll_id", pollIds);
+    if (votesErr) return { error: `Lỗi xóa poll_votes: ${votesErr.message}` };
+  }
+
+  // Bước 4: Xóa tuần tự các bảng con có family_id
   const tables = [
-    "poll_votes",
     "polls",
     "audit_logs",
     "family_fund_transactions",
@@ -123,7 +139,7 @@ export async function deleteFamily(familyId: string) {
     if (delErr) return { error: `Lỗi xóa ${table}: ${delErr.message}` };
   }
 
-  // Bước 4: Xóa gia phả
+  // Bước 5: Xóa gia phả
   const { error } = await supabase
     .from("families")
     .delete()
@@ -163,7 +179,6 @@ export async function getFamilyShares(familyId: string) {
 
   if (error) return { error: error.message };
   
-  // Chuyển đổi data sang format ShareRow
   const mappedData = (data || []).map((s: any) => ({
     id: s.id,
     shared_with: s.shared_with,
